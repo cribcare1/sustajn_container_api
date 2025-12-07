@@ -24,4 +24,6 @@ public interface InventoryService {
     public Map<String, Object> addRestaurantInventoryBulk(AdminRestaurantInventoryBulkRequest request);
 
     public Map<String, Object> getRestaurantInventory(Long restaurantId);
+
+    public Map<String,Object> getAdminDashboardData();
 }

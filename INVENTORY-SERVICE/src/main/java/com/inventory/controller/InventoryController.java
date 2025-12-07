@@ -29,12 +29,12 @@ public class InventoryController {
 
     @PostMapping("/saveOrUpdateContainerType")
     public ResponseEntity<?> saveOrUpdateContainerType(
-            @RequestPart("request") String requestString,
+            @RequestPart("request") ContainerTypeRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file) {
 
         try {
-            // Convert JSON string to ContainerTypeRequest
-            ContainerTypeRequest request = objectMapper.readValue(requestString, ContainerTypeRequest.class);
+//            // Convert JSON string to ContainerTypeRequest
+//            ContainerTypeRequest request = objectMapper.readValue(requestString, ContainerTypeRequest.class);
 
             Map<String, Object> response = service.saveOrUpdate(request, file);
             return ResponseEntity.ok(response);

@@ -446,4 +446,9 @@ public class InventoryServiceImpl implements InventoryService {
         return response;
     }
 
+    @Override
+    public Map<String, Object> getAdminDashboardData() {
+        return Map.of();
+    }
+
 }

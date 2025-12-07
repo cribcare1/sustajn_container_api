@@ -20,7 +20,7 @@ import com.inventory.util.DateTimeUtil;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ContainerType {
+public class ContainerType extends BaseEntity{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -80,21 +80,5 @@ public class ContainerType {
     @Column(name = "status", length = 15)
     private String status; // active, inactive, discontinued
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    public void onCreate() {
-        this.createdAt = DateTimeUtil.nowDubai();
-        this.updatedAt = DateTimeUtil.nowDubai();
-    }
-
-    @PreUpdate
-    public void onUpdate() {
-        this.updatedAt = DateTimeUtil.nowDubai();
-    }
 }
             
