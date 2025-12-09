@@ -1,0 +1,194 @@
+{
+  "info": {
+    "_postman_id": "2594e342-4bf2-470e-bf00-d1732c024414",
+    "name": "Container",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "LoginRegister",
+      "item": [
+        {
+          "name": "Login",
+          "id": "7defa9c0-25b0-4964-8e1b-592328b521ec",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"userName\":\"biswa@mailinator.com\",\r\n    \"password\":\"123456789\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://35.154.182.218:9090/auth/generate-token",
+              "protocol": "http",
+              "host": [
+                "35",
+                "154",
+                "182",
+                "218"
+              ],
+              "port": "9090",
+              "path": [
+                "auth",
+                "generate-token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Register User",
+          "id": "77b10e5e-93d6-48c5-b104-5b3f90eb052b",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"userType\": \"ADMIN\",\r\n  \"fullName\": \"Biswa\",\r\n  \"gender\": \"MALE\",\r\n  \"profilePictureUrl\": \"https://example.com/profile.jpg\",\r\n  \"dateOfBirth\": \"1995-09-12\",\r\n//   \"userName\": \"biswa123\",\r\n  \"email\": \"biswa@mailinator.com\",\r\n  \"phoneNumber\": \"9876543218\",\r\n  \"passwordHash\": \"password@123\",\r\n  \"accountStatus\": \"active\",\r\n  \"address\": \"Bhubaneswar, Odisha\",\r\n  \"cityId\": 12,\r\n  \"latitude\": 20.296059,\r\n  \"longitude\": 85.824539,\r\n  \"phoneVerified\": false,\r\n  \"emailVerified\": false,\r\n  \"appVersion\": \"1.0.0\",\r\n  \"deviceOs\": \"ANDROID\",\r\n  \"pushNotification\": true\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:9090/auth/register-user",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9090",
+              "path": [
+                "auth",
+                "register-user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ForgotPassword",
+          "id": "57bba0f1-42e5-4ef9-91f8-061c2fe85a23",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiaXN3YUBleGFtcGxlLmNvbSIsImlhdCI6MTc2NDI0OTU5MSwiZXhwIjoxNzY0MjQ5ODkxLCJlbWFpbCI6ImJpc3dhQGV4YW1wbGUuY29tIn0.evAgQAcogWsXVmoDlNANUZhDp9kDD1EOpn8RuihApmw",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"biswa@mailinator.com\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:9090/notification/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9090",
+              "path": [
+                "notification",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "verify-token",
+          "id": "59a389a5-7f07-4cb1-8b7c-6c58200f165f",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"biswa@mailinator.com\",\r\n    \"token\":\"897539\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:9090/notification/verify-token",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9090",
+              "path": [
+                "notification",
+                "verify-token"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "201dd98f-4516-4d95-bbd6-83abb3b349b8"
+    },
+    {
+      "name": "Container",
+      "item": [
+        {
+          "name": "Get All container Type",
+          "id": "41c726ef-18d9-49b8-8b1c-608cd7cac804",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJiaXN3YUBleGFtcGxlLmNvbSIsImlhdCI6MTc2NDc2OTM3MCwiZXhwIjoxNzY1Mzc0MTcwLCJlbWFpbCI6ImJpc3dhQGV4YW1wbGUuY29tIn0.6MKN8AL-sYxKKgin5vJMDmZCwDvMgqMmxVGdX4zyA0M",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:9090/inventory/container-type/activeContainerTypes",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "9090",
+              "path": [
+                "inventory",
+                "container-type",
+                "activeContainerTypes"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "f94549f1-4ff1-48a9-9918-bb776e639f36"
+    }
+  ]
+}
