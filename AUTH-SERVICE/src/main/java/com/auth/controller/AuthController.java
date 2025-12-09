@@ -32,7 +32,7 @@ public class AuthController {
         return userDto;
     }
 
-    @PostMapping("/generate-token")
+    @PostMapping("/login")
     public LoginResponse generateToken(@RequestBody LoginRequest loginRequest){
 
         try{
