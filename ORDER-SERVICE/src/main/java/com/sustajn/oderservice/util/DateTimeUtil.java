@@ -1,4 +1,4 @@
-package com.inventory.util;
+package com.sustajn.oderservice.util;
 
 
 import java.time.LocalDateTime;

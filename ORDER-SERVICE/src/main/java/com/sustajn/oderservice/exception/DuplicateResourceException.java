@@ -1,4 +1,4 @@
-package com.inventory.exception;
+package com.sustajn.oderservice.exception;
 
 
 public class DuplicateResourceException extends RuntimeException {

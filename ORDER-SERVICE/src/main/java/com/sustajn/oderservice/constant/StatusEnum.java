@@ -1,4 +1,4 @@
-package com.inventory.Constant;
+package com.sustajn.oderservice.constant;
 
 public enum StatusEnum {
     BORROWED,
