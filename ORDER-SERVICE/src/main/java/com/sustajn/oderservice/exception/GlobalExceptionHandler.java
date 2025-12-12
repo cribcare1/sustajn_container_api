@@ -1,4 +1,4 @@
-package com.inventory.exception;
+package com.sustajn.oderservice.exception;
 
 import java.util.HashMap;
 import java.util.List;
@@ -64,8 +64,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(buildResponse("Malformed request body", "error", null), HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(InventoryException.class)
-    public ResponseEntity<?> handleInventoryException(InventoryException ex) {
+    @ExceptionHandler(OrderException.class)
+    public ResponseEntity<?> handleOrderException(OrderException ex) {
         Map<String, Object> error = new HashMap<>();
         error.put("status", "error");
         error.put("message", ex.getMessage());

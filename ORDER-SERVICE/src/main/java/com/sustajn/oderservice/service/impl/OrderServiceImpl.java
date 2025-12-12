@@ -1,6 +1,4 @@
+package com.sustajn.oderservice.service.impl;
 
-
-class OrderServiceImpl extends OrderService{
-
-
+public class OrderServiceImpl {
 }

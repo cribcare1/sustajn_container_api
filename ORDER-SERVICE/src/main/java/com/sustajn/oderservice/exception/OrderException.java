@@ -1,7 +1,7 @@
-package com.inventory.exception;
+package com.sustajn.oderservice.exception;
 
-public class InventoryException extends RuntimeException {
-    public InventoryException(String message) {
+public class OrderException extends RuntimeException {
+    public OrderException(String message) {
         super(message);
     }
 }
