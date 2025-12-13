@@ -6,6 +6,8 @@ import com.auth.model.UserDto;
 import com.auth.request.ChangePasswordRequest;
 import com.auth.request.LoginRequest;
 import com.auth.response.LoginResponse;
+import com.auth.request.LogoutRequest;
+
 import com.auth.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -54,5 +56,11 @@ public class AuthController {
         Map<String,Object> response = userService.changePassword(passwordRequest.getUserId(),passwordRequest.getNewPassword());
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestBody LogoutRequest logoutRequest) {
+        Map<String, Object> response = userService.logout(logoutRequest.getUserId(), logoutRequest.getToken());
+        return ResponseEntity.ok(response);
+    }
+
 
 }

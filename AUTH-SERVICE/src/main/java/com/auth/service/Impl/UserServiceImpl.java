@@ -1,4 +1,6 @@
 package com.auth.service.Impl;
+import java.util.HashMap;
+
 
 import com.auth.model.User;
 import com.auth.model.UserDto;
@@ -67,4 +69,30 @@ public class UserServiceImpl implements UserService {
           );
       }
     }
+    @Override
+    public Map<String, Object> logout(Long userId, String token) {
+        Map<String, Object> response = new HashMap<>();
+
+        if (token == null || token.trim().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "No token provided");
+            return response;
+        }
+
+        try {
+
+
+
+            response.put("success", true);
+            response.put("message", "Logout successful");
+            response.put("userId", userId);
+            return response;
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Logout failed: " + e.getMessage());
+            return response;
+        }
+    }
+
+
 }

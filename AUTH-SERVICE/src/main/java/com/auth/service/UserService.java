@@ -12,4 +12,6 @@ public interface UserService {
     public LoginResponse generateToken(String username);
     public UserDto saveUser(User user);
     public Map<String,Object> changePassword(Long userId, String newPassword);
+
+    Map<String, Object> logout(Long userId, String token);
 }
