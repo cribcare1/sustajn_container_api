@@ -1,0 +1,69 @@
+package com.auth.request;
+
+import lombok.*;
+import java.time.LocalDate;
+import java.util.List;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class RestaurantRegistrationRequest {
+
+    // ========== USER REGISTRATION PART ==========
+    private String fullName;
+    private String email;
+    private String phoneNumber;
+    private String password;    // you will hash this
+    private LocalDate dateOfBirth;
+    private String address;
+    private Double latitude;
+    private Double longitude;
+
+    // ========== BASIC RESTAURANT DETAILS ==========
+    private BasicDetails basicDetails;
+
+    // ========== BANK DETAILS ==========
+    private BankDetailsRequest bankDetails;
+
+    // ========== SOCIAL MEDIA DETAILS ==========
+    private List<SocialMediaRequest> socialMediaList;
+
+
+
+    // --------- INNER DTO CLASSES ---------
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BasicDetails {
+        private String speciality;
+        private String websiteDetails;
+        private String cuisine;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class BankDetailsRequest {
+        private String bankName;
+        private String taxNumber;
+        private String accountNumber;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class SocialMediaRequest {
+        private String socialMediaType;
+        private String link;
+    }
+}
+
