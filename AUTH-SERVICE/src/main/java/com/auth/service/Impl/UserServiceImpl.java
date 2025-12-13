@@ -8,20 +8,27 @@ import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
+import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.service.UserService;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -156,7 +163,7 @@ public class UserServiceImpl implements UserService {
 
             // ---------------- BANK DETAILS ----------------
             BankDetails bank = BankDetails.builder()
-                    .restaurantId(savedUser.getId())
+                    .userId(savedUser.getId())
                     .bankName(request.getBankDetails().getBankName())
                     .accountNumber(request.getBankDetails().getAccountNumber())
                     .taxNumber(request.getBankDetails().getTaxNumber())
@@ -200,4 +207,202 @@ public class UserServiceImpl implements UserService {
         map.put("data", null);
         return map;
     }
+
+
+    @Transactional
+    @Override
+    public Map<String, Object> registerUserWithBankDetails(
+            RestaurantRegistrationRequest request,
+            MultipartFile profileImage
+    ) {
+
+        try {
+
+            // ---------------- VALIDATIONS ----------------
+            if (request == null) {
+                throw new IllegalArgumentException("Request body is missing");
+            }
+
+            if (request.getEmail() == null || request.getEmail().isBlank()) {
+                throw new IllegalArgumentException("Email is required");
+            }
+
+            if (userRepository.existsByEmail(request.getEmail())) {
+                throw new IllegalStateException("Email already registered");
+            }
+
+            if (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()) {
+                throw new IllegalArgumentException("Phone number is required");
+            }
+
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                throw new IllegalStateException("Phone number already registered");
+            }
+
+            if (request.getPassword() == null || request.getPassword().length() < 6) {
+                throw new IllegalArgumentException("Password must be at least 6 characters");
+            }
+
+//            if (request.getBankDetails() == null) {
+//                throw new IllegalArgumentException("Bank details are required");
+//            }
+
+            // ---------------- PROFILE IMAGE UPLOAD ----------------
+            String profileImageUrl = null;
+
+            if (profileImage != null && !profileImage.isEmpty()) {
+
+                if (profileImage.getContentType() == null ||
+                        !profileImage.getContentType().startsWith("image/")) {
+                    throw new IllegalArgumentException("Only image files are allowed");
+                }
+
+//                profileImageUrl = fileUploadService.uploadImage(profileImage);
+                profileImageUrl = null;
+
+            }
+            LocalDate dob = null;
+            if (request.getDateOfBirth() != null) {
+                dob = LocalDate.parse(request.getDateOfBirth());
+            }
+
+
+            // ---------------- CREATE USER ----------------
+            User user = User.builder()
+                    .userType(UserType.USER)
+                    .fullName(request.getFullName())
+                    .email(request.getEmail())
+                    .userName(request.getEmail())
+                    .phoneNumber(request.getPhoneNumber())
+                    .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .dateOfBirth(dob)
+                    .address(request.getAddress())
+                    .latitude(request.getLatitude() != null
+                            ? BigDecimal.valueOf(request.getLatitude())
+                            : null)
+                    .longitude(request.getLongitude() != null
+                            ? BigDecimal.valueOf(request.getLongitude())
+                            : null)
+                    .profilePictureUrl(profileImageUrl)
+                    .accountStatus(AccountStatus.active)
+                    .emailVerified(false)
+                    .phoneVerified(false)
+                    .build();
+
+            User savedUser = userRepository.save(user);
+
+//            // ---------------- CREATE BANK DETAILS ----------------
+//            RestaurantRegistrationRequest.BankDetailsRequest bankReq =
+//                    request.getBankDetails();
+
+//            BankDetails bankDetails = BankDetails.builder()
+//                    .userId(savedUser.getId())
+//                    .bankName(bankReq.getBankName())
+//                    .accountNumber(bankReq.getAccountNumber())
+//                    .iBanNumber(bankReq.getIBanNumber())
+//                    .taxNumber(bankReq.getTaxNumber())
+//                    .build();
+//
+//            bankRepo.save(bankDetails);
+
+            // ---------------- SUCCESS RESPONSE ----------------
+            Map<String, Object> success = new HashMap<>();
+            success.put("status", "success");
+            success.put("message", "User registered successfully with bank details");
+            success.put("userId", savedUser.getId());
+            success.put("profileImageUrl", profileImageUrl);
+
+            return success;
+
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            // Known validation / business errors
+            return error(ex.getMessage());
+
+        } catch (Exception ex) {
+            // Log full error internally
+            return error(ex.getMessage());
+        }
+    }
+
+
+
+    public Map<String, Object> getActiveRestaurantsMap(Pageable pageable) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Page<User> restaurants = userRepository.findByUserTypeAndAccountStatus(
+                    UserType.RESTAURANT,
+                    AccountStatus.active,
+                    pageable
+            );
+
+            // Map Users to RestaurantBasicDetailsResponse
+            List<RestaurantBasicDetailsResponse> data = restaurants.stream()
+                    .map(user -> new RestaurantBasicDetailsResponse(
+                            user.getId(),
+                            user.getFullName(),
+                            user.getAddress(),
+                            user.getPhoneNumber(),
+                            user.getEmail(),
+                            user.getProfilePictureUrl(),
+                            0 // container count, can update dynamically later
+                    ))
+                    .collect(Collectors.toList());
+
+            // Prepare response map
+            response.put("status", "success");
+            response.put("restaurantData", data);
+            response.put("page", restaurants.getNumber());
+            response.put("size", restaurants.getSize());
+            response.put("totalElements", restaurants.getTotalElements());
+            response.put("totalPages", restaurants.getTotalPages());
+
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Failed to fetch active restaurants");
+            response.put("details", e.getMessage());
+        }
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> getActiveCustomersMap(Pageable pageable) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Page<User> restaurants = userRepository.findByUserTypeAndAccountStatus(
+                    UserType.USER,
+                    AccountStatus.active,
+                    pageable
+            );
+
+            // Map Users to RestaurantBasicDetailsResponse
+            List<CustomerDetailsBasic> data = restaurants.stream()
+                    .map(user -> new CustomerDetailsBasic(
+                            user.getId(),
+                            user.getEmail(),              // email
+                            user.getPhoneNumber(),        // mobile
+                            user.getFullName(),           // fullName
+                            user.getProfilePictureUrl(),  // profileImage
+                            0,                            // borrowedCount
+                            0,                            // returnedCount
+                            0                             // pendingCount
+                    ))
+                    .collect(Collectors.toList());
+
+
+            // Prepare response map
+            response.put("status", "success");
+            response.put("customersData", data);
+            response.put("page", restaurants.getNumber());
+            response.put("size", restaurants.getSize());
+            response.put("totalElements", restaurants.getTotalElements());
+            response.put("totalPages", restaurants.getTotalPages());
+
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "Failed to fetch active customers");
+            response.put("details", e.getMessage());
+        }
+        return response;
+    }
+
 }

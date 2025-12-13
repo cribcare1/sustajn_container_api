@@ -1,5 +1,6 @@
 package com.auth.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import java.time.LocalDate;
 import java.util.List;
@@ -15,8 +16,9 @@ public class RestaurantRegistrationRequest {
     private String fullName;
     private String email;
     private String phoneNumber;
-    private String password;    // you will hash this
-    private LocalDate dateOfBirth;
+    private String password;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
+    private String dateOfBirth;
     private String address;
     private Double latitude;
     private Double longitude;
@@ -54,6 +56,9 @@ public class RestaurantRegistrationRequest {
         private String bankName;
         private String taxNumber;
         private String accountNumber;
+
+        public String iBanNumber;
+
     }
 
     @Getter

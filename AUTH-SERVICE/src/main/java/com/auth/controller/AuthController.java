@@ -8,8 +8,10 @@ import com.auth.request.LoginRequest;
 import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.response.LoginResponse;
 import com.auth.service.UserService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -73,6 +75,44 @@ public class AuthController {
         return ResponseEntity.ok(
                 userService.registerRestaurant(request, profileImage)
         );
+    }
+
+
+    @PostMapping(
+            value = "/registerCostumer",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<?> registerUserWithBankDetails(
+            @RequestPart("data") String request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
+    ) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        RestaurantRegistrationRequest regRequest =
+                mapper.readValue(request, RestaurantRegistrationRequest.class);
+        return ResponseEntity.ok(
+                userService.registerUserWithBankDetails(regRequest, profileImage)
+        );
+    }
+
+    @GetMapping("/activeRestaurants")
+    public ResponseEntity<?> getActiveRestaurants(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Map<String, Object> response = userService.getActiveRestaurantsMap(PageRequest.of(page, size));
+        return ResponseEntity.ok(response);
+    }
+
+
+
+    @GetMapping("/activeCustomersDetails")
+    public ResponseEntity<?> getActiveCustomersDetails(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Map<String, Object> response = userService.getActiveCustomersMap(PageRequest.of(page, size));
+        return ResponseEntity.ok(response);
     }
 
 

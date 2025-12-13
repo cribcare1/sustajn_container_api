@@ -4,10 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.ErrorResponses;
 import com.inventory.exception.InventoryException;
-import com.inventory.request.AdminRestaurantInventoryBulkRequest;
-import com.inventory.request.ContainerTypeRequest;
-import com.inventory.request.InventoryBulkAddRequest;
-import com.inventory.request.InventoryUpdateRequest;
+import com.inventory.request.*;
 import com.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -141,5 +138,33 @@ public class InventoryController {
             err.put("details", ex.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
         }
+    }
+
+    @PostMapping(
+            value = "/addContainerByAdmin"
+    )
+    public ResponseEntity<?> addContainer(
+            @RequestParam("data") String data,
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+
+        Map<String, Object> response;
+
+        try {
+            // Convert String JSON → DTO
+            AddContainerRequest request =
+                    objectMapper.readValue(data, AddContainerRequest.class);
+
+            response = service.addContainer(request, image);
+
+        } catch (Exception e) {
+            response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Invalid request data");
+            response.put("details", e.getMessage());
+        }
+
+        // ALWAYS return 200
+        return ResponseEntity.ok(response);
     }
 }

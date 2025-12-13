@@ -35,6 +35,9 @@ public class ContainerType extends BaseEntity{
     @Column(name = "capacity_ml")
     private Integer capacityMl;
 
+    @Column(name = "product_id")
+    private String productId;
+
     @Column(name = "container_material", length = 100)
     private String material;
 
