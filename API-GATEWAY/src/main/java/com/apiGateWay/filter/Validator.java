@@ -14,7 +14,8 @@ public class Validator {
 
     public static  final List<String> endpoints = List.of(
             "/register-user",
-            "/generate-token",
+            "/login",
+            "/register-restaurant",
             "/validate-token/{token}",
             "/change-password");
 

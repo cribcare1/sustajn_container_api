@@ -68,8 +68,8 @@ public class User {
     @Column(name = "address", length = 500)
     private String address;
 
-    @Column(name = "city_id")
-    private Integer cityId;
+//    @Column(name = "city_id")
+//    private Integer cityId;
 
     @Column(name = "latitude", precision = 10, scale = 8)
     private BigDecimal latitude;

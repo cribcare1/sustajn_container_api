@@ -1,0 +1,1144 @@
+{
+  "info": {
+    "_postman_id": "1a1a8d6e-2d1b-428f-ac23-5612505168ed",
+    "name": "TDSTEST",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "RegistrationLOGIN",
+      "item": [
+        {
+          "name": "addAdmin",
+          "id": "1b73069f-d60c-4b71-a7cb-42a714b37149",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"fullName\": \"Super Admin - DGP Headquarters\",\r\n  \"userName\": \"ADMIN_DGP\",\r\n  \"password\": \"Admin@123\",\r\n  \"mobileNumber\": \"9876543210\",\r\n  \"email\": \"admin.dgp@ksp.gov.in\",\r\n  \"address\": \"No.1, Police Head Quarters, Narpathuga Road, Opp: Martha's Hospital, K R Circle\",\r\n  \"city\": \"Bengaluru\",\r\n  \"pin\": \"560001\",\r\n  \"designation\": \"System Administrator\"\r\n  }\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/auth/addAdmin",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "auth",
+                "addAdmin"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "loginUsingUserNamePassword",
+          "id": "5f881187-1450-4702-9858-fc3328e060a7",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"userName\": \"ADMIN_DGP\",\r\n  \"password\": \"Admin@123\",\r\n  \"role\":\"admin\"\r\n  }\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/auth/loginUsingUserNamePassword",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "auth",
+                "loginUsingUserNamePassword"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "deletePanDetails",
+          "id": "f75348ee-b4e1-4842-9c85-136e564a3947",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/pan/delete/1?createdBy=4",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "pan",
+                "delete",
+                "1"
+              ],
+              "query": [
+                {
+                  "key": "createdBy",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "getAllActivePan",
+          "id": "f74afb85-e770-46f1-9142-42617ad051cf",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8443/tds/pan/getAllActivePan",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "pan",
+                "getAllActivePan"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "saveOrUpdatePan",
+          "id": "ee9d7000-2252-4eca-b668-bfcf725cc209",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"id\":2,\r\n  \"panName\": \"KSPolice\"\r\n//   \"panNumber\": \"ABCDE1234G\",\r\n//   \"mobile\": \"9876543210\",\r\n//   \"email\": \"divya.biradar@example.com\",\r\n//   \"address\": \"123, MG Road, Bengaluru, Karnataka\",\r\n//   \"createdBy\": 1\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/pan/saveOrUpdate",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "pan",
+                "saveOrUpdate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "editAdmin",
+          "id": "4230e5e6-9df9-4c28-8564-24a03155755d",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"id\": 1,\r\n  \"mobileNumber\": \"9876543210\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/user/editAdmin",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "user",
+                "editAdmin"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete-ddo/4",
+          "id": "6d49ae71-0e19-4ffa-87e6-5d8a9c1d1b50",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"gstId\":10,\r\n   \"gstHolderName\": \"Divya Biradar\",\r\n  \"gstName\": \"Divya Enterprises\",\r\n  \"gstNumber\": \"29ABCDE1234F1ZQ\",\r\n  \"address\": \"MG Road, Bengaluru\",\r\n  \"email\": \"divya@example.com\",\r\n  \"mobile\": \"9876543210\",\r\n  \"stateCode\": 29,\r\n  \"pinCode\": \"560001\",\r\n  \"city\": \"Bengaluru\",\r\n  \"createdBy\": 1\r\n}\r\n"
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/user/delete-ddo/4",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "user",
+                "delete-ddo",
+                "4"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "6e9c16ad-e6b7-4fa6-b7a8-916620535654"
+    },
+    {
+      "name": "Bank",
+      "item": [
+        {
+          "name": "saveOrUpdateBank",
+          "id": "c806c016-4606-496b-8266-82af023d2ffe",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"bankName\": \"State Bank of India\",\r\n  \"branchName\": \"MG Road Branch\",\r\n  \"accountNumber\": \"123456789012\",\r\n  \"accountType\": \"CURRENT\",\r\n  \"accountName\": \"DGP Office Treasury\",\r\n  \"ifscCode\": \"SBIN0000123\",\r\n  \"micrCode\": \"560002012\",\r\n  \"gstId\": 5,\r\n  \"status\": \"active\",\r\n  \"createdBy\": 1\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/banks/saveOrUpdateBank",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "banks",
+                "saveOrUpdateBank"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "activeBankDetails",
+          "id": "c42a2a7c-5093-4034-9dc2-e09509de4c58",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/banks/activeBankDetails?gstId=4",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "banks",
+                "activeBankDetails"
+              ],
+              "query": [
+                {
+                  "key": "gstId",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "deleteBank",
+          "id": "d68d2c00-2cdb-4277-ad25-c1774bfaa817",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8443/tds/banks/deleteBank/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "banks",
+                "deleteBank",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "9c9d77ec-f5ac-46ca-a4b0-da6386d178dc"
+    },
+    {
+      "name": "GST",
+      "item": [
+        {
+          "name": "addDDOByGSTIN",
+          "id": "98436293-fb69-4d57-a2c8-b3877f9d4542",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"adminId\": 3,\r\n  \"user\": {\r\n    \"fullName\": \"Amit Sharma\",\r\n    \"email\": \"amit.sharma@example.com\",\r\n    \"mobileNumber\": \"9876543211\",\r\n    \"ddoCode\": \"DDO1001\",\r\n    \"address\": \"Sector 21, Noida\",\r\n    \"designation\": \"Accounts Officer\",\r\n    \"city\":\"Bangalore\",\r\n    \"pinCode\":\"546567\"\r\n  }\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/user/addDDOByGSTIN",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "user",
+                "addDDOByGSTIN"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "invoices/details/1",
+          "id": "15a3e58d-65d5-48d1-873e-7c0ff75b3045",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:8443/tds/invoices/details/1",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "invoices",
+                "details",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "save invoice",
+          "id": "03785727-5722-4a8c-aec8-e41f28890421",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "// {\r\n//   \"ddoId\": 17,\r\n//   \"gstId\": 5,\r\n//   \"customerId\": 2,\r\n//   \"invoiceDate\": \"2025-02-10\",\r\n//   \"invoiceStatus\": \"DRAFT\",\r\n//   \"remarks\": \"First invoice\",\r\n//   \"gstType\": \"FCM\",\r\n\r\n//   \"items\": [\r\n//     {\r\n//       \"hsnId\": 10,\r\n//       \"serviceName\": \"Consulting\",\r\n//       \"quantity\": 2,\r\n//       \"rate\": 5000,\r\n//       \"amount\": 10000,\r\n//       \"cgstRate\": 9,\r\n//       \"sgstRate\": 9,\r\n//       \"igstRate\": 0,\r\n//       \"cgstValue\": 900,\r\n//       \"sgstValue\": 900,\r\n//       \"igstValue\": 0\r\n//     }\r\n//   ],\r\n\r\n//   \"gstSnapshot\": {\r\n//     \"gstName\": \"XYZ Pvt Ltd\",\r\n//     \"gstNumber\": \"29ABCDE1234F1Z5\",\r\n//     \"stateCode\": \"29\",\r\n//     \"gstHolderName\": \"RAHUL\"\r\n//   },\r\n\r\n//   \"bankSnapshot\": {\r\n//     \"bankName\": \"SBI\",\r\n//     \"branchName\": \"MG Road\",\r\n//     \"accountNumber\": \"1234567890\",\r\n//     \"ifscCode\": \"SBIN0000123\"\r\n//   },\r\n\r\n//   \"creditNote\": {\r\n//     \"creditNoteNumber\": \"CN001\",\r\n//     \"creditNoteAmount\": 500,\r\n//     \"mismatchAmount\": 0,\r\n//     \"reason\": \"Adjustment\"\r\n//   }\r\n// }\r\n{\r\n  \"invoiceId\": null,\r\n  \"ddoId\": 17,\r\n  \"bankId\": 55,\r\n  \"gstId\": 5,\r\n  \"customerId\": 2,\r\n  \"invoiceNumber\": \"INV-2025-001\",\r\n  \"invoiceDate\": \"2025-02-10\",\r\n  \"gstType\": \"FCM\",\r\n  \"invoiceStatus\": \"DRAFT\",\r\n  \"remarks\": \"First invoice\",\r\n\r\n  \"totalAmount\": 10000.00,\r\n  \"totalCgst\": 900.00,\r\n  \"totalSgst\": 900.00,\r\n  \"totalIgst\": 0.00,\r\n  \"grandTotal\": 11800.00,\r\n\r\n  \"paidAmount\": 0.00,\r\n  \"balanceAmount\": 11800.00,\r\n\r\n  \"items\": [\r\n    {\r\n      \"hsnId\": 10,\r\n      \"serviceName\": \"Consulting\",\r\n      \"quantity\": 2,\r\n      \"rate\": 5000,\r\n      \"amount\": 10000,\r\n      \"cgstRate\": 9,\r\n      \"sgstRate\": 9,\r\n      \"igstRate\": 0\r\n    }\r\n  ],\r\n\r\n  \"gstSnapshot\": {\r\n    \"gstName\": \"XYZ Pvt Ltd\",\r\n    \"gstNumber\": \"29ABCDE1234F1Z5\",\r\n    \"stateCode\": \"29\",\r\n    \"gstHolderName\": \"RAHUL\"\r\n  },\r\n\r\n  \"bankSnapshot\": {\r\n    \"bankName\": \"SBI\",\r\n    \"branchName\": \"MG Road\",\r\n    \"accountNumber\": \"1234567890\",\r\n    \"ifscCode\": \"SBIN0000123\"\r\n  },\r\n\r\n  \"creditNote\": {\r\n    \"creditNoteNumber\": \"CN001\",\r\n    \"creditNoteAmount\": 500,\r\n    \"mismatchAmount\": 0,\r\n    \"reason\": \"Adjustment\"\r\n  }\r\n}\r\n\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://localhost:8443/tds/invoices/save",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "invoices",
+                "save"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "deleteGst",
+          "id": "5b7f7c76-6789-4c3b-a63c-82d7537273dd",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/gst/deleteGst/1/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "gst",
+                "deleteGst",
+                "1",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "activeGSTDetails",
+          "id": "30856df8-7da2-4883-b4d5-fb87db11916e",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8443/tds/gst/activeGSTDetails",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "gst",
+                "activeGSTDetails"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "saveOrUpdateGSt",
+          "id": "9b3caa8e-1213-440d-858a-6230bb36d24d",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"gstId\":10,\r\n   \"gstHolderName\": \"Divya Biradar\",\r\n  \"gstName\": \"Divya Enterprises\",\r\n  \"gstNumber\": \"29ABCDE1234F1ZQ\",\r\n  \"address\": \"MG Road, Bengaluru\",\r\n  \"email\": \"divya@example.com\",\r\n  \"mobile\": \"9876543210\",\r\n  \"stateCode\": 29,\r\n  \"pinCode\": \"560001\",\r\n  \"city\": \"Bengaluru\",\r\n  \"createdBy\": 1\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/gst/saveOrUpdate",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "gst",
+                "saveOrUpdate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "deleteCustomer",
+          "id": "2eef0463-f19e-460e-8d3c-d324b7435891",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/customer/deleteCustomer/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "customer",
+                "deleteCustomer",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "activeCustomers",
+          "id": "7f7a4326-1b7a-48d2-92d3-085c2c4d6dfb",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8443/tds/customer/activeCustomers/16",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "customer",
+                "activeCustomers",
+                "16"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "addOrEditCustomer",
+          "id": "07628fcf-569a-46a4-8a52-19a84033b277",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"id\":1,\r\n  \"customerName\": \"ABC Industries Pvt Ltd\",\r\n  \"customerType\": \"gov\",\r\n  \"customerEmail\": \"abcd@example.com\",\r\n  \"address\": \"Plot 23, Industrial Area, Bengaluru\",\r\n  \"pinCode\": \"560001\",\r\n  \"stateCode\": \"29\",\r\n  \"gstNumber\": \"29AAACX1234L1ZP\",\r\n  \"exemptionNumber\": \"\",\r\n  \"ddoId\": 16\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/customer/addOrEditCustomer",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "customer",
+                "addOrEditCustomer"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ddoList",
+          "id": "553d4abc-49bf-4056-aea8-6ee963f791c7",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:8443/tds/gst/ddoList?gstId=4",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "gst",
+                "ddoList"
+              ],
+              "query": [
+                {
+                  "key": "gstId",
+                  "value": "4"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "/invoices/list",
+          "id": "58316671-86df-4049-86d5-7df1f09f13b6",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:8443/tds/invoices/list",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "invoices",
+                "list"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "migrate-ddos",
+          "id": "a759987a-dcb4-43d8-b654-4e257a14a0b4",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"fromGstId\": 5,\r\n  \"toGstId\": 4,\r\n  \"ddoIds\": [16, 103],\r\n  \"updatedBy\": 1\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/gst/migrate-ddos",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "gst",
+                "migrate-ddos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "generate-number",
+          "id": "a7d5f381-dbf1-4c53-b36b-018eade30ddf",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://api.gokpolicegst.com:8443/tds/invoices/generate-number?ddoId=16&gstId=5",
+              "protocol": "https",
+              "host": [
+                "api",
+                "gokpolicegst",
+                "com"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "invoices",
+                "generate-number"
+              ],
+              "query": [
+                {
+                  "key": "ddoId",
+                  "value": "16"
+                },
+                {
+                  "key": "gstId",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "submit",
+          "id": "a36bd6d1-a66d-4ec7-9e9b-bea45f06b748",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJERE8xMDAyIiwiaWF0IjoxNzY0Mjc1MjUxLCJleHAiOjE3NjU1NzEyNTF9.tGTJw1IXeWkspjru5FcC0N2N27OIZ1tHmY_hjxkRgUs",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"invoiceId\": 3,\r\n//   \"paidAmount\": 5000.00,\r\n//   \"balanceAmount\": 15000.00,\r\n  \"remarks\": \"Invoice submitted for approval.\"\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "https://localhost:8443/tds/invoices/submit",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "invoices",
+                "submit"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "3edb0961-fa9f-4243-8725-22b0757f9e81"
+    },
+    {
+      "name": "HSN",
+      "item": [
+        {
+          "name": "getAllHSN",
+          "id": "2f02c18d-79f2-4e9a-81a2-149aaba2b917",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8443/tds/hsn/getAllHSN",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "hsn",
+                "getAllHSN"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "saveOrUpdateHSN",
+          "id": "4332dc95-805f-473a-9192-77cfdcfa4b24",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"id\":1,\r\n  \"hsnCode\": \"998314\",\r\n  \"serviceName\": \"IT Consulting Services\",\r\n  \"igst\": \"18\",\r\n  \"cgst\": \"9\",\r\n  \"sgst\": \"9\",\r\n  \"totalGst\": \"18\",\r\n  \"gstId\": 1,\r\n  \"createdBy\": 1\r\n}\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8443/tds/hsn/saveOrUpdateHSN",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "hsn",
+                "saveOrUpdateHSN"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete",
+          "id": "84ab095f-18b5-4678-9343-2bafa5826eb6",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8443/tds/hsn/delete/3/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "hsn",
+                "delete",
+                "3",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "getAllHSNHistory/1",
+          "id": "93590092-1daa-43a4-a5f9-b9e459491b0a",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJBRE1JTl9ER1AiLCJpYXQiOjE3NjI1NTg5ODUsImV4cCI6MTc2Mzg1NDk4NX0.pQ7sSnbeM4emVvrSmdXDjV1TU6ltSUyh4p_MrAN99qg",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:8443/tds/hsn/getAllHSNHistory/1",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "hsn",
+                "getAllHSNHistory",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GetHistory HSN",
+          "id": "c42db52f-8f38-41a7-8f2c-ca3f8a1b9773",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJERE8xMDAyIiwiaWF0IjoxNzY0NDgyNDkxLCJleHAiOjE3NjU3Nzg0OTF9.IoQfMMwKGYNhm6kB99LX6JObUSdLKZeax_vh9EkPfMU",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "https://localhost:8443/tds/hsn/getAllHSNHistory/8",
+              "protocol": "https",
+              "host": [
+                "localhost"
+              ],
+              "port": "8443",
+              "path": [
+                "tds",
+                "hsn",
+                "getAllHSNHistory",
+                "8"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "id": "3da5aac1-4785-4b34-9c83-3d6a6862046d"
+    },
+    {
+      "name": "New Request",
+      "id": "e1156a21-15c3-4605-bd5b-1216b2a3f198",
+      "request": {
+        "method": "GET",
+        "header": []
+      },
+      "response": []
+    }
+  ]
+}
