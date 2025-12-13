@@ -2,6 +2,7 @@ package com.auth.service.Impl;
 
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
+import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.BankDetailsRepository;
 import com.auth.repository.BasicRestaurantDetailsRepository;
@@ -39,6 +40,7 @@ public class UserServiceImpl implements UserService {
     private final BasicRestaurantDetailsRepository basicRepo;
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
+    private final NotificationFeignClientService notificationFeignClientService;
 //    private final  fileUploadService;
     @Override
     public LoginResponse generateToken(String username) {
@@ -124,8 +126,8 @@ public class UserServiceImpl implements UserService {
             String profileImageUrl = null;
 
             if (profileImage != null && !profileImage.isEmpty()) {
-                //profileImageUrl = fileUploadService.uploadImage(profileImage);
-                profileImageUrl=null;
+                profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
+                System.err.println("profileImageUrl = " + profileImageUrl);
             }
 
 
@@ -257,8 +259,10 @@ public class UserServiceImpl implements UserService {
                     throw new IllegalArgumentException("Only image files are allowed");
                 }
 
-//                profileImageUrl = fileUploadService.uploadImage(profileImage);
-                profileImageUrl = null;
+             if (profileImage != null && !profileImage.isEmpty()) {
+                profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
+                System.err.println("profileImageUrl = " + profileImageUrl);
+            }
 
             }
             LocalDate dob = null;

@@ -1,6 +1,7 @@
 package com.auth.controller;
 
 import com.auth.exception.BadRequestException;
+import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.ChangePasswordRequest;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
+    private final NotificationFeignClientService notificationFeignClientService;
 
     @PostMapping("/register-user")
     public UserDto registerUser(@RequestBody User user){
@@ -115,5 +117,18 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+
+    @GetMapping("/images/{type}/{fileName}")
+    public ResponseEntity<byte[]> fetchImage(
+            @PathVariable String type,
+            @PathVariable String fileName) {
+
+        byte[] imageBytes = notificationFeignClientService.getContainerImage(type, fileName);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "inline; filename=\"" + fileName + "\"")
+                .contentType(MediaType.IMAGE_JPEG) // You can dynamically detect type if needed
+                .body(imageBytes);
+    }
 
 }

@@ -16,6 +16,7 @@ public class Validator {
             "/register-user",
             "/login",
             "/register-restaurant",
+            "/registerCostumer",
             "/validate-token/{token}",
             "/change-password");
 
