@@ -1,6 +1,7 @@
 package com.auth.controller;
 
 import com.auth.exception.BadRequestException;
+import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.ChangePasswordRequest;
@@ -8,8 +9,10 @@ import com.auth.request.LoginRequest;
 import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.response.LoginResponse;
 import com.auth.service.UserService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,6 +29,7 @@ import java.util.Map;
 public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
+    private final NotificationFeignClientService notificationFeignClientService;
 
     @PostMapping("/register-user")
     public UserDto registerUser(@RequestBody User user){
@@ -75,5 +79,56 @@ public class AuthController {
         );
     }
 
+
+    @PostMapping(
+            value = "/registerCostumer",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<?> registerUserWithBankDetails(
+            @RequestPart("data") String request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
+    ) throws JsonProcessingException {
+        ObjectMapper mapper = new ObjectMapper();
+        RestaurantRegistrationRequest regRequest =
+                mapper.readValue(request, RestaurantRegistrationRequest.class);
+        return ResponseEntity.ok(
+                userService.registerUserWithBankDetails(regRequest, profileImage)
+        );
+    }
+
+    @GetMapping("/activeRestaurants")
+    public ResponseEntity<?> getActiveRestaurants(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Map<String, Object> response = userService.getActiveRestaurantsMap(PageRequest.of(page, size));
+        return ResponseEntity.ok(response);
+    }
+
+
+
+    @GetMapping("/activeCustomersDetails")
+    public ResponseEntity<?> getActiveCustomersDetails(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Map<String, Object> response = userService.getActiveCustomersMap(PageRequest.of(page, size));
+        return ResponseEntity.ok(response);
+    }
+
+
+    @GetMapping("/images/{type}/{fileName}")
+    public ResponseEntity<byte[]> fetchImage(
+            @PathVariable String type,
+            @PathVariable String fileName) {
+
+        byte[] imageBytes = notificationFeignClientService.getContainerImage(type, fileName);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "inline; filename=\"" + fileName + "\"")
+                .contentType(MediaType.IMAGE_JPEG) // You can dynamically detect type if needed
+                .body(imageBytes);
+    }
 
 }
