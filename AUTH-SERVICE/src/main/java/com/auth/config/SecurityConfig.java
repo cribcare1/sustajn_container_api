@@ -23,9 +23,9 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer ::  disable)
                 .authorizeHttpRequests(req->{
                     req.requestMatchers("/auth/register-user","/auth/generate-token","/auth/change-password").permitAll();
+                    req.requestMatchers("/profile/**").authenticated();
                     req.anyRequest().authenticated();
-                }).userDetailsService(userDetailsService())
-                .httpBasic(Customizer.withDefaults());
+                }).userDetailsService(userDetailsService());
         return http.build();
 }
     @Bean
