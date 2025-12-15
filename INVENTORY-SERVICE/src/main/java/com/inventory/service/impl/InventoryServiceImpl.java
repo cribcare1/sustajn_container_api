@@ -11,6 +11,7 @@ import com.inventory.entity.ContainerType;
 import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
 import com.inventory.exception.ResourceNotFoundException;
+import com.inventory.feignClient.service.NotificationFeignClientService;
 import com.inventory.repository.AdminInventoryMasterAuditRepository;
 import com.inventory.repository.AdminInventoryMasterRepository;
 import com.inventory.repository.AdminRestaurantInventoryDetailsRepository;
@@ -37,7 +38,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final ContainerTypeRepository repository;
     private final FileStorageUtil fileStorageUtil;
-
+    private final NotificationFeignClientService notificationFeignClientService;
     private final AdminInventoryMasterRepository masterRepo;
     private final AdminInventoryMasterAuditRepository auditRepo;
     private final AdminRestaurantInventoryDetailsRepository adminRestaurantInventoryDetailsRepository;
@@ -87,7 +88,7 @@ public class InventoryServiceImpl implements InventoryService {
         containerType.setStatus(InventoryConstant.ACTIVE);
         // Update image only when file provided
         if (file != null && !file.isEmpty()) {
-            String url = fileStorageUtil.uploadFile(file);
+            String url = notificationFeignClientService.uploadImage("container",file);
             containerType.setImageUrl(url);
         }
 
@@ -460,7 +461,7 @@ public class InventoryServiceImpl implements InventoryService {
         try {
             // 1️⃣ Upload image
             if (image != null && !image.isEmpty()) {
-                imageUrl = fileStorageUtil.uploadFile(image);
+                 imageUrl = notificationFeignClientService.uploadImage(InventoryConstant.CONTAINER,image);
             }
 
             // 2️⃣ Check container existence
@@ -548,9 +549,9 @@ public class InventoryServiceImpl implements InventoryService {
         } catch (Exception ex) {
 
             // Rollback uploaded image
-//            if (imageUrl != null) {
-//                fileStorageUtil.delete(imageUrl);
-//            }
+            if (imageUrl != null) {
+                notificationFeignClientService.deleteContainer(InventoryConstant.CONTAINER,imageUrl);
+            }
 
             response.put("status", "error");
             response.put("message", "Failed to add container"+ex.getMessage());

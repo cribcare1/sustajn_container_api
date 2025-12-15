@@ -35,4 +35,4 @@ eureka:
 
 inventory:
   file:
-    upload-dir: /opt/inventory/uploads
+    upload-dir: C:/InventoryUploads

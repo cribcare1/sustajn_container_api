@@ -56,7 +56,7 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest passwordRequest){
-        Map<String,Object> response = userService.changePassword(passwordRequest.getUserId(),passwordRequest.getNewPassword());
+        Map<String,Object> response = userService.changePassword(passwordRequest.getEmail(),passwordRequest.getNewPassword());
         return ResponseEntity.ok(response);
     }
 

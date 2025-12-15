@@ -92,6 +92,23 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    public Map<String,Object> changePassword(String email, String newPassword){
+        try{
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            return Map.of(
+                    "message", "Password changed successfully",
+                    "status", "success"
+            );
+        } catch (Exception e){
+            return Map.of(
+                    "message", "Error changing password: " + e.getMessage(),
+                    "status", "error"
+            );
+        }
+    }
 
     @Transactional
     @Override
@@ -296,18 +313,21 @@ public class UserServiceImpl implements UserService {
             User savedUser = userRepository.save(user);
 
 //            // ---------------- CREATE BANK DETAILS ----------------
-//            RestaurantRegistrationRequest.BankDetailsRequest bankReq =
-//                    request.getBankDetails();
+            if( request.getBankDetails() != null) {
+                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
+                        request.getBankDetails();
 
-//            BankDetails bankDetails = BankDetails.builder()
-//                    .userId(savedUser.getId())
-//                    .bankName(bankReq.getBankName())
-//                    .accountNumber(bankReq.getAccountNumber())
-//                    .iBanNumber(bankReq.getIBanNumber())
-//                    .taxNumber(bankReq.getTaxNumber())
-//                    .build();
-//
-//            bankRepo.save(bankDetails);
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .bankName(bankReq.getBankName())
+                        .accountNumber(bankReq.getAccountNumber())
+                        .iBanNumber(bankReq.getIBanNumber())
+                        .taxNumber(bankReq.getTaxNumber())
+                        .build();
+
+                bankRepo.save(bankDetails);
+            }
+
 
             // ---------------- SUCCESS RESPONSE ----------------
             Map<String, Object> success = new HashMap<>();

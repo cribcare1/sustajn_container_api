@@ -8,5 +8,6 @@ public class InventoryConstant {
     public static final  String INVENTORY_MASTER_DATA="inventoryMasterData";
     public static final String SUCCESS = "success";
     public static final String ERROR = "error";
+    public static final String CONTAINER="container";
 
 }

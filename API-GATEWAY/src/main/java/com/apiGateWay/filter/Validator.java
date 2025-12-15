@@ -12,17 +12,29 @@ public class Validator {
 
     private final AntPathMatcher antPathMatcher = new AntPathMatcher();
 
-    public static  final List<String> endpoints = List.of(
-            "/register-user",
-            "/login",
-            "/register-restaurant",
-            "/registerCostumer",
-            "/validate-token/{token}",
-            "/change-password");
+//    public static final List<String> publicEndpoints = List.of(
+//            "/register-user",
+//            "/login",
+//            "/register-restaurant",
+//            "/registerCostumer",
+//            "/validate-token/*",   // use wildcard instead of {token}
+//            "/change-password"
+//    );
+public static final List<String> publicEndpoints = List.of(
+        "/auth/register-user",
+        "/auth/login",
+        "/auth/register-restaurant",
+        "/auth/registerCostumer",
+        "/auth/validate-token/**", // match any token path
+        "/auth/change-password/**",
+        "/auth/images/**"
+);
 
-    public Predicate<ServerHttpRequest> predicate = serverHttpRequest -> {
-        String requestPath = serverHttpRequest.getURI().getPath();
-        return endpoints.stream()
-                .noneMatch(uri -> antPathMatcher.match(uri, requestPath));
+
+    public Predicate<ServerHttpRequest> predicate = request -> {
+        String path = request.getURI().getPath();
+        // Returns true if JWT validation IS REQUIRED
+        return publicEndpoints.stream()
+                .noneMatch(uri -> antPathMatcher.match(uri, path));
     };
 }
