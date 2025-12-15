@@ -62,15 +62,27 @@ public class UserServiceImpl implements UserService {
                 "Bearer"   // token type
         );    }
 
-    public UserDto saveUser(User user){
+    @Override
+    public UserDto saveUser(User user) {
+
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
         user.setUserName(user.getEmail());
         user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
         user.setCreatedAt(LocalDateTime.now());
+        user.setAccountStatus(AccountStatus.active);
+        user.setUserType(UserType.ADMIN);
+
         User savedUser = userRepository.save(user);
-        return new UserDto(savedUser.getId(),
+
+        return new UserDto(
+                savedUser.getId(),
                 savedUser.getUserName(),
                 savedUser.getEmail(),
-                savedUser.getUserType().name());
+                savedUser.getUserType().name()
+        );
     }
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
