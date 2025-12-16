@@ -62,15 +62,27 @@ public class UserServiceImpl implements UserService {
                 "Bearer"   // token type
         );    }
 
-    public UserDto saveUser(User user){
+    @Override
+    public UserDto saveUser(User user) {
+
+        if (userRepository.existsByEmail(user.getEmail())) {
+            throw new RuntimeException("Email already exists");
+        }
+
         user.setUserName(user.getEmail());
         user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
         user.setCreatedAt(LocalDateTime.now());
+        user.setAccountStatus(AccountStatus.active);
+        user.setUserType(UserType.ADMIN);
+
         User savedUser = userRepository.save(user);
-        return new UserDto(savedUser.getId(),
+
+        return new UserDto(
+                savedUser.getId(),
                 savedUser.getUserName(),
                 savedUser.getEmail(),
-                savedUser.getUserType().name());
+                savedUser.getUserType().name()
+        );
     }
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
@@ -92,6 +104,23 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    public Map<String,Object> changePassword(String email, String newPassword){
+        try{
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            return Map.of(
+                    "message", "Password changed successfully",
+                    "status", "success"
+            );
+        } catch (Exception e){
+            return Map.of(
+                    "message", "Error changing password: " + e.getMessage(),
+                    "status", "error"
+            );
+        }
+    }
 
     @Transactional
     @Override
@@ -296,18 +325,21 @@ public class UserServiceImpl implements UserService {
             User savedUser = userRepository.save(user);
 
 //            // ---------------- CREATE BANK DETAILS ----------------
-//            RestaurantRegistrationRequest.BankDetailsRequest bankReq =
-//                    request.getBankDetails();
+            if( request.getBankDetails() != null) {
+                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
+                        request.getBankDetails();
 
-//            BankDetails bankDetails = BankDetails.builder()
-//                    .userId(savedUser.getId())
-//                    .bankName(bankReq.getBankName())
-//                    .accountNumber(bankReq.getAccountNumber())
-//                    .iBanNumber(bankReq.getIBanNumber())
-//                    .taxNumber(bankReq.getTaxNumber())
-//                    .build();
-//
-//            bankRepo.save(bankDetails);
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .bankName(bankReq.getBankName())
+                        .accountNumber(bankReq.getAccountNumber())
+                        .iBanNumber(bankReq.getIBanNumber())
+                        .taxNumber(bankReq.getTaxNumber())
+                        .build();
+
+                bankRepo.save(bankDetails);
+            }
+
 
             // ---------------- SUCCESS RESPONSE ----------------
             Map<String, Object> success = new HashMap<>();

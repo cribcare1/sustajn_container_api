@@ -15,6 +15,7 @@ public interface UserService {
     public LoginResponse generateToken(String username);
     public UserDto saveUser(User user);
     public Map<String,Object> changePassword(Long userId, String newPassword);
+    public Map<String,Object> changePassword(String email, String newPassword);
     public Map<String,Object> registerRestaurant(
             RestaurantRegistrationRequest request,
             MultipartFile profileImage

@@ -3,11 +3,10 @@ spring:
     name: NOTIFICATION-SERVICE
 
   datasource:
-    datasource:
-      url: jdbc:postgresql://ep-cool-star-a1f4ko82-pooler.ap-southeast-1.aws.neon.tech:5432/AUTH_SERVICE?sslmode=require
-      username: neondb_owner
-      password: npg_c1NYetKqXkd3
-      driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://ep-cool-star-a1f4ko82-pooler.ap-southeast-1.aws.neon.tech:5432/AUTH_SERVICE?sslmode=require
+    username: neondb_owner
+    password: npg_c1NYetKqXkd3
+    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -21,7 +20,7 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: cribcareinfo@gmail.com
-    password: YOUR_APP_PASSWORD
+    password: wcuh mggi wvol hayp
     properties:
       mail:
         smtp:
@@ -31,6 +30,11 @@ spring:
             required: true
           ssl:
             trust: smtp.gmail.com
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 server:
   port: 8082
