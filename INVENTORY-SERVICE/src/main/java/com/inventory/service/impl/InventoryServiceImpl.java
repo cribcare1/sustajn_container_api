@@ -11,14 +11,12 @@ import com.inventory.entity.ContainerType;
 import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
 import com.inventory.exception.ResourceNotFoundException;
+import com.inventory.feignClient.service.NotificationFeignClientService;
 import com.inventory.repository.AdminInventoryMasterAuditRepository;
 import com.inventory.repository.AdminInventoryMasterRepository;
 import com.inventory.repository.AdminRestaurantInventoryDetailsRepository;
 import com.inventory.repository.ContainerTypeRepository;
-import com.inventory.request.AdminRestaurantInventoryBulkRequest;
-import com.inventory.request.ContainerTypeRequest;
-import com.inventory.request.InventoryBulkAddRequest;
-import com.inventory.request.InventoryUpdateRequest;
+import com.inventory.request.*;
 import com.inventory.service.InventoryService;
 import com.inventory.util.DateTimeUtil;
 import com.inventory.util.FileStorageUtil;
@@ -40,7 +38,7 @@ public class InventoryServiceImpl implements InventoryService {
 
     private final ContainerTypeRepository repository;
     private final FileStorageUtil fileStorageUtil;
-
+    private final NotificationFeignClientService notificationFeignClientService;
     private final AdminInventoryMasterRepository masterRepo;
     private final AdminInventoryMasterAuditRepository auditRepo;
     private final AdminRestaurantInventoryDetailsRepository adminRestaurantInventoryDetailsRepository;
@@ -90,7 +88,7 @@ public class InventoryServiceImpl implements InventoryService {
         containerType.setStatus(InventoryConstant.ACTIVE);
         // Update image only when file provided
         if (file != null && !file.isEmpty()) {
-            String url = fileStorageUtil.uploadFile(file);
+            String url = notificationFeignClientService.uploadImage("container",file);
             containerType.setImageUrl(url);
         }
 
@@ -315,9 +313,7 @@ public class InventoryServiceImpl implements InventoryService {
             response.put("status", "success");
             response.put("message", "Active inventory fetched successfully");
             response.put("count", list.size());
-            response.put("data", list);
-            response.put("timestamp", LocalDateTime.now());
-
+            response.put("inventory_data", list);
             return response;
 
         } catch (InventoryException ex) {
@@ -450,5 +446,119 @@ public class InventoryServiceImpl implements InventoryService {
     public Map<String, Object> getAdminDashboardData() {
         return Map.of();
     }
+
+
+
+
+
+    @Transactional
+    @Override
+    public Map<String, Object> addContainer(AddContainerRequest request, MultipartFile image) {
+
+        Map<String, Object> response = new HashMap<>();
+        String imageUrl = null;
+
+        try {
+            // 1️⃣ Upload image
+            if (image != null && !image.isEmpty()) {
+                 imageUrl = notificationFeignClientService.uploadImage(InventoryConstant.CONTAINER,image);
+            }
+
+            // 2️⃣ Check container existence
+            ContainerType containerType = repository
+                    .findByNameIgnoreCase(request.getContainerName())
+                    .orElse(null);
+
+            boolean isNewContainer = false;
+
+            // 3️⃣ Create container if not exists
+            if (containerType == null) {
+                isNewContainer = true;
+
+                containerType = ContainerType.builder()
+                        .name(request.getContainerName())
+                        .description(request.getDescription())
+                        .capacityMl(request.getCapacityMl())
+                        .material(request.getMaterial())
+                        .productId(request.getProductId())
+                        .colour(request.getColour())
+                        .lengthCm(request.getLengthCm())
+                        .widthCm(request.getWidthCm())
+                        .heightCm(request.getHeightCm())
+                        .weightGrams(request.getWeightGrams())
+                        .foodSafe(request.getFoodSafe())
+                        .dishwasherSafe(request.getDishwasherSafe())
+                        .microwaveSafe(request.getMicrowaveSafe())
+                        .maxTemperature(request.getMaxTemperature())
+                        .minTemperature(request.getMinTemperature())
+                        .lifespanCycle(request.getLifespanCycle())
+                        .costPerUnit(request.getPrice())
+                        .imageUrl(imageUrl)
+                        .status("active")
+                        .build();
+
+                containerType = repository.save(containerType);
+            }
+
+            // 4️⃣ Fetch or create inventory master
+            ContainerType finalContainerType = containerType;
+            AdminInventoryMaster inventory = masterRepo
+                    .findByContainerTypeId(containerType.getId())
+                    .orElseGet(() -> {
+                        AdminInventoryMaster inv = new AdminInventoryMaster();
+                        inv.setContainerTypeId(finalContainerType.getId());
+                        inv.setTotalContainers(0);
+                        inv.setAvailableContainers(0);
+                        inv.setCreatedBy(request.getUserId());
+                        inv.setStatus("active");
+                        return inv;
+                    });
+
+            // 5️⃣ Quantity logic
+            int addedQty = request.getQuantity();
+            int newTotal = inventory.getTotalContainers() + addedQty;
+            int newAvailable = inventory.getAvailableContainers() + addedQty;
+
+            inventory.setTotalContainers(newTotal);
+            inventory.setAvailableContainers(newAvailable);
+            inventory.setUpdatedBy(request.getUserId());
+
+            masterRepo.save(inventory);
+
+            // 6️⃣ Audit
+            AdminInventoryMasterAudit audit = AdminInventoryMasterAudit.builder()
+                    .inventoryMasterId(inventory.getId())
+                    .quantityChange(addedQty)
+                    .balanceAfter(newAvailable)
+                    .actionType("ADD")
+                    .reason(isNewContainer ? "New container added" : "Stock added")
+                    .changedBy(request.getUserId())
+                    .build();
+
+            auditRepo.save(audit);
+
+            // ✅ SUCCESS RESPONSE
+            response.put("status", "success");
+            response.put("message", isNewContainer
+                    ? "Container created and inventory added successfully"
+                    : "Inventory updated successfully");
+            response.put("containerTypeId", containerType.getId());
+            response.put("totalContainers", newTotal);
+            response.put("availableContainers", newAvailable);
+
+        } catch (Exception ex) {
+
+            // Rollback uploaded image
+            if (imageUrl != null) {
+                notificationFeignClientService.deleteContainer(InventoryConstant.CONTAINER,imageUrl);
+            }
+
+            response.put("status", "error");
+            response.put("message", "Failed to add container"+ex.getMessage());
+        }
+
+        return response;
+    }
+
 
 }

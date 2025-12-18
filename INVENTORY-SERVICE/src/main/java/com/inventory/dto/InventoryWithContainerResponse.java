@@ -37,5 +37,7 @@ public class InventoryWithContainerResponse {
     private Integer totalContainers;
     private Integer availableContainers;
 
+    private String productId;
+
 }
 

@@ -20,7 +20,9 @@ spring:
           uri: lb://AUTH-SERVICE
           predicates:
             - Path=/auth/**
-#          filters:
+          filters:
+              -name: AuthFilter
+        #          filters:
 #            - StripPrefix=1
         - id: NOTIFICATION-SERVICE
           uri: lb://NOTIFICATION-SERVICE

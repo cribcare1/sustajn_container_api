@@ -2,10 +2,7 @@ package com.inventory.service;
 
 import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
-import com.inventory.request.AdminRestaurantInventoryBulkRequest;
-import com.inventory.request.ContainerTypeRequest;
-import com.inventory.request.InventoryBulkAddRequest;
-import com.inventory.request.InventoryUpdateRequest;
+import com.inventory.request.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,4 +23,6 @@ public interface InventoryService {
     public Map<String, Object> getRestaurantInventory(Long restaurantId);
 
     public Map<String,Object> getAdminDashboardData();
-}
+
+    public Map<String, Object> addContainer(AddContainerRequest request, MultipartFile image) ;
+    }

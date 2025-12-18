@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: NOTIFICATION-SERVICE
+
+  datasource:
+    url: jdbc:postgresql://ep-cool-star-a1f4ko82-pooler.ap-southeast-1.aws.neon.tech:5432/AUTH_SERVICE?sslmode=require
+    username: neondb_owner
+    password: npg_c1NYetKqXkd3
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: cribcareinfo@gmail.com
+    password: wcuh mggi wvol hayp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          ssl:
+            trust: smtp.gmail.com
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+server:
+  port: 8082
+
+notification:
+  token:
+    expiry-ms: 120000
+
+image:
+  storage:
+    root-path: C:/uploads
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://35.154.182.218:8761/eureka/
+  instance:
+    prefer-ip-address: true
