@@ -68,9 +68,4 @@ public class JwtUtil {
     public Date extractExpiration(String token){
         return getClaims(token).getExpiration();
     }
-
-    public String extractUsername(String token) {
-        return getClaims(token).getSubject();
-    }
 }
-

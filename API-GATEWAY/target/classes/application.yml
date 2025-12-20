@@ -38,13 +38,6 @@ spring:
           filters:
             - name: AuthFilter
 
-        - id: ORDER-SERVICE
-          uri: lb://ORDER-SERVICE
-          predicates:
-            - Path=/oderservice/**
-          filters:
-            - name: AuthFilter
-
 
 logging:
   level:

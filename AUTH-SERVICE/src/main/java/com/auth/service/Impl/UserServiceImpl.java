@@ -1,4 +1,4 @@
-package com.auth.service.impl;
+package com.auth.service.Impl;
 
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
@@ -9,7 +9,6 @@ import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
 import com.auth.request.RestaurantRegistrationRequest;
-import com.auth.request.UpdateProfileRequest;
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
@@ -35,20 +34,22 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-
     private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final BasicRestaurantDetailsRepository basicRepo;
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
-
+//    private final  fileUploadService;
     @Override
     public LoginResponse generateToken(String username) {
         User user = userRepository.findByUserName(username)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
-        String token = new JwtUtil().generateToken(username);
+        // Validate password here…
+
+        String token = jwtUtil.generateToken(username);
 
         return new LoginResponse(
                 user.getId(),
@@ -58,9 +59,8 @@ public class UserServiceImpl implements UserService {
                 user.getAddress(),
                 user.getFullName(),
                 token,
-                "Bearer"
-        );
-    }
+                "Bearer"   // token type
+        );    }
 
     @Override
     public UserDto saveUser(User user) {
@@ -85,61 +85,22 @@ public class UserServiceImpl implements UserService {
         );
     }
 
-    @Override
-    public Map<String, Object> changePassword(Long userId, String newPassword) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
-
-        return Map.of(
-                "message", "Password changed successfully",
-                "status", "success"
-        );
-    }
-
-
-    @Override
-    public Map<String, Object> logout(Long userId, String token) {
-        Map<String, Object> response = new HashMap<>();
-
-        if (token == null || token.trim().isEmpty()) {
-            response.put("success", false);
-            response.put("message", "No token provided");
-            return response;
-        }
-
-        response.put("success", true);
-        response.put("message", "Logout successful");
-        response.put("userId", userId);
-        return response;
-    }
-
-    @Override
-    public Map<String, Object> updateProfile(String username, UpdateProfileRequest request) {
-
-        User user = userRepository.findByUserName(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        if (request.getFullName() != null)
-            user.setFullName(request.getFullName());
-
-        if (request.getAddress() != null)
-            user.setAddress(request.getAddress());
-
-        if (request.getPhoneNumber() != null)
-            user.setPhoneNumber(request.getPhoneNumber());
-
-        if (request.getProfilePictureUrl() != null)
-            user.setProfilePictureUrl(request.getProfilePictureUrl());
-
-        userRepository.save(user);
-
-        return Map.of(
-                "message", "Profile updated successfully",
-                "status", "success"
-        );
+    public Map<String,Object> changePassword(Long userId, String newPassword){
+      try{
+          User user = userRepository.findById(userId)
+                  .orElseThrow(() -> new RuntimeException("User not found"));
+          user.setPasswordHash(passwordEncoder.encode(newPassword));
+          userRepository.save(user);
+          return Map.of(
+                  "message", "Password changed successfully",
+                  "status", "success"
+          );
+      } catch (Exception e){
+          return Map.of(
+                  "message", "Error changing password: " + e.getMessage(),
+                  "status", "error"
+          );
+      }
     }
 
 

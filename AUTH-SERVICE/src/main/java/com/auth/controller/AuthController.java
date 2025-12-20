@@ -9,8 +9,6 @@ import com.auth.request.ChangePasswordRequest;
 import com.auth.request.LoginRequest;
 import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.response.LoginResponse;
-import com.auth.request.LogoutRequest;
-
 import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

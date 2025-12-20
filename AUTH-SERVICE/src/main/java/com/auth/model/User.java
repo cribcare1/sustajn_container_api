@@ -1,5 +1,7 @@
 package com.auth.model;
 
+
+
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.DeviceOS;
 import com.auth.enumDetails.Gender;
@@ -36,6 +38,7 @@ public class User {
     @Column(name = "full_name", length = 100)
     private String fullName;
 
+
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", length = 20)
     private Gender gender;
@@ -49,7 +52,7 @@ public class User {
     @Column(name = "user_name")
     private String userName;
 
-    @Column(name = "email", length = 250)
+    @Column(name = "email", length = 250, unique = false)
     private String email;
 
     @Column(name = "phone_number", length = 25)
@@ -64,6 +67,9 @@ public class User {
 
     @Column(name = "address", length = 500)
     private String address;
+
+//    @Column(name = "city_id")
+//    private Integer cityId;
 
     @Column(name = "latitude", precision = 10, scale = 8)
     private BigDecimal latitude;
@@ -107,22 +113,5 @@ public class User {
         this.updatedAt = LocalDateTime.now();
     }
 
-    // ===============================
-    // ✅ EXPLICIT GETTERS (CRITICAL FIX)
-    // ===============================
-
-    public UserType getUserType() {
-        return this.userType;
-    }
-
-    public String getPasswordHash() {
-        return this.passwordHash;
-    }
-
-    public String getUserName() {
-        return this.userName;
-    }
-    public AccountStatus getAccountStatus() {
-        return this.accountStatus;
-    }
 }
+
