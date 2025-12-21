@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile default="true" name="Default" enabled="true" />
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="API-GATEWAY" target="21" />
+      <module name="AUTH-SERVICE" target="21" />
+      <module name="EUREKA-SERVER" target="21" />
+      <module name="INVENTORY-SERVICE" target="21" />
+      <module name="NOTIFICATION-SERVICE" target="21" />
+    </bytecodeTargetLevel>
+  </component>
+</project>
