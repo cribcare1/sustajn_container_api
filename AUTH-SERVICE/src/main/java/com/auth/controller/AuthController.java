@@ -13,6 +13,7 @@ import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -30,6 +31,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/auth")
+@Slf4j
 public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
@@ -45,11 +47,13 @@ public class AuthController {
     public ResponseEntity<?> registerUser(@RequestBody User user) {
 
         try {
+            log.info("inside register user method");
+            // Check if username already exists
             UserDto userDto = userService.saveUser(user);
 
             return ResponseEntity.status(HttpStatus.OK).body(
                     Map.of(
-                            "status", "SUCCESS",
+                            "status", "success",
                             "message", "User registered successfully",
                             "data", userDto
                     )
@@ -59,7 +63,7 @@ public class AuthController {
 
             return ResponseEntity.ok(
                     Map.of(
-                            "status", "ERROR",
+                            "status", "error",
                             "message", ex.getMessage()
                     )
             );
@@ -74,16 +78,16 @@ public class AuthController {
             );
         }
     }
-    
+
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> generateToken(
+    public ResponseEntity<?> generateToken(
             @RequestBody LoginRequest loginRequest) {
 
         try {
-            // 1️⃣ Check if user exists
+            log.info("inside login method");
             Optional<User> userOpt = userRepository.findByUserName(loginRequest.getUserName());
-
+            log.info("UserOpt: {}", userOpt);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                         Map.of(
@@ -99,7 +103,7 @@ public class AuthController {
             if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                         Map.of(
-                                "status", "ERROR",
+                                "status", "error",
                                 "message", "Invalid password"
                         )
                 );
@@ -116,7 +120,7 @@ public class AuthController {
             if (!authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                         Map.of(
-                                "status", "ERROR",
+                                "status", "error",
                                 "message", "Authentication failed"
                         )
                 );
@@ -127,7 +131,7 @@ public class AuthController {
 
             return ResponseEntity.ok(
                     Map.of(
-                            "status", "SUCCESS",
+                            "status", "success",
                             "message", "Login successful",
                             "data", response
                     )
@@ -136,7 +140,7 @@ public class AuthController {
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.OK).body(
                     Map.of(
-                            "status", "ERROR",
+                            "status", "error",
                             "message", "Something went wrong"
                     )
             );
