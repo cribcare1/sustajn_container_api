@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/orders")
 @RequiredArgsConstructor
 public class OrderController {
 
@@ -19,7 +19,7 @@ public class OrderController {
     /**
      * Borrow containers
      */
-    @PostMapping("/borrowContainers")
+        @PostMapping("/borrowContainers")
     public ResponseEntity<Map<String, Object>> borrowContainers(
             @RequestBody BorrowRequest request
     ) {
