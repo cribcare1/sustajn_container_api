@@ -3,17 +3,18 @@ package com.inventory.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.ErrorResponses;
+import com.inventory.dto.ProductResponse;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
 import com.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,7 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InventoryController {
 
-    private final InventoryService service;
+    private final InventoryService inventoryService;
     private final ObjectMapper objectMapper;
 
     @PostMapping("/saveOrUpdateContainerType")
@@ -33,7 +34,7 @@ public class InventoryController {
 //            // Convert JSON string to ContainerTypeRequest
 //            ContainerTypeRequest request = objectMapper.readValue(requestString, ContainerTypeRequest.class);
 
-            Map<String, Object> response = service.saveOrUpdate(request, file);
+            Map<String, Object> response = inventoryService.saveOrUpdate(request, file);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -55,7 +56,7 @@ public class InventoryController {
      */
     @GetMapping("/getContainerTypes")
     public ResponseEntity<?> getActiveContainerTypes() {
-        Map<String, Object> response = service.getActiveContainerTypes();
+        Map<String, Object> response = inventoryService.getActiveContainerTypes();
         return ResponseEntity.ok(response);
     }
 
@@ -66,7 +67,7 @@ public class InventoryController {
      */
     @PostMapping("/delete-container-type/{id}")
     public ResponseEntity<?> deleteContainerType(@PathVariable Integer id) {
-        Map<String, Object> response = service.deleteContainerType(id);
+        Map<String, Object> response = inventoryService.deleteContainerType(id);
         return ResponseEntity.ok(response);
     }
 
@@ -78,7 +79,7 @@ public class InventoryController {
     // -----------------------------------------
     @PostMapping("/updateInventory")
     public ResponseEntity<?> updateInventory(@RequestBody InventoryUpdateRequest request) {
-        return ResponseEntity.ok(service.updateInventory(request));
+        return ResponseEntity.ok(inventoryService.updateInventory(request));
     }
 
     // -----------------------------------------
@@ -86,7 +87,7 @@ public class InventoryController {
     // -----------------------------------------
     @GetMapping("/getAllActiveInventory")
     public ResponseEntity<?> getAllActiveInventory() {
-        return ResponseEntity.ok(service.getAllActiveInventory());
+        return ResponseEntity.ok(inventoryService.getAllActiveInventory());
     }
 
     @PostMapping("/restaurant/addRestaurantInventory")
@@ -94,7 +95,7 @@ public class InventoryController {
             @RequestBody AdminRestaurantInventoryBulkRequest request) {
 
         try {
-            Map<String, Object> response = service.addRestaurantInventoryBulk(request);
+            Map<String, Object> response = inventoryService.addRestaurantInventoryBulk(request);
             return ResponseEntity.ok(response);
 
         } catch (InventoryException ex) {
@@ -122,7 +123,7 @@ public class InventoryController {
             @PathVariable Long restaurantId) {
 
         try {
-            Map<String, Object> response = service.getRestaurantInventory(restaurantId);
+            Map<String, Object> response = inventoryService.getRestaurantInventory(restaurantId);
             return ResponseEntity.ok(response);
 
         } catch (InventoryException ex) {
@@ -155,7 +156,7 @@ public class InventoryController {
             AddContainerRequest request =
                     objectMapper.readValue(data, AddContainerRequest.class);
 
-            response = service.addContainer(request, image);
+            response = inventoryService.addContainer(request, image);
 
         } catch (Exception e) {
             response = new HashMap<>();
@@ -166,5 +167,10 @@ public class InventoryController {
 
         // ALWAYS return 200
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/by-ids")
+    public List<ProductResponse> getProductsByIds(@RequestBody List<Integer> ids) {
+        return inventoryService.getProductsByIds(ids);
     }
 }

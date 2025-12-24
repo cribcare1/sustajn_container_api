@@ -10,4 +10,7 @@ import java.util.Map;
 public interface OrderService {
     public Map<String, Object> borrowContainers(BorrowRequest request);
     public Map<String, Object> returnContainers(ReturnRequest request);
+
+    public Map<String, Object> getMonthWiseOrders(Long userId, int year);
+    public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status);
 }

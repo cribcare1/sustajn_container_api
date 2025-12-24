@@ -23,4 +23,39 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
 );
 
 
+    @Query("""
+    SELECT b
+    FROM BorrowOrder b
+    JOIN Order o ON b.orderId = o.id
+    WHERE o.orderStatus = 'APPROVED'
+      AND b.userId = :userId
+    """)
+    List<BorrowOrder> getAllTheApprovedBorrowOrdersByUserId(Long userId);
+
+//    @Query("""
+//        SELECT b
+//        FROM BorrowOrder b
+//        JOIN Order o ON b.orderId = o.id
+//        WHERE b.userId = :userId
+//          AND FUNCTION('YEAR', o.orderDate) = :year
+//          AND o.orderStatus = 'APPROVED'
+//        """)
+//    List<BorrowOrder> findAllByUserIdAndYear(
+//            @Param("userId") Long userId,
+//            @Param("year") int year
+//    );
+
+    @Query(value = """
+    SELECT b.*
+    FROM borrow_orders b
+    JOIN orders o ON b.order_id = o.id
+    WHERE b.user_id = :userId
+      AND EXTRACT(YEAR FROM o.order_date) = :year
+      AND o.order_status = 'APPROVED'
+""", nativeQuery = true)
+    List<BorrowOrder> findAllByUserIdAndYear(
+            @Param("userId") Long userId,
+            @Param("year") int year
+    );
+
 }

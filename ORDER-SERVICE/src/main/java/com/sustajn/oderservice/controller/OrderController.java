@@ -37,4 +37,23 @@ public class OrderController {
         Map<String, Object> response = orderService.returnContainers(request);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/borrowed/{userId}")
+    public ResponseEntity<Map<String, Object>> getBorrowedContainersForUser(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "APPROVED") String status) {
+
+        Map<String, Object> response = orderService
+                .getOrderDetailsListByStatusForUser(userId, status);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/monthWiseBorrowedDetails")
+    public ResponseEntity<Map<String, Object>> getMonthWiseOrders(
+            @RequestParam Long userId,
+            @RequestParam int year) {
+        Map<String, Object> response = orderService.getMonthWiseOrders(userId, year);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -1,8 +1,11 @@
 package com.sustajn.oderservice.service.impl;
 
+import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Order;
 import com.sustajn.oderservice.entity.ReturnOrder;
+import com.sustajn.oderservice.feign.service.AuthClient;
+import com.sustajn.oderservice.feign.service.InventoryFeignClient;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.OrderRepository;
 import com.sustajn.oderservice.repository.ReturnOrderRepository;
@@ -16,7 +19,10 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
+import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,6 +32,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final BorrowOrderRepository borrowOrderRepository;
     private final ReturnOrderRepository returnOrderRepository;
+    private final AuthClient authClient;
+    private final InventoryFeignClient inventoryFeignClient;
     @Override
     @Transactional
     public Map<String, Object> borrowContainers(BorrowRequest request) {
@@ -180,6 +188,125 @@ public class OrderServiceImpl implements OrderService {
             return handleReturnError(ex);
         }
     }
+
+    @Override
+    public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // 1️⃣ Fetch Borrow Orders for user + status
+            List<BorrowOrder> borrowOrders =
+                    borrowOrderRepository.getAllTheApprovedBorrowOrdersByUserId(userId);
+
+            if (borrowOrders == null || borrowOrders.isEmpty()) {
+                response.put("status", "success");
+                response.put("message", "No borrowed containers found for user");
+                response.put("data", List.of());
+                return response;
+            }
+
+            // 2️⃣ Collect product + restaurant IDs
+            List<Integer> productIds = borrowOrders.stream()
+                    .map(b -> b.getProductId().intValue())
+                    .distinct()
+                    .collect(Collectors.toList());   // ✅ mutable
+
+
+            List<Long> restaurantIds = borrowOrders.stream()
+                    .map(BorrowOrder::getRestaurantId)
+                    .distinct()
+                    .collect(Collectors.toList());   // ✅ mutable
+
+            // 3️⃣ Call Inventory Service
+            List<ProductResponse> products = List.of();
+            try {
+                products = inventoryFeignClient.getProductsByIds(productIds);
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to fetch product details from Inventory Service", ex);
+            }
+
+            Map<Long, ProductResponse> productMap = products.stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getProductId().longValue(),
+                            p -> p,
+                            (a, b) -> a
+                    ));
+
+            // 4️⃣ Call Auth Service
+            List<RestaurantRegisterResponse> restaurants = List.of();
+            try {
+                restaurants = authClient.getRestaurantsByIds(restaurantIds);
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to fetch restaurant details from Auth Service", ex);
+            }
+
+
+
+            Map<Long, RestaurantRegisterResponse> restaurantMap = restaurants.stream()
+                    .collect(Collectors.toMap(
+                            RestaurantRegisterResponse::getRestaurantId,
+                            r -> r,
+                            (a, b) -> a
+                    ));
+
+            // 5️⃣ Build Response List
+            List<OrderDetailsResponse> results = borrowOrders.stream()
+                    .map(b -> OrderDetailsResponse.builder()
+                            .restaurantId(
+                                    b.getRestaurantId() != null
+                                            ? b.getRestaurantId().intValue()
+                                            : null
+                            )
+                            .restaurantName(
+                                    restaurantMap.containsKey(b.getRestaurantId())
+                                            ? restaurantMap.get(b.getRestaurantId()).getName()
+                                            : null
+                            )
+//                            .restaurantAddress(
+//                                    restaurantMap.containsKey(b.getRestaurantId())
+//                                            ? restaurantMap.get(b.getRestaurantId()).get()
+//                                            : null
+//                            )
+                            .productId(b.getProductId())
+                            .productName(
+                                    productMap.containsKey(b.getProductId())
+                                            ? productMap.get(b.getProductId()).getProductName()
+                                            : null
+                            )
+                            .quantity(b.getQuantity())
+                            .build()
+                    )
+                    .collect(Collectors.toList());   // ✅ mutable
+
+            // 6️⃣ Final Success Response
+            response.put("status", "success");
+            response.put("message", "Borrowed container list fetched successfully");
+            response.put("data", results);
+
+            return response;
+        }
+        catch (IllegalArgumentException ex) {
+            response.put("status", "error");
+            response.put("message", "Invalid input provided");
+            response.put("details", ex.getMessage());
+            return response;
+        }
+        catch (RuntimeException ex) {
+            response.put("status", "error");
+            response.put("message", ex.getMessage());
+            response.put("details", ex.getCause() != null ? ex.getCause().getMessage() : null);
+            return response;
+        }
+        catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Unexpected error while fetching user order details");
+            response.put("details", ex.getMessage());
+            return response;
+        }
+    }
+
+
     private Map<String, Object> handleReturnError(Exception ex) {
 
         return ApiResponseUtil.error(
@@ -187,6 +314,114 @@ public class OrderServiceImpl implements OrderService {
                         ? ex.getMessage()
                         : "Failed to return containers"
         );
+    }
+
+    @Override
+    public Map<String, Object> getMonthWiseOrders(Long userId, int year) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            int currentMonth = LocalDate.now().getMonthValue();
+
+            // 1️⃣ Fetch orders up to current month
+            List<BorrowOrder> borrowOrders =
+                    borrowOrderRepository.findAllByUserIdAndYear(userId, year)
+                            .stream()
+                            .filter(b -> b.getBorrowedAt().getMonthValue() <= currentMonth)
+                            .collect(Collectors.toList());
+
+            // 2️⃣ Month map in DESCENDING order  (Dec → Nov → … → Jan)
+            Map<String, List<OrderListDetails>> monthWiseOrders = new LinkedHashMap<>();
+            for (int m = currentMonth; m >= 1; m--) {
+                String monthName =
+                        Month.of(m).getDisplayName(TextStyle.FULL, Locale.ENGLISH); // e.g., "December"
+                monthWiseOrders.put(monthName, new ArrayList<>());
+            }
+
+            if (!borrowOrders.isEmpty()) {
+
+                // 3️⃣ Collect ids
+                List<Integer> productIds = borrowOrders.stream()
+                        .map(b -> b.getProductId().intValue())
+                        .distinct().toList();
+
+                List<Long> restaurantIds = borrowOrders.stream()
+                        .map(BorrowOrder::getRestaurantId)
+                        .distinct().toList();
+
+                // 4️⃣ Product service
+                List<ProductResponse> products = inventoryFeignClient.getProductsByIds(productIds);
+                Map<Long, ProductResponse> productMap = products.stream()
+                        .collect(Collectors.toMap(p -> p.getProductId().longValue(), p -> p));
+
+                // 5️⃣ Restaurant service
+                List<RestaurantRegisterResponse> restaurants = authClient.getRestaurantsByIds(restaurantIds);
+                Map<Long, RestaurantRegisterResponse> restaurantMap = restaurants.stream()
+                        .collect(Collectors.toMap(RestaurantRegisterResponse::getRestaurantId, r -> r));
+
+                // 6️⃣ Group by orderId
+                Map<Long, List<BorrowOrder>> grouped =
+                        borrowOrders.stream().collect(Collectors.groupingBy(BorrowOrder::getOrderId));
+
+                // 7️⃣ Build order entries
+                for (Map.Entry<Long, List<BorrowOrder>> entry : grouped.entrySet()) {
+
+                    List<BorrowOrder> orderItems = entry.getValue();
+                    BorrowOrder first = orderItems.get(0);
+
+                    RestaurantRegisterResponse restaurant =
+                            restaurantMap.get(first.getRestaurantId());
+
+                    List<ProductOrderListResponse> productList = orderItems.stream()
+                            .map(b -> {
+                                ProductResponse p = productMap.get(b.getProductId());
+                                return new ProductOrderListResponse(
+                                        b.getProductId().intValue(),
+                                        p != null ? p.getProductName() : null,
+                                        p != null ? p.getCapacity() : null,
+                                        b.getQuantity(),
+                                        p != null ? p.getProductImageUrl() : null
+                                );
+                            })
+                            .toList();
+
+                    int totalContainers = orderItems.stream()
+                            .mapToInt(BorrowOrder::getQuantity)
+                            .sum();
+
+                    LocalDateTime dt = first.getBorrowedAt();
+                    String monthName =
+                            Month.of(dt.getMonthValue())
+                                    .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+
+                    OrderListDetails details = OrderListDetails.builder()
+                            .orderId(first.getOrderId())
+                            .restaurantId(first.getRestaurantId())
+                            .restaurantName(restaurant != null ? restaurant.getName() : null)
+                            .productCount(productList.size())
+                            .totalContainerCount(totalContainers)
+                            .orderDate(dt.toLocalDate().toString())
+                            .orderTime(dt.toLocalTime().toString())
+                            .productOrderListResponseList(productList)
+                            .build();
+
+                    monthWiseOrders.get(monthName).add(details);
+                }
+            }
+
+            response.put("status", "success");
+            response.put("message", "Month-wise orders fetched successfully");
+            response.put("value", monthWiseOrders);
+            return response;
+
+        } catch (Exception ex) {
+
+            response.put("status", "error");
+            response.put("message", "Failed to fetch month-wise orders");
+            response.put("value", null);
+            return response;
+        }
     }
 
 }
