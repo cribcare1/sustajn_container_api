@@ -1,14 +1,18 @@
 package com.auth.response;
+import com.auth.model.BankDetails;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.Builder;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class ProfileResponse {
     private Long id;
     private String fullName;
@@ -16,4 +20,5 @@ public class ProfileResponse {
     private String address;
     private String phoneNumber;
     private String profilePictureUrl;
+    private BankDetailsResponse bankDetails;
 }
