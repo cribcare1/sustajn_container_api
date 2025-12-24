@@ -22,6 +22,14 @@ spring:
           predicates:
             - Path=/notification/**,/images/**
 
+
+        - id: ORDER-SERVICE
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/order/**
+          filters:
+            - name: AuthFilter
+
         - id: INVENTORY-SERVICE
           uri: lb://INVENTORY-SERVICE
           predicates:
