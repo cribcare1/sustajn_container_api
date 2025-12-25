@@ -8,7 +8,9 @@ import com.auth.repository.UserRepository;
 import com.auth.request.ChangePasswordRequest;
 import com.auth.request.LoginRequest;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.UpdateProfileRequest;
 import com.auth.response.LoginResponse;
+import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -223,6 +225,19 @@ public class AuthController {
                 .header("Content-Disposition", "inline; filename=\"" + fileName + "\"")
                 .contentType(MediaType.IMAGE_JPEG) // You can dynamically detect type if needed
                 .body(imageBytes);
+    }
+    @GetMapping("/{restaurantId}/getProfile")
+    public ProfileResponse getRestaurantProfileById(
+            @PathVariable Long restaurantId
+    ) {
+        return userService.getRestaurantProfileById(restaurantId);
+    }
+    @PutMapping("/{restaurantId}/profile")
+    public ProfileResponse updateRestaurantProfileById(
+            @PathVariable Long restaurantId,
+            @RequestBody UpdateProfileRequest request
+    ) {
+        return userService.updateRestaurantProfileById(restaurantId, request);
     }
 
 }

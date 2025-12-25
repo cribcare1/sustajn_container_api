@@ -13,6 +13,9 @@ import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.response.RestaurantRegisterResponse;
+import com.auth.response.ProfileResponse;
+import com.auth.response.BankDetailsResponse;
+
 import com.auth.service.UserService;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
@@ -22,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.auth.request.UpdateProfileRequest;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -84,6 +89,99 @@ public class UserServiceImpl implements UserService {
                 savedUser.getUserType().name()
         );
     }
+    @Override
+
+    public ProfileResponse getRestaurantProfileById(Long restaurantId) {
+
+
+        User user = userRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        if (user.getUserType() != UserType.RESTAURANT) {
+            throw new RuntimeException("User is not a restaurant");
+        }
+        BankDetails bankDetails =
+                bankRepo.findByUserId(user.getId()).orElse(null);
+
+
+        BankDetailsResponse bankResponse = null;
+
+        if (bankDetails != null) {
+            bankResponse = BankDetailsResponse.builder()
+                    .id(bankDetails.getId())
+                    .userId(bankDetails.getUserId())
+                    .bankName(bankDetails.getBankName())
+                    .accountNumber(bankDetails.getAccountNumber())
+                    .iBanNumber(bankDetails.getIBanNumber())
+                    .taxNumber(bankDetails.getTaxNumber())
+                    .build();
+        }
+
+
+        return ProfileResponse.builder()
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .address(user.getAddress())
+                .phoneNumber(user.getPhoneNumber())
+                .profilePictureUrl(user.getProfilePictureUrl())
+                .bankDetails(bankResponse)
+                .build();
+    }
+
+    @Override
+    public ProfileResponse updateRestaurantProfileById(
+            Long restaurantId,
+            UpdateProfileRequest request
+    ) {
+
+        User user = userRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        if (user.getUserType() != UserType.RESTAURANT) {
+            throw new RuntimeException("User is not a restaurant");
+        }
+
+        if (request.getFullName() != null)
+            user.setFullName(request.getFullName());
+
+        if (request.getAddress() != null)
+            user.setAddress(request.getAddress());
+
+        if (request.getPhoneNumber() != null)
+            user.setPhoneNumber(request.getPhoneNumber());
+
+        if (request.getProfilePictureUrl() != null)
+            user.setProfilePictureUrl(request.getProfilePictureUrl());
+
+        userRepository.save(user);
+        BankDetails bankDetails =
+                bankRepo.findByUserId(user.getId()).orElse(null);
+        BankDetailsResponse bankResponse = null;
+        if (bankDetails != null) {
+            bankResponse = BankDetailsResponse.builder()
+                    .id(bankDetails.getId())
+                    .userId(bankDetails.getUserId())
+                    .bankName(bankDetails.getBankName())
+                    .accountNumber(bankDetails.getAccountNumber())
+                    .iBanNumber(bankDetails.getIBanNumber())
+                    .taxNumber(bankDetails.getTaxNumber())
+                    .build();
+        }
+
+
+        return new ProfileResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getAddress(),
+                user.getPhoneNumber(),
+                user.getProfilePictureUrl(),
+                bankResponse
+        );
+    }
+
+
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
       try{
