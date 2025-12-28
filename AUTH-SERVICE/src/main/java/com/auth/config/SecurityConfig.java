@@ -26,6 +26,10 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer ::  disable)
                 .authorizeHttpRequests(req->{
                     req.requestMatchers("/auth/register-user","/auth/login","/auth/change-password","/auth/register-restaurant","/auth/registerCostumer","/auth/**").permitAll();
+                    req.requestMatchers(
+                            "/restaurants/**"
+                    ).permitAll();
+                    req.requestMatchers("/profile/**").authenticated();
                     req.anyRequest().authenticated();
                 }).userDetailsService(userDetailsService())
                 .httpBasic(Customizer.withDefaults());
