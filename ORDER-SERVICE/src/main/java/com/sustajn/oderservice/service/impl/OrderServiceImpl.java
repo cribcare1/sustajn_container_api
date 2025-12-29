@@ -4,6 +4,7 @@ import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Order;
 import com.sustajn.oderservice.entity.ReturnOrder;
+import com.sustajn.oderservice.exception.ResourceNotFoundException;
 import com.sustajn.oderservice.feign.service.AuthClient;
 import com.sustajn.oderservice.feign.service.InventoryFeignClient;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
@@ -381,7 +382,8 @@ public class OrderServiceImpl implements OrderService {
                                         p != null ? p.getProductName() : null,
                                         p != null ? p.getCapacity() : null,
                                         b.getQuantity(),
-                                        p != null ? p.getProductImageUrl() : null
+                                        p != null ? p.getProductImageUrl() : null,
+                                        p!= null ? p.getProductUniqueId() : null
                                 );
                             })
                             .toList();
@@ -399,6 +401,7 @@ public class OrderServiceImpl implements OrderService {
                             .orderId(first.getOrderId())
                             .restaurantId(first.getRestaurantId())
                             .restaurantName(restaurant != null ? restaurant.getName() : null)
+                            .restaurantAddress(restaurant!= null ? restaurant.getName() : null)
                             .productCount(productList.size())
                             .totalContainerCount(totalContainers)
                             .orderDate(dt.toLocalDate().toString())
@@ -423,5 +426,119 @@ public class OrderServiceImpl implements OrderService {
             return response;
         }
     }
+    @Override
+    public Map<String, Object> getOrderDetailsByOrderId(Long orderId) {
 
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // 1️⃣ Fetch all order items for this orderId
+            List<BorrowOrder> orderItems =
+                    borrowOrderRepository.findAllByOrderId(orderId);
+
+            if (orderItems == null || orderItems.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "No order details found for given orderId");
+                response.put("data", null);
+                return response;
+            }
+
+            BorrowOrder first = orderItems.get(0);
+
+            // 2️⃣ Collect product + restaurant ids
+            List<Integer> productIds = orderItems.stream()
+                    .map(b -> b.getProductId().intValue())
+                    .distinct()
+                    .toList();
+
+            List<Long> restaurantIds = List.of(first.getRestaurantId());
+
+            // 3️⃣ Fetch Product Details
+            List<ProductResponse> products =
+                    inventoryFeignClient.getProductsByIds(productIds);
+
+            Map<Long, ProductResponse> productMap = products.stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getProductId().longValue(),
+                            p -> p
+                    ));
+
+            // 4️⃣ Fetch Restaurant Details
+            List<RestaurantRegisterResponse> restaurants =
+                    authClient.getRestaurantsByIds(restaurantIds);
+
+            RestaurantRegisterResponse restaurant =
+                    restaurants.isEmpty() ? null : restaurants.get(0);
+
+            // 5️⃣ Build product list response
+            List<ProductOrderListResponse> productList = orderItems.stream()
+                    .map(b -> {
+                        ProductResponse p = productMap.get(b.getProductId());
+                        return new ProductOrderListResponse(
+                                b.getProductId().intValue(),
+                                p != null ? p.getProductName() : null,
+                                p != null ? p.getCapacity() : null,
+                                b.getQuantity(),
+                                p != null ? p.getProductImageUrl() : null,
+                                p != null ? p.getProductUniqueId() : null
+                        );
+                    })
+                    .toList();
+
+            int totalContainers = orderItems.stream()
+                    .mapToInt(BorrowOrder::getQuantity)
+                    .sum();
+
+            // 6️⃣ Final Response Object (same structure as before)
+            OrderListDetails details = OrderListDetails.builder()
+                    .orderId(first.getOrderId())
+                    .restaurantId(first.getRestaurantId())
+                    .restaurantName(restaurant != null ? restaurant.getName() : null)
+                    .restaurantAddress(restaurant != null ? restaurant.getAddress() : null)
+                    .productCount(productList.size())
+                    .totalContainerCount(totalContainers)
+                    .orderDate(first.getBorrowedAt().toLocalDate().toString())
+                    .orderTime(first.getBorrowedAt().toLocalTime().toString())
+                    .productOrderListResponseList(productList)
+                    .build();
+
+            response.put("status", "success");
+            response.put("message", "Order details fetched successfully");
+            response.put("data", details);
+            return response;
+        }
+        catch (Exception ex) {
+
+            response.put("status", "error");
+            response.put("message", "Failed to fetch order details");
+            response.put("data", null);
+            return response;
+        }
+    }
+
+
+    @Override
+    public Map<String,Object> approveOrder(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        // If already approved — no update needed
+        if ("APPROVED".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new RuntimeException("Order is already APPROVED");
+        }
+
+        // Allow only pending → approved
+        if (!"PENDING".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new RuntimeException("Only PENDING orders can be approved");
+        }
+
+        order.setOrderStatus("APPROVED");
+        orderRepository.save(order);
+
+        Map<String,Object> response = new HashMap<>();
+        response.put("status","success");
+        response.put("message", "Order status updated to APPROVED");
+        return response;
+    }
 }

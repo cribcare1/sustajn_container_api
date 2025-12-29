@@ -58,4 +58,5 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
             @Param("year") int year
     );
 
+    List<BorrowOrder> findAllByOrderId(Long orderId);
 }

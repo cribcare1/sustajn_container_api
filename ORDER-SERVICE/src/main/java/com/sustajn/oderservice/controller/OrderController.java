@@ -56,4 +56,15 @@ public class OrderController {
         Map<String, Object> response = orderService.getMonthWiseOrders(userId, year);
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/details/{orderId}")
+    public ResponseEntity<?> getOrderDetailsByOrderId(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.getOrderDetailsByOrderId(orderId));
+    }
+
+
+    @PostMapping("/approve/{orderId}")
+    public ResponseEntity<Map<String,Object>> approveOrder(@PathVariable Long orderId) {
+        return ResponseEntity.ok(orderService.approveOrder(orderId));
+    }
 }

@@ -16,4 +16,5 @@ public class ProductResponse {
     private Double price;
     private String productImageUrl;
     private Integer capacity;
+    private String productUniqueId;
 }

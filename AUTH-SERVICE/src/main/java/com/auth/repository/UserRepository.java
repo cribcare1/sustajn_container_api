@@ -29,7 +29,8 @@ public interface UserRepository extends JpaRepository<User,Long> {
         u.fullName,
         u.email,
         u.phoneNumber,
-        u.profilePictureUrl
+        u.profilePictureUrl,
+        u.address
     )
     FROM User u
     WHERE u.id IN :ids
