@@ -1,8 +1,10 @@
 package com.auth.service;
 
+
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.RestaurantFeedbackRequest;
 import com.auth.response.LoginResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,11 @@ public interface UserService {
             RestaurantRegistrationRequest request,
             MultipartFile profileImage
     );
+    Map<String, Object> submitRestaurantFeedback(
+            RestaurantFeedbackRequest request
+    );
+
+
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable);
     public Map<String, Object> getActiveCustomersMap(Pageable pageable);
 }

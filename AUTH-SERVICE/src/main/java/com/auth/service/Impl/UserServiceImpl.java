@@ -8,7 +8,10 @@ import com.auth.repository.BankDetailsRepository;
 import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
+import com.auth.repository.RestaurantFeedbackRepository;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.RestaurantFeedbackRequest;
+
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
@@ -41,7 +44,10 @@ public class UserServiceImpl implements UserService {
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
-//    private final  fileUploadService;
+    private final RestaurantFeedbackRepository restaurantFeedbackRepository;
+
+
+    //    private final  fileUploadService;
     @Override
     public LoginResponse generateToken(String username) {
         User user = userRepository.findByUserName(username)
@@ -84,6 +90,34 @@ public class UserServiceImpl implements UserService {
                 savedUser.getUserType().name()
         );
     }
+    @Override
+    public Map<String, Object> submitRestaurantFeedback(
+            RestaurantFeedbackRequest request
+    ) {
+
+        User restaurant = userRepository.findById(request.getRestaurantId())
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        if (restaurant.getUserType() != UserType.RESTAURANT) {
+            throw new RuntimeException("User is not a restaurant");
+        }
+
+        RestaurantFeedback feedback = RestaurantFeedback.builder()
+                .restaurantId(request.getRestaurantId())
+                .rating(request.getRating())
+                .subject(request.getSubject())
+                .remarks(request.getRemarks())
+                .build();
+
+        restaurantFeedbackRepository.save(feedback);
+
+        return Map.of(
+                "status", "SUCCESS",
+                "message", "Feedback submitted successfully"
+        );
+    }
+
+
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
       try{
