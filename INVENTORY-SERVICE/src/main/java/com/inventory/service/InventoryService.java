@@ -2,6 +2,7 @@ package com.inventory.service;
 
 import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
+import com.inventory.dto.ProductResponse;
 import com.inventory.request.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,4 +26,6 @@ public interface InventoryService {
     public Map<String,Object> getAdminDashboardData();
 
     public Map<String, Object> addContainer(AddContainerRequest request, MultipartFile image) ;
-    }
+
+    List<ProductResponse> getProductsByIds(List<Integer> ids);
+}

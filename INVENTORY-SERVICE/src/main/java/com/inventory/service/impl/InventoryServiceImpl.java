@@ -3,6 +3,7 @@ package com.inventory.service.impl;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
+import com.inventory.dto.ProductResponse;
 import com.inventory.dto.RestaurantInventoryViewResponse;
 import com.inventory.entity.AdminInventoryMaster;
 import com.inventory.entity.AdminInventoryMasterAudit;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InventoryServiceImpl implements InventoryService {
 
-    private final ContainerTypeRepository repository;
+    private final ContainerTypeRepository containerTypeRepository;
     private final FileStorageUtil fileStorageUtil;
     private final NotificationFeignClientService notificationFeignClientService;
     private final AdminInventoryMasterRepository masterRepo;
@@ -49,21 +50,21 @@ public class InventoryServiceImpl implements InventoryService {
 
         if (request.getId() != null) {
             // Update case
-            containerType = repository.findById(request.getId())
+            containerType = containerTypeRepository.findById(request.getId())
                     .orElseThrow(() ->
                             new ResourceNotFoundException("Container Type not found with ID: " + request.getId()));
 
             // Name changed? then validate unique
             if (request.getName() != null &&
                     !containerType.getName().equalsIgnoreCase(request.getName()) &&
-                    repository.existsByNameIgnoreCase(request.getName())) {
+                    containerTypeRepository.existsByNameIgnoreCase(request.getName())) {
 
                 throw new DuplicateResourceException("Container type name already exists: " + request.getName());
             }
 
         } else {
             // Create case
-            if (repository.existsByNameIgnoreCase(request.getName())) {
+            if (containerTypeRepository.existsByNameIgnoreCase(request.getName())) {
                 throw new DuplicateResourceException("Container type name already exists: " + request.getName());
             }
             containerType = new ContainerType();
@@ -92,7 +93,7 @@ public class InventoryServiceImpl implements InventoryService {
             containerType.setImageUrl(url);
         }
 
-        ContainerType saved = repository.save(containerType);
+        ContainerType saved = containerTypeRepository.save(containerType);
 
         Map<String, Object> response = new HashMap<>();
         response.put(InventoryConstant.STATUS, InventoryConstant.SUCCESS);
@@ -107,7 +108,7 @@ public class InventoryServiceImpl implements InventoryService {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            List<ContainerTypeResponse> activeContainers = repository.findActiveContainerTypes();
+            List<ContainerTypeResponse> activeContainers = containerTypeRepository.findActiveContainerTypes();
 
             if (activeContainers.isEmpty()) {
                 response.put(InventoryConstant.STATUS, InventoryConstant.SUCCESS);
@@ -138,7 +139,7 @@ public class InventoryServiceImpl implements InventoryService {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            ContainerType containerType = repository.findById(id)
+            ContainerType containerType = containerTypeRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Container Type not found with ID: " + id));
 
             if (InventoryConstant.INACTIVE.equalsIgnoreCase(containerType.getStatus())) {
@@ -149,7 +150,7 @@ public class InventoryServiceImpl implements InventoryService {
             }
 
             containerType.setStatus(InventoryConstant.INACTIVE);
-            repository.save(containerType);
+            containerTypeRepository.save(containerType);
 
             response.put(InventoryConstant.STATUS, InventoryConstant.SUCCESS);
             response.put(InventoryConstant.MESSAGE, "Container Type marked as inactive successfully.");
@@ -465,7 +466,7 @@ public class InventoryServiceImpl implements InventoryService {
             }
 
             // 2️⃣ Check container existence
-            ContainerType containerType = repository
+            ContainerType containerType = containerTypeRepository
                     .findByNameIgnoreCase(request.getContainerName())
                     .orElse(null);
 
@@ -497,7 +498,7 @@ public class InventoryServiceImpl implements InventoryService {
                         .status("active")
                         .build();
 
-                containerType = repository.save(containerType);
+                containerType = containerTypeRepository.save(containerType);
             }
 
             // 4️⃣ Fetch or create inventory master
@@ -560,5 +561,13 @@ public class InventoryServiceImpl implements InventoryService {
         return response;
     }
 
+
+    @Override
+    public List<ProductResponse> getProductsByIds(List<Integer> ids) {
+        if (ids == null || ids.isEmpty()) {
+            throw new IllegalArgumentException("Product ID list cannot be empty");
+        }
+        return containerTypeRepository.findProductResponsesByIds(ids);
+    }
 
 }

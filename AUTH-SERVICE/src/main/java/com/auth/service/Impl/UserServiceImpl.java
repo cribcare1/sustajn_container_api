@@ -1,5 +1,6 @@
 package com.auth.service.Impl;
 
+import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
 import com.auth.feignClient.service.NotificationFeignClientService;
@@ -9,6 +10,7 @@ import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.response.*;
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
@@ -17,6 +19,7 @@ import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
 
 import com.auth.service.UserService;
+import com.auth.util.DistanceUtil;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +34,7 @@ import com.auth.request.UpdateProfileRequest;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -537,6 +538,80 @@ public class UserServiceImpl implements UserService {
             response.put("details", e.getMessage());
         }
         return response;
+    }
+
+    @Override
+    public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds) {
+        return userRepository.findRestaurantsByIds(restaurantIds,UserType.RESTAURANT,AccountStatus.active);
+    }
+
+
+    public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // Input validation
+            if (keyword == null || keyword.trim().isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "Search keyword cannot be empty");
+                response.put("searchData", Collections.emptyList());
+                return response;
+            }
+
+            // Fetch restaurants from repository
+            List<User> restaurants = userRepository.searchRestaurantsByKeyword(keyword);
+
+            if (restaurants.isEmpty()) {
+                response.put("status", "success");
+                response.put("message", "No restaurants found for the given keyword");
+                response.put("searchData", Collections.emptyList());
+                return response;
+            }
+
+            // Map restaurants to response DTO with distance
+            List<RestaurantSearchResponse> restaurantList = restaurants.stream()
+                    .map(r -> {
+                        double distanceKm = 0.0;
+                        BigDecimal lat = r.getLatitude();
+                        BigDecimal lon = r.getLongitude();
+
+                        if (lat != null && lon != null) {
+                            try {
+                                distanceKm = DistanceUtil.calculateDistance(
+                                        currentLat, currentLon, lat.doubleValue(), lon.doubleValue()
+                                );
+                            } catch (Exception e) {
+                                // Ignore distance calculation errors, distance will remain 0
+                            }
+                        }
+                        // If lat/lon is null, distance will remain 0 (or you can set to -1 if you want)
+
+                        return new RestaurantSearchResponse(
+                                r.getId(),
+                                r.getFullName(),
+                                r.getAddress(),
+                                r.getLatitude(),
+                                r.getLongitude(),
+                                distanceKm,
+                                r.getProfilePictureUrl()
+                        );
+                    })
+                    .sorted(Comparator.comparingDouble(RestaurantSearchResponse::getDistanceKm))
+                    .collect(Collectors.toList());
+
+
+            // Prepare map response
+            response.put("status", "success");
+            response.put("message", "Restaurants fetched successfully");
+            response.put("searchData", restaurantList);
+            return response;
+
+        } catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Unable to search restaurants at the moment. Please try again later.");
+            response.put("searchData", Collections.emptyList());
+            return response;
+        }
     }
 
 }

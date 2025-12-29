@@ -34,4 +34,8 @@ public class Order extends BaseEntity{
 
     @Column(nullable = false, unique = true)
     private String transactionId;
+
+    //private String typeOfOrder;
+
+    private String orderStatus;
 }

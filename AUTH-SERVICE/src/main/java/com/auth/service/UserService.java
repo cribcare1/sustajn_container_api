@@ -4,6 +4,7 @@ import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.response.LoginResponse;
+import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.auth.request.UpdateProfileRequest;
 
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -39,9 +41,7 @@ public interface UserService {
     );
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable);
     public Map<String, Object> getActiveCustomersMap(Pageable pageable);
-
-
-
-
+    public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds);
+    public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon);
 
 }

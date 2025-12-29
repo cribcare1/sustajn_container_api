@@ -10,6 +10,7 @@ import com.auth.request.LoginRequest;
 import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.request.UpdateProfileRequest;
 import com.auth.response.LoginResponse;
+import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,6 +28,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -240,4 +242,17 @@ public class AuthController {
         return userService.updateRestaurantProfileById(restaurantId, request);
     }
 
+
+    @PostMapping("/by-ids")
+    public List<RestaurantRegisterResponse> getRestaurants(@RequestBody List<Long> ids) {
+        return userService.getAllActiveRestaurantsByListOfIds(ids);
+    }
+
+    @GetMapping("/searchRestaurant")
+    public ResponseEntity<?> searchRestaurant(  @RequestParam String keyword,
+                                                @RequestParam double lat,
+                                                @RequestParam double lon) {
+        Map<String,Object> response= userService.searchRestaurants(keyword,lat,lon);
+        return ResponseEntity.ok(response);
+    }
 }
