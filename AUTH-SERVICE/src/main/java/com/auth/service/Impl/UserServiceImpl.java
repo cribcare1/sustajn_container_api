@@ -8,14 +8,14 @@ import com.auth.repository.BankDetailsRepository;
 import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
-import com.auth.repository.RestaurantFeedbackRepository;
 import com.auth.request.RestaurantRegistrationRequest;
-import com.auth.request.RestaurantFeedbackRequest;
-
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.response.RestaurantRegisterResponse;
+import com.auth.response.ProfileResponse;
+import com.auth.response.BankDetailsResponse;
+
 import com.auth.service.UserService;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
@@ -25,6 +25,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.auth.request.UpdateProfileRequest;
+
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -44,10 +46,7 @@ public class UserServiceImpl implements UserService {
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
-    private final RestaurantFeedbackRepository restaurantFeedbackRepository;
-
-
-    //    private final  fileUploadService;
+//    private final  fileUploadService;
     @Override
     public LoginResponse generateToken(String username) {
         User user = userRepository.findByUserName(username)
@@ -91,29 +90,94 @@ public class UserServiceImpl implements UserService {
         );
     }
     @Override
-    public Map<String, Object> submitRestaurantFeedback(
-            RestaurantFeedbackRequest request
-    ) {
 
-        User restaurant = userRepository.findById(request.getRestaurantId())
+    public ProfileResponse getRestaurantProfileById(Long restaurantId) {
+
+
+        User user = userRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
-        if (restaurant.getUserType() != UserType.RESTAURANT) {
+        if (user.getUserType() != UserType.RESTAURANT) {
+            throw new RuntimeException("User is not a restaurant");
+        }
+        BankDetails bankDetails =
+                bankRepo.findByUserId(user.getId()).orElse(null);
+
+
+        BankDetailsResponse bankResponse = null;
+
+        if (bankDetails != null) {
+            bankResponse = BankDetailsResponse.builder()
+                    .id(bankDetails.getId())
+                    .userId(bankDetails.getUserId())
+                    .bankName(bankDetails.getBankName())
+                    .accountNumber(bankDetails.getAccountNumber())
+                    .iBanNumber(bankDetails.getIBanNumber())
+                    .taxNumber(bankDetails.getTaxNumber())
+                    .build();
+        }
+
+
+        return ProfileResponse.builder()
+                .id(user.getId())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .address(user.getAddress())
+                .phoneNumber(user.getPhoneNumber())
+                .profilePictureUrl(user.getProfilePictureUrl())
+                .bankDetails(bankResponse)
+                .build();
+    }
+
+    @Override
+    public ProfileResponse updateRestaurantProfileById(
+            Long restaurantId,
+            UpdateProfileRequest request
+    ) {
+
+        User user = userRepository.findById(restaurantId)
+                .orElseThrow(() -> new RuntimeException("Restaurant not found"));
+
+        if (user.getUserType() != UserType.RESTAURANT) {
             throw new RuntimeException("User is not a restaurant");
         }
 
-        RestaurantFeedback feedback = RestaurantFeedback.builder()
-                .restaurantId(request.getRestaurantId())
-                .rating(request.getRating())
-                .subject(request.getSubject())
-                .remarks(request.getRemarks())
-                .build();
+        if (request.getFullName() != null)
+            user.setFullName(request.getFullName());
 
-        restaurantFeedbackRepository.save(feedback);
+        if (request.getAddress() != null)
+            user.setAddress(request.getAddress());
 
-        return Map.of(
-                "status", "SUCCESS",
-                "message", "Feedback submitted successfully"
+        if (request.getPhoneNumber() != null)
+            user.setPhoneNumber(request.getPhoneNumber());
+
+        if (request.getProfilePictureUrl() != null)
+            user.setProfilePictureUrl(request.getProfilePictureUrl());
+
+        userRepository.save(user);
+        BankDetails bankDetails =
+                bankRepo.findByUserId(user.getId()).orElse(null);
+        BankDetailsResponse bankResponse = null;
+        if (bankDetails != null) {
+            bankResponse = BankDetailsResponse.builder()
+                    .id(bankDetails.getId())
+                    .userId(bankDetails.getUserId())
+                    .bankName(bankDetails.getBankName())
+                    .accountNumber(bankDetails.getAccountNumber())
+                    .iBanNumber(bankDetails.getIBanNumber())
+                    .taxNumber(bankDetails.getTaxNumber())
+                    .build();
+        }
+
+
+        return new ProfileResponse(
+                user.getId(),
+                user.getFullName(),
+                user.getEmail(),
+                user.getAddress(),
+                user.getPhoneNumber(),
+                user.getProfilePictureUrl(),
+                bankResponse
         );
     }
 

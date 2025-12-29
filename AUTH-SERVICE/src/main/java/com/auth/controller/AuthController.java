@@ -1,4 +1,5 @@
 package com.auth.controller;
+
 import com.auth.exception.BadRequestException;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
@@ -7,13 +8,12 @@ import com.auth.repository.UserRepository;
 import com.auth.request.ChangePasswordRequest;
 import com.auth.request.LoginRequest;
 import com.auth.request.RestaurantRegistrationRequest;
-import com.auth.request.RestaurantFeedbackRequest;
+import com.auth.request.UpdateProfileRequest;
 import com.auth.response.LoginResponse;
-//import com.auth.response.RestaurantFeedbackResponse;
+import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -30,12 +30,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Map;
 import java.util.Optional;
 
-
-@Slf4j
 @RestController
-
-@RequestMapping("/auth")
 @RequiredArgsConstructor
+@RequestMapping("/auth")
+@Slf4j
 public class AuthController {
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
@@ -89,7 +87,7 @@ public class AuthController {
             @RequestBody LoginRequest loginRequest) {
 
         try {
-            log.info("inside login method");
+            addlog.info("inside login method");
             Optional<User> userOpt = userRepository.findByUserName(loginRequest.getUserName());
             log.info("UserOpt: {}", userOpt);
             if (userOpt.isEmpty()) {
@@ -228,15 +226,18 @@ public class AuthController {
                 .contentType(MediaType.IMAGE_JPEG) // You can dynamically detect type if needed
                 .body(imageBytes);
     }
-    @PostMapping("/restaurant/feedback")
-    public ResponseEntity<Map<String, Object>> submitRestaurantFeedback(
-            @RequestBody RestaurantFeedbackRequest request
+    @GetMapping("/{restaurantId}/getProfile")
+    public ProfileResponse getRestaurantProfileById(
+            @PathVariable Long restaurantId
     ) {
-        return ResponseEntity.ok(
-                userService.submitRestaurantFeedback(request)
-        );
+        return userService.getRestaurantProfileById(restaurantId);
     }
-
-
+    @PutMapping("/{restaurantId}/profile")
+    public ProfileResponse updateRestaurantProfileById(
+            @PathVariable Long restaurantId,
+            @RequestBody UpdateProfileRequest request
+    ) {
+        return userService.updateRestaurantProfileById(restaurantId, request);
+    }
 
 }
