@@ -15,4 +15,5 @@ public class ProductOrderListResponse {
     private Integer capacity;
     private int containerCount;   // 👈 new field
     private String productImageUrl;
+    private String productUniqueId;
 }

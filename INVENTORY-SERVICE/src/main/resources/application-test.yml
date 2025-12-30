@@ -3,9 +3,9 @@ spring:
     name: INVENTORY-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-bitter-darkness-a122sbpg-pooler.ap-southeast-1.aws.neon.tech:5432/INVENTORY_SERVICE?sslmode=require
+    url: jdbc:postgresql://ep-withered-unit-a1m1n89u-pooler.ap-southeast-1.aws.neon.tech:5432/inventory_service?sslmode=require
     username: neondb_owner
-    password: npg_lkA9tfR2eHQI
+    password: npg_ByIJD8VdA1Ur
     driver-class-name: org.postgresql.Driver
 
   jpa:

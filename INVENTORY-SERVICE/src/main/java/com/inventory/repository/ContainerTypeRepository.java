@@ -34,7 +34,8 @@ public interface ContainerTypeRepository extends JpaRepository<ContainerType,Int
             c.description,
             CAST(c.costPerUnit AS double),
             c.imageUrl,
-            c.capacityMl
+            c.capacityMl,
+            c.productId
         )
         FROM ContainerType c
         WHERE c.id IN :ids

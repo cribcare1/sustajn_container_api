@@ -13,6 +13,7 @@ public class OrderListDetails {
     private Long orderId;
     private Long restaurantId;
     private String restaurantName;
+    private String restaurantAddress;
     private Integer productCount;
     private Integer totalContainerCount;
     private String orderDate;

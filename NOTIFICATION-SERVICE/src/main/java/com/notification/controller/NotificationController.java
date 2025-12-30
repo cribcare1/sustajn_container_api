@@ -1,15 +1,18 @@
 package com.notification.controller;
 
+import com.notification.dto.DeviceTokenRequest;
 import com.notification.dto.ForgotRequest;
+import com.notification.dto.NotificationRequestNew;
 import com.notification.dto.VerifyRequest;
+import com.notification.entity.DeviceToken;
+import com.notification.service.DeviceTokenService;
 import com.notification.service.EmailService;
+import com.notification.service.PushNotificationService;
 import com.notification.service.TokenService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -19,11 +22,16 @@ public class NotificationController {
 
     private final TokenService tokenService;
     private final EmailService emailService;
+    private final PushNotificationService notificationService;
+    private final DeviceTokenService deviceTokenService;
+
 
     @Autowired
-    public NotificationController(TokenService tokenService, EmailService emailService) {
+    public NotificationController(TokenService tokenService, EmailService emailService,PushNotificationService notificationService,DeviceTokenService deviceTokenService) {
         this.tokenService = tokenService;
         this.emailService = emailService;
+        this.notificationService=notificationService;
+        this.deviceTokenService=deviceTokenService;
     }
 
     @PostMapping("/forgot-password")
@@ -43,4 +51,22 @@ public class NotificationController {
         return ResponseEntity.ok(Map.of("message","token verified. You may reset the password now.","status","success"));
 
     }
+
+    @PostMapping("/send")
+    public ResponseEntity<String> sendNotification(
+            @RequestBody NotificationRequestNew request
+    ) {
+        String result = notificationService.sendNotificationToMultipleDevices(request);
+        return ResponseEntity.ok(result);
+    }
+
+
+    @PostMapping("/registerOrUpdateDeviceToken")
+    public ResponseEntity<DeviceToken> registerOrUpdateToken(
+            DeviceTokenRequest deviceTokenRequest
+    ) {
+        DeviceToken saved = deviceTokenService.upsertUserDeviceToken(deviceTokenRequest.getUserId(),deviceTokenRequest.getDeviceToken(), deviceTokenRequest.getDeviceType());
+        return ResponseEntity.ok(saved);
+    }
+
 }
