@@ -11,6 +11,8 @@ import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.request.UpdateProfileRequest;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
+import com.auth.request.FeedbackRequest;
+import com.auth.response.FeedbackResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -254,5 +256,24 @@ public class AuthController {
                                                 @RequestParam double lon) {
         Map<String,Object> response= userService.searchRestaurants(keyword,lat,lon);
         return ResponseEntity.ok(response);
+    }
+
+
+    @PostMapping("/feedback")
+    public ResponseEntity<?> submitFeedback(@RequestBody FeedbackRequest request) {
+        return ResponseEntity.ok(userService.submitFeedback(request));
+    }
+
+    // Single API: /auth/feedback/fetch?id=1&type=RESTAURANT
+    @GetMapping("/feedback/fetch")
+    public ResponseEntity<?> getFeedback(
+            @RequestParam Long id,
+            @RequestParam String type
+    ) {
+        try {
+            return ResponseEntity.ok(userService.getFeedbackByType(id, type));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of("status", "error", "message", e.getMessage()));
+        }
     }
 }

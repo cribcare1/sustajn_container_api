@@ -17,6 +17,9 @@ import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
+import com.auth.repository.FeedbackRepository; // Import exists
+import com.auth.request.FeedbackRequest;
+import com.auth.response.FeedbackResponse;
 
 import com.auth.service.UserService;
 import com.auth.util.DistanceUtil;
@@ -47,13 +50,12 @@ public class UserServiceImpl implements UserService {
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
-//    private final  fileUploadService;
+    private final FeedbackRepository feedbackRepository;
+
     @Override
     public LoginResponse generateToken(String username) {
         User user = userRepository.findByUserName(username)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
-
-        // Validate password here…
 
         String token = jwtUtil.generateToken(username);
 
@@ -90,23 +92,18 @@ public class UserServiceImpl implements UserService {
                 savedUser.getUserType().name()
         );
     }
+
     @Override
-
     public ProfileResponse getRestaurantProfileById(Long restaurantId) {
-
-
         User user = userRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
         if (user.getUserType() != UserType.RESTAURANT) {
             throw new RuntimeException("User is not a restaurant");
         }
-        BankDetails bankDetails =
-                bankRepo.findByUserId(user.getId()).orElse(null);
-
+        BankDetails bankDetails = bankRepo.findByUserId(user.getId()).orElse(null);
 
         BankDetailsResponse bankResponse = null;
-
         if (bankDetails != null) {
             bankResponse = BankDetailsResponse.builder()
                     .id(bankDetails.getId())
@@ -117,7 +114,6 @@ public class UserServiceImpl implements UserService {
                     .taxNumber(bankDetails.getTaxNumber())
                     .build();
         }
-
 
         return ProfileResponse.builder()
                 .id(user.getId())
@@ -135,7 +131,6 @@ public class UserServiceImpl implements UserService {
             Long restaurantId,
             UpdateProfileRequest request
     ) {
-
         User user = userRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
@@ -182,26 +177,89 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    // ... existing imports ...
 
+    // 1. UPDATED SUBMIT METHOD
+    @Override
+    public Map<String, Object> submitFeedback(FeedbackRequest request) {
+        try {
+            // Changed request.getSenderId() to request.getCustomerId()
+            User customer = userRepository.findById(request.getCustomerId())
+                    .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-    public Map<String,Object> changePassword(Long userId, String newPassword){
-      try{
-          User user = userRepository.findById(userId)
-                  .orElseThrow(() -> new RuntimeException("User not found"));
-          user.setPasswordHash(passwordEncoder.encode(newPassword));
-          userRepository.save(user);
-          return Map.of(
-                  "message", "Password changed successfully",
-                  "status", "success"
-          );
-      } catch (Exception e){
-          return Map.of(
-                  "message", "Error changing password: " + e.getMessage(),
-                  "status", "error"
-          );
-      }
+            Feedback feedback = Feedback.builder()
+                    .customer(customer) // Changed .sender(sender) to .customer(customer)
+                    .restaurantId(request.getRestaurantId())
+                    .rating(request.getRating())
+                    .subject(request.getSubject())
+                    .remark(request.getRemark())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            feedbackRepository.save(feedback);
+
+            return Map.of(
+                    "status", "success",
+                    "message", "Feedback submitted successfully"
+            );
+        } catch (Exception e) {
+            return Map.of(
+                    "status", "error",
+                    "message", "Error submitting feedback: " + e.getMessage()
+            );
+        }
     }
 
+    // 2. NEW UNIFIED GET METHOD
+    @Override
+    public List<FeedbackResponse> getFeedbackByType(Long id, String type) {
+        List<Feedback> feedbacks;
+
+        if ("RESTAURANT".equalsIgnoreCase(type)) {
+            feedbacks = feedbackRepository.findByRestaurantId(id);
+        } else if ("CUSTOMER".equalsIgnoreCase(type)) {
+            feedbacks = feedbackRepository.findByCustomerId(id);
+        } else {
+            throw new RuntimeException("Invalid type. Use 'RESTAURANT' or 'CUSTOMER'");
+        }
+
+        return feedbacks.stream().map(this::mapToFeedbackResponse).collect(Collectors.toList());
+    }
+
+    // 3. UPDATED MAPPER
+    private FeedbackResponse mapToFeedbackResponse(Feedback f) {
+        return FeedbackResponse.builder()
+                .id(f.getId())
+                .customerName(f.getCustomer().getFullName())            // Changed from sender
+
+                .restaurantId(f.getRestaurantId())
+                .rating(f.getRating())
+                .subject(f.getSubject())
+                .remark(f.getRemark())
+                .createdAt(f.getCreatedAt())
+                .build();
+    }
+
+
+    // --- FIX 2: DELETED THE EXTRA CLOSING BRACE '}' HERE ---
+
+    public Map<String,Object> changePassword(Long userId, String newPassword){
+        try{
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            return Map.of(
+                    "message", "Password changed successfully",
+                    "status", "success"
+            );
+        } catch (Exception e){
+            return Map.of(
+                    "message", "Error changing password: " + e.getMessage(),
+                    "status", "error"
+            );
+        }
+    }
 
     public Map<String,Object> changePassword(String email, String newPassword){
         try{
@@ -230,9 +288,6 @@ public class UserServiceImpl implements UserService {
         Map<String, Object> response = new HashMap<>();
 
         try {
-
-            // ---------------- VALIDATIONS ----------------
-
             if (request.getEmail() == null || request.getEmail().isBlank()) {
                 return error("Email is required");
             }
@@ -249,25 +304,18 @@ public class UserServiceImpl implements UserService {
                 return error("Password must be at least 6 characters");
             }
 
-
-            // ---------------- UPLOAD PROFILE IMAGE ----------------
             String profileImageUrl = null;
-
             if (profileImage != null && !profileImage.isEmpty()) {
                 profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
-                System.err.println("profileImageUrl = " + profileImageUrl);
             }
 
-
-            // ---------------- CREATE USER ----------------
             User user = User.builder()
                     .userType(UserType.RESTAURANT)
                     .fullName(request.getFullName())
                     .email(request.getEmail())
-                    .userName(request.getEmail())    // Email acts as username
+                    .userName(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
-//                    .dateOfBirth(request.getDateOfBirth())
                     .address(request.getAddress())
                     .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
                     .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
@@ -279,8 +327,6 @@ public class UserServiceImpl implements UserService {
 
             User savedUser = userRepository.save(user);
 
-
-            // ---------------- BASIC DETAILS ----------------
             BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
                     .restaurantId(savedUser.getId())
                     .speciality(request.getBasicDetails().getSpeciality())
@@ -290,8 +336,6 @@ public class UserServiceImpl implements UserService {
 
             basicRepo.save(basic);
 
-
-            // ---------------- BANK DETAILS ----------------
             BankDetails bank = BankDetails.builder()
                     .userId(savedUser.getId())
                     .bankName(request.getBankDetails().getBankName())
@@ -301,8 +345,6 @@ public class UserServiceImpl implements UserService {
 
             bankRepo.save(bank);
 
-
-            // ---------------- SOCIAL MEDIA LINKS ----------------
             for (RestaurantRegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
                 SocialMediaDetails media = SocialMediaDetails.builder()
                         .restaurantId(savedUser.getId())
@@ -312,8 +354,6 @@ public class UserServiceImpl implements UserService {
                 socialRepo.save(media);
             }
 
-
-            // ---------------- RESPONSE DTO ----------------
             RestaurantRegisterResponse data = RestaurantRegisterResponse.builder()
                     .restaurantId(savedUser.getId())
                     .name(savedUser.getFullName())
@@ -329,7 +369,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
     private Map<String, Object> error(String message) {
         Map<String, Object> map = new HashMap<>();
         map.put("status", "error");
@@ -338,68 +377,33 @@ public class UserServiceImpl implements UserService {
         return map;
     }
 
-
     @Transactional
     @Override
     public Map<String, Object> registerUserWithBankDetails(
             RestaurantRegistrationRequest request,
             MultipartFile profileImage
     ) {
-
         try {
+            if (request == null) throw new IllegalArgumentException("Request body is missing");
+            if (request.getEmail() == null || request.getEmail().isBlank()) throw new IllegalArgumentException("Email is required");
+            if (userRepository.existsByEmail(request.getEmail())) throw new IllegalStateException("Email already registered");
+            if (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()) throw new IllegalArgumentException("Phone number is required");
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) throw new IllegalStateException("Phone number already registered");
+            if (request.getPassword() == null || request.getPassword().length() < 6) throw new IllegalArgumentException("Password must be at least 6 characters");
 
-            // ---------------- VALIDATIONS ----------------
-            if (request == null) {
-                throw new IllegalArgumentException("Request body is missing");
-            }
-
-            if (request.getEmail() == null || request.getEmail().isBlank()) {
-                throw new IllegalArgumentException("Email is required");
-            }
-
-            if (userRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalStateException("Email already registered");
-            }
-
-            if (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()) {
-                throw new IllegalArgumentException("Phone number is required");
-            }
-
-            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-                throw new IllegalStateException("Phone number already registered");
-            }
-
-            if (request.getPassword() == null || request.getPassword().length() < 6) {
-                throw new IllegalArgumentException("Password must be at least 6 characters");
-            }
-
-//            if (request.getBankDetails() == null) {
-//                throw new IllegalArgumentException("Bank details are required");
-//            }
-
-            // ---------------- PROFILE IMAGE UPLOAD ----------------
             String profileImageUrl = null;
-
             if (profileImage != null && !profileImage.isEmpty()) {
-
-                if (profileImage.getContentType() == null ||
-                        !profileImage.getContentType().startsWith("image/")) {
+                if (profileImage.getContentType() == null || !profileImage.getContentType().startsWith("image/")) {
                     throw new IllegalArgumentException("Only image files are allowed");
                 }
-
-             if (profileImage != null && !profileImage.isEmpty()) {
                 profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
-                System.err.println("profileImageUrl = " + profileImageUrl);
             }
 
-            }
             LocalDate dob = null;
             if (request.getDateOfBirth() != null) {
                 dob = LocalDate.parse(request.getDateOfBirth());
             }
 
-
-            // ---------------- CREATE USER ----------------
             User user = User.builder()
                     .userType(UserType.USER)
                     .fullName(request.getFullName())
@@ -409,12 +413,8 @@ public class UserServiceImpl implements UserService {
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .dateOfBirth(dob)
                     .address(request.getAddress())
-                    .latitude(request.getLatitude() != null
-                            ? BigDecimal.valueOf(request.getLatitude())
-                            : null)
-                    .longitude(request.getLongitude() != null
-                            ? BigDecimal.valueOf(request.getLongitude())
-                            : null)
+                    .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
+                    .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
                     .profilePictureUrl(profileImageUrl)
                     .accountStatus(AccountStatus.active)
                     .emailVerified(false)
@@ -423,11 +423,8 @@ public class UserServiceImpl implements UserService {
 
             User savedUser = userRepository.save(user);
 
-//            // ---------------- CREATE BANK DETAILS ----------------
             if( request.getBankDetails() != null) {
-                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
-                        request.getBankDetails();
-
+                RestaurantRegistrationRequest.BankDetailsRequest bankReq = request.getBankDetails();
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
                         .bankName(bankReq.getBankName())
@@ -435,12 +432,9 @@ public class UserServiceImpl implements UserService {
                         .iBanNumber(bankReq.getIBanNumber())
                         .taxNumber(bankReq.getTaxNumber())
                         .build();
-
                 bankRepo.save(bankDetails);
             }
 
-
-            // ---------------- SUCCESS RESPONSE ----------------
             Map<String, Object> success = new HashMap<>();
             success.put("status", "success");
             success.put("message", "User registered successfully with bank details");
@@ -450,16 +444,11 @@ public class UserServiceImpl implements UserService {
             return success;
 
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            // Known validation / business errors
             return error(ex.getMessage());
-
         } catch (Exception ex) {
-            // Log full error internally
             return error(ex.getMessage());
         }
     }
-
-
 
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable) {
         Map<String, Object> response = new HashMap<>();
@@ -470,7 +459,6 @@ public class UserServiceImpl implements UserService {
                     pageable
             );
 
-            // Map Users to RestaurantBasicDetailsResponse
             List<RestaurantBasicDetailsResponse> data = restaurants.stream()
                     .map(user -> new RestaurantBasicDetailsResponse(
                             user.getId(),
@@ -479,11 +467,10 @@ public class UserServiceImpl implements UserService {
                             user.getPhoneNumber(),
                             user.getEmail(),
                             user.getProfilePictureUrl(),
-                            0 // container count, can update dynamically later
+                            0
                     ))
                     .collect(Collectors.toList());
 
-            // Prepare response map
             response.put("status", "success");
             response.put("restaurantData", data);
             response.put("page", restaurants.getNumber());
@@ -509,22 +496,17 @@ public class UserServiceImpl implements UserService {
                     pageable
             );
 
-            // Map Users to RestaurantBasicDetailsResponse
             List<CustomerDetailsBasic> data = restaurants.stream()
                     .map(user -> new CustomerDetailsBasic(
                             user.getId(),
-                            user.getEmail(),              // email
-                            user.getPhoneNumber(),        // mobile
-                            user.getFullName(),           // fullName
-                            user.getProfilePictureUrl(),  // profileImage
-                            0,                            // borrowedCount
-                            0,                            // returnedCount
-                            0                             // pendingCount
+                            user.getEmail(),
+                            user.getPhoneNumber(),
+                            user.getFullName(),
+                            user.getProfilePictureUrl(),
+                            0, 0, 0
                     ))
                     .collect(Collectors.toList());
 
-
-            // Prepare response map
             response.put("status", "success");
             response.put("customersData", data);
             response.put("page", restaurants.getNumber());
@@ -545,12 +527,9 @@ public class UserServiceImpl implements UserService {
         return userRepository.findRestaurantsByIds(restaurantIds,UserType.RESTAURANT,AccountStatus.active);
     }
 
-
     public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon) {
         Map<String, Object> response = new HashMap<>();
-
         try {
-            // Input validation
             if (keyword == null || keyword.trim().isEmpty()) {
                 response.put("status", "error");
                 response.put("message", "Search keyword cannot be empty");
@@ -558,7 +537,6 @@ public class UserServiceImpl implements UserService {
                 return response;
             }
 
-            // Fetch restaurants from repository
             List<User> restaurants = userRepository.searchRestaurantsByKeyword(keyword);
 
             if (restaurants.isEmpty()) {
@@ -568,7 +546,6 @@ public class UserServiceImpl implements UserService {
                 return response;
             }
 
-            // Map restaurants to response DTO with distance
             List<RestaurantSearchResponse> restaurantList = restaurants.stream()
                     .map(r -> {
                         double distanceKm = 0.0;
@@ -581,10 +558,9 @@ public class UserServiceImpl implements UserService {
                                         currentLat, currentLon, lat.doubleValue(), lon.doubleValue()
                                 );
                             } catch (Exception e) {
-                                // Ignore distance calculation errors, distance will remain 0
+                                // Ignore
                             }
                         }
-                        // If lat/lon is null, distance will remain 0 (or you can set to -1 if you want)
 
                         return new RestaurantSearchResponse(
                                 r.getId(),
@@ -599,8 +575,6 @@ public class UserServiceImpl implements UserService {
                     .sorted(Comparator.comparingDouble(RestaurantSearchResponse::getDistanceKm))
                     .collect(Collectors.toList());
 
-
-            // Prepare map response
             response.put("status", "success");
             response.put("message", "Restaurants fetched successfully");
             response.put("searchData", restaurantList);
@@ -614,4 +588,4 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-}
+} // --- CLASS CLOSES CORRECTLY HERE ---
