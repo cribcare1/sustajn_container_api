@@ -5,7 +5,7 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "feedbacks")
+@Table(name = "feedback")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,7 +27,7 @@ public class Feedback {
     private String rating;
     private String subject;
 
-    @Column(length = 1000)
+    @Column(length = 3500)
     private String remark;
 
     private LocalDateTime createdAt;

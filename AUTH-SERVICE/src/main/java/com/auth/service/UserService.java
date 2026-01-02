@@ -6,6 +6,8 @@ import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
+import com.auth.request.UpdateBankDetailsRequest;
+import com.auth.response.BankDetailsResponse;
 import com.auth.request.FeedbackRequest;
 import com.auth.response.FeedbackResponse;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +53,7 @@ public interface UserService {
 
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
+    BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
 }
 
 

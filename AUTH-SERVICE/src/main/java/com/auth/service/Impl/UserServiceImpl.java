@@ -19,6 +19,7 @@ import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
 import com.auth.repository.FeedbackRepository; // Import exists
 import com.auth.request.FeedbackRequest;
+import com.auth.request.UpdateBankDetailsRequest;
 import com.auth.response.FeedbackResponse;
 
 import com.auth.service.UserService;
@@ -243,7 +244,45 @@ public class UserServiceImpl implements UserService {
     }
 
 
+    @Override
+    public BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request) {
+        // 1. Verify User exists
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // 2. Find existing bank details OR create new ones
+        BankDetails bankDetails = bankRepo.findByUserId(user.getId())
+                .orElse(BankDetails.builder()
+                        .userId(user.getId())
+                        .build());
+
+        // 3. Update fields if they are not null
+        if (request.getBankName() != null) {
+            bankDetails.setBankName(request.getBankName());
+        }
+        if (request.getAccountNumber() != null) {
+            bankDetails.setAccountNumber(request.getAccountNumber());
+        }
+        if (request.getIBanNumber() != null) {
+            bankDetails.setIBanNumber(request.getIBanNumber());
+        }
+        if (request.getTaxNumber() != null) {
+            bankDetails.setTaxNumber(request.getTaxNumber());
+        }
+
+        // 4. Save to DB
+        BankDetails savedBank = bankRepo.save(bankDetails);
+
+        // 5. Return Response
+        return BankDetailsResponse.builder()
+                .id(savedBank.getId())
+                .userId(savedBank.getUserId())
+                .bankName(savedBank.getBankName())
+                .accountNumber(savedBank.getAccountNumber())
+                .iBanNumber(savedBank.getIBanNumber())
+                .taxNumber(savedBank.getTaxNumber())
+                .build();
+    }
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
         try{
