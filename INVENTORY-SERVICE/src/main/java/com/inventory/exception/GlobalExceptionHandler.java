@@ -61,7 +61,7 @@ public class GlobalExceptionHandler {
     @ResponseBody
     public ResponseEntity<Map<String, Object>> handleBadRequest(HttpMessageNotReadableException ex) {
         log.warn("Malformed JSON request: {}", ex.getMessage());
-        return new ResponseEntity<>(buildResponse("Malformed request body", "error", null), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(buildResponse("Malformed request body", "error", null), HttpStatus.OK);
     }
 
     @ExceptionHandler(InventoryException.class)
@@ -69,33 +69,40 @@ public class GlobalExceptionHandler {
         Map<String, Object> error = new HashMap<>();
         error.put("status", "error");
         error.put("message", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        return ResponseEntity.status(HttpStatus.OK).body(error);
+    }
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<?> handleBusinessException(BusinessException ex) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("status", "error");
+        error.put("message", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.OK).body(error);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseBody
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         log.warn("Illegal argument: {}", ex.getMessage());
-        return new ResponseEntity<>(buildResponse(ex.getMessage(), "error", null), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(buildResponse(ex.getMessage(), "error", null), HttpStatus.OK);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     @ResponseBody
     public ResponseEntity<Map<String, Object>> handleResourceNotFoundException(ResourceNotFoundException ex) {
         log.warn("Illegal argument: {}", ex.getMessage());
-        return new ResponseEntity<>(buildResponse(ex.getMessage(), "error", null), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(buildResponse(ex.getMessage(), "error", null), HttpStatus.OK);
     }
     @ExceptionHandler(DuplicateResourceException.class)
     @ResponseBody
     public ResponseEntity<Map<String, Object>> handleDuplicateResourceException(DuplicateResourceException ex) {
         log.warn("Illegal argument: {}", ex.getMessage());
-        return new ResponseEntity<>(buildResponse(ex.getMessage(), "error", null), HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(buildResponse(ex.getMessage(), "error", null), HttpStatus.OK);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseBody
     public ResponseEntity<Map<String, Object>> handleAll(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
-        return new ResponseEntity<>(buildResponse("Internal server error", "error", null), HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(buildResponse("Internal server error"+ex.getMessage(), "error", null), HttpStatus.OK);
     }
 }

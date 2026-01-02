@@ -6,6 +6,7 @@ import com.inventory.dto.ErrorResponses;
 import com.inventory.dto.ProductResponse;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
+import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ public class InventoryController {
 
     private final InventoryService inventoryService;
     private final ObjectMapper objectMapper;
+    private final AdminRestaurantOrderService adminOrderService;
 
     @PostMapping("/saveOrUpdateContainerType")
     public ResponseEntity<?> saveOrUpdateContainerType(
@@ -172,5 +174,42 @@ public class InventoryController {
     @PostMapping("/by-ids")
     public List<ProductResponse> getProductsByIds(@RequestBody List<Integer> ids) {
         return inventoryService.getProductsByIds(ids);
+    }
+
+
+    // 1️⃣ Raise a new order request
+    @PostMapping("/raiseOrderRequest")
+    public ResponseEntity<?> raiseOrderRequest(
+            @RequestBody AdminOrderCreateRequest request
+    ) {
+        Map<String, Object> response = adminOrderService.raiseOrderRequest(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 2️⃣ Approve an order by Admin
+    @PostMapping("/approveOrder")
+    public ResponseEntity<?> approveOrder(
+            @RequestBody AdminOrderApproveRequest request
+    ) {
+        Map<String, Object> response = adminOrderService.approveOrder(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 3️⃣ Mark order as delivered (restaurant received the containers)
+    @PostMapping("/markOrderAsDelivered/{orderId}")
+    public ResponseEntity<?> markOrderAsDelivered(
+            @PathVariable("orderId") Long orderId
+    ) {
+        Map<String, Object> response = adminOrderService.markOrderAsDelivered(orderId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 4️⃣ Get available containers for a restaurant
+    @GetMapping("/restaurant/{restaurantId}/containers")
+    public ResponseEntity<?> getAvailableContainers(
+            @PathVariable("restaurantId") Long restaurantId
+    ) {
+        Map<String, Object> response = adminOrderService.getAvailableContainers(restaurantId);
+        return ResponseEntity.ok(response);
     }
 }

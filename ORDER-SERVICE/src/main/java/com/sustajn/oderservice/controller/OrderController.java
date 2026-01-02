@@ -67,4 +67,19 @@ public class OrderController {
     public ResponseEntity<Map<String,Object>> approveOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.approveOrder(orderId));
     }
+
+
+    @GetMapping("/monthWiseReturnedDetails")
+    public ResponseEntity<Map<String, Object>> getMonthWiseReturnOrders(
+            @RequestParam Long userId,
+            @RequestParam int year) {
+        Map<String, Object> response = orderService.getMonthWiseReturnOrders(userId, year);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/productsSummary/{userId}")
+    public ResponseEntity<?> getBorrowSummary(@PathVariable Long userId) {
+        return ResponseEntity.ok(orderService.getBorrowedProductSummary(userId));
+    }
+
 }
