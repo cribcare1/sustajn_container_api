@@ -405,6 +405,7 @@ public class UserServiceImpl implements UserService {
                     .fullName(request.getFullName())
                     .email(request.getEmail())
                     .userName(request.getEmail())
+                    .customerId(generateUniqueCustomerId(request.getFullName()))
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .dateOfBirth(dob)
@@ -613,5 +614,45 @@ public class UserServiceImpl implements UserService {
             return response;
         }
     }
+
+
+    public String generateUniqueCustomerId(String fullName) {
+
+        // Remove spaces and take first 4 characters
+        String cleanedName = fullName.replaceAll("\\s+", "");
+        String namePart = cleanedName.length() >= 4
+                ? cleanedName.substring(0, 4).toUpperCase()
+                : cleanedName.toUpperCase();
+
+        // Date in DDMMYY format
+        LocalDate today = LocalDate.now();
+        String datePart = String.format("%02d%02d%02d",
+                today.getDayOfMonth(),
+                today.getMonthValue(),
+                today.getYear() % 100
+        );
+
+        // Base ID
+        String baseId = namePart + datePart;
+
+        // Fetch existing IDs from DB
+        List<String> existingIds = userRepository.findCustomerIdStartingWith(baseId);
+
+        if (existingIds.isEmpty()) {
+            return baseId;
+        }
+
+        // Find next available counter
+        int counter = 1;
+        String newId;
+
+        do {
+            newId = String.format("%s_%02d", baseId, counter);
+            counter++;
+        } while (existingIds.contains(newId));
+
+        return newId;
+    }
+
 
 }

@@ -52,4 +52,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
             "AND r.accountStatus = 'active'")
     List<User> searchRestaurantsByKeyword(@Param("keyword") String keyword);
 
+    @Query("SELECT u.customerId FROM User u WHERE u.customerId = :baseId")
+    List<String> findCustomerIdStartingWith(String baseId);
+
 }
