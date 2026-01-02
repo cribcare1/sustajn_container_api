@@ -27,7 +27,7 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
 
     private final AdminOrderRepository adminOrderRepository;
     private final AdminOrderItemRepository adminOrderItemRepository;
-    private RestaurantContainerInventoryRepository inventoryRepository;
+    private final RestaurantContainerInventoryRepository inventoryRepository;
 
     @Override
     @Transactional
@@ -78,17 +78,16 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
             adminOrderItemRepository.saveAll(items);
 
 
-            response.put("success", true);
+            response.put("status", "success");
             response.put("message", "Order request submitted successfully");
 
         } catch (BusinessException ex) {
-            response.put("success", false);
+            response.put("status", "error");
             response.put("message", ex.getMessage());
 
         } catch (Exception ex) {
-            response.put("success", false);
+            response.put("status", "error");
             response.put("message", "Something went wrong while creating order");
-            response.put("error", ex.getMessage());
         }
 
         return response;

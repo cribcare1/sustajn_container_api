@@ -1,7 +1,7 @@
 package com.auth.service;
 
 import com.auth.model.User;
-import com.auth.model.UserDto;
+import com.auth.request.UserDto;
 import com.auth.request.RestaurantRegistrationRequest;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;

@@ -1,6 +1,5 @@
 package com.auth.service.Impl;
 
-import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
 import com.auth.feignClient.service.NotificationFeignClientService;
@@ -10,6 +9,7 @@ import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.UserDto;
 import com.auth.response.*;
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;

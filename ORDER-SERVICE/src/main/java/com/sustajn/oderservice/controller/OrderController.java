@@ -57,13 +57,13 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/details/{orderId}")
+    @GetMapping("/getOrderDetailsByOrderId/{orderId}")
     public ResponseEntity<?> getOrderDetailsByOrderId(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.getOrderDetailsByOrderId(orderId));
     }
 
 
-    @PostMapping("/approve/{orderId}")
+    @PostMapping("/approveOrder/{orderId}")
     public ResponseEntity<Map<String,Object>> approveOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.approveOrder(orderId));
     }

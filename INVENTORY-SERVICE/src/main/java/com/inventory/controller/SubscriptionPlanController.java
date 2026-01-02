@@ -34,7 +34,7 @@ public class SubscriptionPlanController {
         return new ResponseEntity<>(resp, code);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/getById/{id}")
     public ResponseEntity<Map<String, Object>> getById(@PathVariable Integer id) {
         Map<String, Object> resp = service.getSubscriptionPlanById(id);
         String status = (String) resp.getOrDefault("status", "error");
@@ -42,7 +42,7 @@ public class SubscriptionPlanController {
         return new ResponseEntity<>(resp, code);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/update/{id}")
     public ResponseEntity<Map<String, Object>> update(@PathVariable Integer id, @RequestBody SubscriptionPlan plan) {
         Map<String, Object> resp = service.updateSubscriptionPlan(id, plan);
         String status = (String) resp.getOrDefault("status", "error");
@@ -50,7 +50,7 @@ public class SubscriptionPlanController {
         return new ResponseEntity<>(resp, code);
     }
 
-    @DeleteMapping("/{id}")
+    @PostMapping("/delete/{id}")
     public ResponseEntity<Map<String, Object>> delete(@PathVariable Integer id) {
         Map<String, Object> resp = service.deleteSubscriptionPlan(id);
         String status = (String) resp.getOrDefault("status", "error");
@@ -58,7 +58,7 @@ public class SubscriptionPlanController {
         return new ResponseEntity<>(resp, code);
     }
 
-    @GetMapping
+    @GetMapping(name = "/getAllPlans")
     public ResponseEntity<Map<String, Object>> listAll() {
         Map<String, Object> resp = service.listAllPlans();
         String status = (String) resp.getOrDefault("status", "error");
@@ -66,7 +66,7 @@ public class SubscriptionPlanController {
         return new ResponseEntity<>(resp, code);
     }
 
-    @GetMapping("/summaries")
+    @GetMapping("/getPlanSummariesByStatus")
     public ResponseEntity<Map<String, Object>> summaries(@RequestParam(required = false) String status) {
         SubscriptionPlan.PlanStatus ps = null;
         if (status != null && !status.isBlank()) {

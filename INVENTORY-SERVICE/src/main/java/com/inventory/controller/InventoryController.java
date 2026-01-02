@@ -205,7 +205,7 @@ public class InventoryController {
     }
 
     // 4️⃣ Get available containers for a restaurant
-    @GetMapping("/restaurant/{restaurantId}/containers")
+    @GetMapping("/getAvailableContainers/{restaurantId}")
     public ResponseEntity<?> getAvailableContainers(
             @PathVariable("restaurantId") Long restaurantId
     ) {
