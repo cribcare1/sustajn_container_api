@@ -9,11 +9,13 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class ProductOrderListResponse {
-    private Integer productId;
+public class ProductDetailsResponse {
+    private Long orderId;
+    private Long productId;
     private String productName;
-    private Integer capacity;
-    private int containerCount;   // 👈 new field
+    private int quantity;
     private String productImageUrl;
+    private Long daysLeft;
     private String productUniqueId;
+    private Integer containerQuantity;
 }

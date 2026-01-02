@@ -58,4 +58,21 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
             @Param("year") int year
     );
 
+    List<BorrowOrder> findAllByOrderId(Long orderId);
+
+    @Query(value = """
+SELECT 
+    b.order_id,
+    b.product_id,
+    b.quantity AS borrowedQty,
+    COALESCE(SUM(r.returned_quantity), 0) AS returnedQty,
+    (b.quantity - COALESCE(SUM(r.returned_quantity), 0)) AS remainingQty,
+    o.order_date
+FROM borrow_orders b
+JOIN orders o ON b.order_id = o.id
+LEFT JOIN return_orders r ON r.borrow_order_id = b.id
+WHERE b.user_id = :userId
+GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
+""", nativeQuery = true)
+    List<Object[]> getProductBorrowReturnSummary(@Param("userId") Long userId);
 }

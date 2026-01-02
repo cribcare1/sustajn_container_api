@@ -3,9 +3,9 @@ spring:
     name: NOTIFICATION-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-cool-star-a1f4ko82-pooler.ap-southeast-1.aws.neon.tech:5432/AUTH_SERVICE?sslmode=require
+    url: jdbc:postgresql://ep-lively-flower-a1q3da31-pooler.ap-southeast-1.aws.neon.tech:5432/AUTH_SERVICE?sslmode=require
     username: neondb_owner
-    password: npg_c1NYetKqXkd3
+    password: npg_8vKelSCbyG2c
     driver-class-name: org.postgresql.Driver
 
   jpa:

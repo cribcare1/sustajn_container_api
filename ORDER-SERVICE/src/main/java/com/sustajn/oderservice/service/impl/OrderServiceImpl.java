@@ -4,6 +4,7 @@ import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Order;
 import com.sustajn.oderservice.entity.ReturnOrder;
+import com.sustajn.oderservice.exception.ResourceNotFoundException;
 import com.sustajn.oderservice.feign.service.AuthClient;
 import com.sustajn.oderservice.feign.service.InventoryFeignClient;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
@@ -19,10 +20,13 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -381,7 +385,8 @@ public class OrderServiceImpl implements OrderService {
                                         p != null ? p.getProductName() : null,
                                         p != null ? p.getCapacity() : null,
                                         b.getQuantity(),
-                                        p != null ? p.getProductImageUrl() : null
+                                        p != null ? p.getProductImageUrl() : null,
+                                        p!= null ? p.getProductUniqueId() : null
                                 );
                             })
                             .toList();
@@ -399,6 +404,7 @@ public class OrderServiceImpl implements OrderService {
                             .orderId(first.getOrderId())
                             .restaurantId(first.getRestaurantId())
                             .restaurantName(restaurant != null ? restaurant.getName() : null)
+                            .restaurantAddress(restaurant!= null ? restaurant.getName() : null)
                             .productCount(productList.size())
                             .totalContainerCount(totalContainers)
                             .orderDate(dt.toLocalDate().toString())
@@ -423,5 +429,332 @@ public class OrderServiceImpl implements OrderService {
             return response;
         }
     }
+    @Override
+    public Map<String, Object> getOrderDetailsByOrderId(Long orderId) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            // 1️⃣ Fetch all order items for this orderId
+            List<BorrowOrder> orderItems =
+                    borrowOrderRepository.findAllByOrderId(orderId);
+
+            if (orderItems == null || orderItems.isEmpty()) {
+                response.put("status", "error");
+                response.put("message", "No order details found for given orderId");
+                response.put("data", null);
+                return response;
+            }
+
+            BorrowOrder first = orderItems.get(0);
+
+            // 2️⃣ Collect product + restaurant ids
+            List<Integer> productIds = orderItems.stream()
+                    .map(b -> b.getProductId().intValue())
+                    .distinct()
+                    .toList();
+
+            List<Long> restaurantIds = List.of(first.getRestaurantId());
+
+            // 3️⃣ Fetch Product Details
+            List<ProductResponse> products =
+                    inventoryFeignClient.getProductsByIds(productIds);
+
+            Map<Long, ProductResponse> productMap = products.stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getProductId().longValue(),
+                            p -> p
+                    ));
+
+            // 4️⃣ Fetch Restaurant Details
+            List<RestaurantRegisterResponse> restaurants =
+                    authClient.getRestaurantsByIds(restaurantIds);
+
+            RestaurantRegisterResponse restaurant =
+                    restaurants.isEmpty() ? null : restaurants.get(0);
+
+            // 5️⃣ Build product list response
+            List<ProductOrderListResponse> productList = orderItems.stream()
+                    .map(b -> {
+                        ProductResponse p = productMap.get(b.getProductId());
+                        return new ProductOrderListResponse(
+                                b.getProductId().intValue(),
+                                p != null ? p.getProductName() : null,
+                                p != null ? p.getCapacity() : null,
+                                b.getQuantity(),
+                                p != null ? p.getProductImageUrl() : null,
+                                p != null ? p.getProductUniqueId() : null
+                        );
+                    })
+                    .toList();
+
+            int totalContainers = orderItems.stream()
+                    .mapToInt(BorrowOrder::getQuantity)
+                    .sum();
+
+            // 6️⃣ Final Response Object (same structure as before)
+            OrderListDetails details = OrderListDetails.builder()
+                    .orderId(first.getOrderId())
+                    .restaurantId(first.getRestaurantId())
+                    .restaurantName(restaurant != null ? restaurant.getName() : null)
+                    .restaurantAddress(restaurant != null ? restaurant.getAddress() : null)
+                    .productCount(productList.size())
+                    .totalContainerCount(totalContainers)
+                    .orderDate(first.getBorrowedAt().toLocalDate().toString())
+                    .orderTime(first.getBorrowedAt().toLocalTime().toString())
+                    .productOrderListResponseList(productList)
+                    .build();
+
+            response.put("status", "success");
+            response.put("message", "Order details fetched successfully");
+            response.put("data", details);
+            return response;
+        }
+        catch (Exception ex) {
+
+            response.put("status", "error");
+            response.put("message", "Failed to fetch order details");
+            response.put("data", null);
+            return response;
+        }
+    }
+
+
+    @Override
+    public Map<String,Object> approveOrder(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        // If already approved — no update needed
+        if ("APPROVED".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new RuntimeException("Order is already APPROVED");
+        }
+
+        // Allow only pending → approved
+        if (!"PENDING".equalsIgnoreCase(order.getOrderStatus())) {
+            throw new RuntimeException("Only PENDING orders can be approved");
+        }
+
+        order.setOrderStatus("APPROVED");
+        orderRepository.save(order);
+
+        Map<String,Object> response = new HashMap<>();
+        response.put("status","success");
+        response.put("message", "Order status updated to APPROVED");
+        return response;
+    }
+
+
+    @Override
+    public Map<String, Object> getMonthWiseReturnOrders(Long userId, int year) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            int currentMonth = LocalDate.now().getMonthValue();
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
+
+            // 1️⃣ Fetch return orders up to current month
+            List<ReturnOrder> returnOrders =
+                    returnOrderRepository.findAllByUserIdAndYear(userId, year)
+                            .stream()
+                            .filter(r -> r.getReturnedAt().getMonthValue() <= currentMonth)
+                            .collect(Collectors.toList());
+
+            // 2️⃣ Month map in DESC order (Dec -> … -> Jan)
+            Map<String, List<OrderListDetails>> monthWiseReturns = new LinkedHashMap<>();
+            for (int m = currentMonth; m >= 1; m--) {
+                String monthName = Month.of(m)
+                        .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+                monthWiseReturns.put(monthName, new ArrayList<>());
+            }
+
+            if (!returnOrders.isEmpty()) {
+
+                // 3️⃣ Collect product + restaurant ids
+                List<Integer> productIds = returnOrders.stream()
+                        .map(r -> r.getProductId().intValue())
+                        .distinct().toList();
+
+                List<Long> restaurantIds = returnOrders.stream()
+                        .map(ReturnOrder::getRestaurantId)
+                        .distinct().toList();
+
+                // 4️⃣ Product service
+                List<ProductResponse> products =
+                        inventoryFeignClient.getProductsByIds(productIds);
+
+                Map<Long, ProductResponse> productMap = products.stream()
+                        .collect(Collectors.toMap(
+                                p -> p.getProductId().longValue(), p -> p));
+
+                // 5️⃣ Restaurant service
+                List<RestaurantRegisterResponse> restaurants =
+                        authClient.getRestaurantsByIds(restaurantIds);
+
+                Map<Long, RestaurantRegisterResponse> restaurantMap = restaurants.stream()
+                        .collect(Collectors.toMap(
+                                RestaurantRegisterResponse::getRestaurantId, r -> r));
+
+                // 6️⃣ Group by borrowOrderId
+                Map<Long, List<ReturnOrder>> grouped =
+                        returnOrders.stream()
+                                .collect(Collectors.groupingBy(ReturnOrder::getBorrowOrderId));
+
+                // 7️⃣ Build response objects
+                for (Map.Entry<Long, List<ReturnOrder>> entry : grouped.entrySet()) {
+
+                    List<ReturnOrder> items = entry.getValue();
+                    ReturnOrder first = items.get(0);
+
+                    RestaurantRegisterResponse restaurant =
+                            restaurantMap.get(first.getRestaurantId());
+
+                    List<ProductOrderListResponse> productList = items.stream()
+                            .map(r -> {
+                                ProductResponse p = productMap.get(r.getProductId());
+                                return new ProductOrderListResponse(
+                                        r.getProductId().intValue(),
+                                        p != null ? p.getProductName() : null,
+                                        p != null ? p.getCapacity() : null,
+                                        r.getReturnedQuantity(),
+                                        p != null ? p.getProductImageUrl() : null,
+                                        p != null ? p.getProductUniqueId() : null
+                                );
+                            })
+                            .toList();
+
+                    int totalReturned = items.stream()
+                            .mapToInt(ReturnOrder::getReturnedQuantity)
+                            .sum();
+
+                    LocalDateTime dt = first.getReturnedAt();
+                    String monthName = Month.of(dt.getMonthValue())
+                            .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+
+                    OrderListDetails details = OrderListDetails.builder()
+                            .orderId(first.getBorrowOrderId())
+                            .restaurantId(first.getRestaurantId())
+                            .restaurantName(restaurant != null ? restaurant.getName() : null)
+                            .restaurantAddress(restaurant != null ? restaurant.getAddress() : null)
+                            .productCount(productList.size())
+                            .totalContainerCount(totalReturned)
+                            .orderDate(dt.toLocalDate().toString())
+                            .orderTime(dt.toLocalTime().format(timeFormatter)) // ⭐ AM/PM format
+                            .productOrderListResponseList(productList)
+                            .build();
+
+                    monthWiseReturns.get(monthName).add(details);
+                }
+            }
+
+            response.put("status", "success");
+            response.put("message", "Month-wise return orders fetched successfully");
+            response.put("value", monthWiseReturns);
+            return response;
+
+        } catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Failed to fetch month-wise return orders");
+            response.put("value", null);
+            return response;
+        }
+    }
+
+
+    @Override
+    public Map<String, Object> getBorrowedProductSummary(Long userId) {
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+
+            List<Object[]> rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+
+            if (rows == null || rows.isEmpty()) {
+                response.put("status", "success");
+                response.put("message", "No borrowed products found for user");
+                response.put("value", Collections.emptyList());
+                return response;
+            }
+
+            // 🔹 Collect all unique product IDs
+            Set<Integer> productIds = rows.stream()
+                    .map(r -> ((Number) r[1]).intValue())
+                    .collect(Collectors.toSet());
+
+            // 🔹 Fetch product details in ONE call
+            Map<Long, ProductResponse> productMap = new HashMap<>();
+            try {
+                List<ProductResponse> products =
+                        inventoryFeignClient.getProductsByIds(new ArrayList<>(productIds));
+
+                if (products != null) {
+                    productMap = products.stream()
+                            .collect(Collectors.toMap(
+                                    p -> p.getProductId().longValue(),
+                                    p -> p
+                            ));
+                }
+
+            } catch (Exception e) {
+                // Don’t fail the summary if product service is down
+                productMap = Collections.emptyMap();
+            }
+
+            List<ProductDetailsResponse> result = new ArrayList<>();
+
+            for (Object[] r : rows) {
+
+                Long orderId     = ((Number) r[0]).longValue();
+                Long productId   = ((Number) r[1]).longValue();
+                int borrowedQty  = ((Number) r[2]).intValue();
+                int returnedQty  = ((Number) r[3]).intValue();
+                int remainingQty = ((Number) r[4]).intValue();
+                Timestamp ts = (Timestamp) r[5];
+                LocalDateTime orderDate = ts != null ? ts.toLocalDateTime() : null;
+
+                // 🧮 Ensure non-negative
+                if (remainingQty < 0) remainingQty = 0;
+
+                // 🗓 Days Left (7-day rule)
+                long daysPassed = ChronoUnit.DAYS.between(
+                        orderDate.toLocalDate(), LocalDate.now()
+                );
+                long daysLeft = Math.max(0, 7 - daysPassed);
+
+                // 🎯 Get product from map
+                ProductResponse p = productMap.get(productId);
+
+                result.add(
+                        new ProductDetailsResponse(
+                                orderId,
+                                productId,
+                                p != null ? p.getProductName() : null,
+                                remainingQty,                                   // 👈 remaining qty
+                                p != null ? p.getProductImageUrl() : null,
+                                daysLeft,
+                                p != null ? p.getProductUniqueId() : null   ,
+                                p != null ? p.getCapacity() : null  // productCode
+                        )
+                );
+            }
+
+            response.put("status", "success");
+            response.put("message", "Borrowed product summary fetched successfully");
+            response.put("value", result);
+            return response;
+
+        } catch (Exception ex) {
+
+            response.put("status", "error");
+            response.put("message", "Failed to fetch borrowed product summary");
+            response.put("value", null);
+            response.put("error", ex.getMessage());
+            return response;
+        }
+    }
+
 
 }
