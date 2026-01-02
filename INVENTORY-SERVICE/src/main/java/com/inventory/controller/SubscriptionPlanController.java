@@ -2,6 +2,7 @@ package com.inventory.controller;
 
 import java.util.Map;
 
+import com.inventory.request.SubscriptionRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -80,6 +81,14 @@ public class SubscriptionPlanController {
         Map<String, Object> resp = service.getPlanSummaries(ps);
         String st = (String) resp.getOrDefault("status", "error");
         HttpStatus code = "success".equals(st) ? HttpStatus.OK : HttpStatus.INTERNAL_SERVER_ERROR;
+        return new ResponseEntity<>(resp, code);
+    }
+
+    @PostMapping("/upgradeUserSubscription")
+    public ResponseEntity<Map<String, Object>> upgradeUserSubscription(@RequestBody SubscriptionRequest subscriptionRequest) {
+        Map<String, Object> resp = service.upgradeSubscriptionDetails(subscriptionRequest);
+        String status = (String) resp.getOrDefault("status", "error");
+        HttpStatus code = "success".equals(status) ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
         return new ResponseEntity<>(resp, code);
     }
 }

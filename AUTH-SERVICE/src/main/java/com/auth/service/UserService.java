@@ -3,6 +3,7 @@ package com.auth.service;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.SubscriptionRequest;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
@@ -43,5 +44,8 @@ public interface UserService {
     public Map<String, Object> getActiveCustomersMap(Pageable pageable);
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds);
     public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon);
+
+    Map<String, Object> getUserById(Long userId);
+    Map<String, Object> upgradeUserSubscription(SubscriptionRequest subscriptionRequest);
 
 }

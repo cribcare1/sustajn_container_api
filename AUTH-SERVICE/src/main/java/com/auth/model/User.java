@@ -105,6 +105,9 @@ public class User {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
+    @Column(name = "subscription_plan_id")
+    private Integer subscriptionPlanId;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

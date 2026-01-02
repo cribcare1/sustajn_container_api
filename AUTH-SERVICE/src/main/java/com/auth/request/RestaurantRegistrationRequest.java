@@ -22,6 +22,7 @@ public class RestaurantRegistrationRequest {
     private String address;
     private Double latitude;
     private Double longitude;
+    private Integer subscriptionPlanId;
 
     // ========== BASIC RESTAURANT DETAILS ==========
     private BasicDetails basicDetails;
