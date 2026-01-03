@@ -18,6 +18,10 @@ import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
+import com.auth.repository.FeedbackRepository; // Import exists
+import com.auth.request.FeedbackRequest;
+import com.auth.request.UpdateBankDetailsRequest;
+import com.auth.response.FeedbackResponse;
 
 import com.auth.service.UserService;
 import com.auth.util.DistanceUtil;
@@ -48,7 +52,8 @@ public class UserServiceImpl implements UserService {
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
-//    private final  fileUploadService;
+    private final FeedbackRepository feedbackRepository;
+
     @Override
     public LoginResponse generateToken(String username) {
         User user = userRepository.findByUserName(username)
@@ -91,23 +96,18 @@ public class UserServiceImpl implements UserService {
                 savedUser.getUserType().name()
         );
     }
+
     @Override
-
     public ProfileResponse getRestaurantProfileById(Long restaurantId) {
-
-
         User user = userRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
         if (user.getUserType() != UserType.RESTAURANT) {
             throw new RuntimeException("User is not a restaurant");
         }
-        BankDetails bankDetails =
-                bankRepo.findByUserId(user.getId()).orElse(null);
-
+        BankDetails bankDetails = bankRepo.findByUserId(user.getId()).orElse(null);
 
         BankDetailsResponse bankResponse = null;
-
         if (bankDetails != null) {
             bankResponse = BankDetailsResponse.builder()
                     .id(bankDetails.getId())
@@ -118,7 +118,6 @@ public class UserServiceImpl implements UserService {
                     .taxNumber(bankDetails.getTaxNumber())
                     .build();
         }
-
 
         return ProfileResponse.builder()
                 .id(user.getId())
@@ -136,7 +135,6 @@ public class UserServiceImpl implements UserService {
             Long restaurantId,
             UpdateProfileRequest request
     ) {
-
         User user = userRepository.findById(restaurantId)
                 .orElseThrow(() -> new RuntimeException("Restaurant not found"));
 
@@ -183,26 +181,127 @@ public class UserServiceImpl implements UserService {
         );
     }
 
+    // ... existing imports ...
 
+    // 1. UPDATED SUBMIT METHOD
+    @Override
+    public Map<String, Object> submitFeedback(FeedbackRequest request) {
+        try {
+            // Changed request.getSenderId() to request.getCustomerId()
+            User customer = userRepository.findById(request.getCustomerId())
+                    .orElseThrow(() -> new RuntimeException("Customer not found"));
 
-    public Map<String,Object> changePassword(Long userId, String newPassword){
-      try{
-          User user = userRepository.findById(userId)
-                  .orElseThrow(() -> new RuntimeException("User not found"));
-          user.setPasswordHash(passwordEncoder.encode(newPassword));
-          userRepository.save(user);
-          return Map.of(
-                  "message", "Password changed successfully",
-                  "status", "success"
-          );
-      } catch (Exception e){
-          return Map.of(
-                  "message", "Error changing password: " + e.getMessage(),
-                  "status", "error"
-          );
-      }
+            Feedback feedback = Feedback.builder()
+                    .customer(customer) // Changed .sender(sender) to .customer(customer)
+                    .restaurantId(request.getRestaurantId())
+                    .rating(request.getRating())
+                    .subject(request.getSubject())
+                    .remark(request.getRemark())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            feedbackRepository.save(feedback);
+
+            return Map.of(
+                    "status", "success",
+                    "message", "Feedback submitted successfully"
+            );
+        } catch (Exception e) {
+            return Map.of(
+                    "status", "error",
+                    "message", "Error submitting feedback: " + e.getMessage()
+            );
+        }
     }
 
+    // 2. NEW UNIFIED GET METHOD
+    @Override
+    public List<FeedbackResponse> getFeedbackByType(Long id, String type) {
+        List<Feedback> feedbacks;
+
+        if ("RESTAURANT".equalsIgnoreCase(type)) {
+            feedbacks = feedbackRepository.findByRestaurantId(id);
+        } else if ("CUSTOMER".equalsIgnoreCase(type)) {
+            feedbacks = feedbackRepository.findByCustomerId(id);
+        } else {
+            throw new RuntimeException("Invalid type. Use 'RESTAURANT' or 'CUSTOMER'");
+        }
+
+        return feedbacks.stream().map(this::mapToFeedbackResponse).collect(Collectors.toList());
+    }
+
+    // 3. UPDATED MAPPER
+    private FeedbackResponse mapToFeedbackResponse(Feedback f) {
+        return FeedbackResponse.builder()
+                .id(f.getId())
+                .customerName(f.getCustomer().getFullName())            // Changed from sender
+
+                .restaurantId(f.getRestaurantId())
+                .rating(f.getRating())
+                .subject(f.getSubject())
+                .remark(f.getRemark())
+                .createdAt(f.getCreatedAt())
+                .build();
+    }
+
+
+    @Override
+    public BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request) {
+        // 1. Verify User exists
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 2. Find existing bank details OR create new ones
+        BankDetails bankDetails = bankRepo.findByUserId(user.getId())
+                .orElse(BankDetails.builder()
+                        .userId(user.getId())
+                        .build());
+
+        // 3. Update fields if they are not null
+        if (request.getBankName() != null) {
+            bankDetails.setBankName(request.getBankName());
+        }
+        if (request.getAccountNumber() != null) {
+            bankDetails.setAccountNumber(request.getAccountNumber());
+        }
+        if (request.getIBanNumber() != null) {
+            bankDetails.setIBanNumber(request.getIBanNumber());
+        }
+        if (request.getTaxNumber() != null) {
+            bankDetails.setTaxNumber(request.getTaxNumber());
+        }
+
+        // 4. Save to DB
+        BankDetails savedBank = bankRepo.save(bankDetails);
+
+        // 5. Return Response
+        return BankDetailsResponse.builder()
+                .id(savedBank.getId())
+                .userId(savedBank.getUserId())
+                .bankName(savedBank.getBankName())
+                .accountNumber(savedBank.getAccountNumber())
+                .iBanNumber(savedBank.getIBanNumber())
+                .taxNumber(savedBank.getTaxNumber())
+                .build();
+    }
+
+    public Map<String,Object> changePassword(Long userId, String newPassword){
+        try{
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
+            return Map.of(
+                    "message", "Password changed successfully",
+                    "status", "success"
+            );
+        } catch (Exception e){
+            return Map.of(
+                    "message", "Error changing password: " + e.getMessage(),
+                    "status", "error"
+            );
+        }
+    }
 
     public Map<String,Object> changePassword(String email, String newPassword){
         try{
@@ -231,9 +330,6 @@ public class UserServiceImpl implements UserService {
         Map<String, Object> response = new HashMap<>();
 
         try {
-
-            // ---------------- VALIDATIONS ----------------
-
             if (request.getEmail() == null || request.getEmail().isBlank()) {
                 return error("Email is required");
             }
@@ -250,25 +346,18 @@ public class UserServiceImpl implements UserService {
                 return error("Password must be at least 6 characters");
             }
 
-
-            // ---------------- UPLOAD PROFILE IMAGE ----------------
             String profileImageUrl = null;
-
             if (profileImage != null && !profileImage.isEmpty()) {
                 profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
-                System.err.println("profileImageUrl = " + profileImageUrl);
             }
 
-
-            // ---------------- CREATE USER ----------------
             User user = User.builder()
                     .userType(UserType.RESTAURANT)
                     .fullName(request.getFullName())
                     .email(request.getEmail())
-                    .userName(request.getEmail())    // Email acts as username
+                    .userName(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
-//                    .dateOfBirth(request.getDateOfBirth())
                     .address(request.getAddress())
                     .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
                     .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
@@ -280,8 +369,6 @@ public class UserServiceImpl implements UserService {
 
             User savedUser = userRepository.save(user);
 
-
-            // ---------------- BASIC DETAILS ----------------
             BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
                     .restaurantId(savedUser.getId())
                     .speciality(request.getBasicDetails().getSpeciality())

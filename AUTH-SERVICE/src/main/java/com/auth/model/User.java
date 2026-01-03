@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(name = "users", indexes = {
         @Index(name = "idx_email", columnList = "email"),
         @Index(name = "idx_user_id", columnList = "user_id"),
-        @Index(name = "idx_city_id", columnList = "city_id"),
+//        @Index(name = "idx_city_id", columnList = "city_id"),
         @Index(name = "idx_account_status", columnList = "account_status")
 })
 @Data
