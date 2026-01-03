@@ -171,7 +171,7 @@ public class InventoryController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/by-ids")
+    @PostMapping("/getProductsByIds")
     public List<ProductResponse> getProductsByIds(@RequestBody List<Integer> ids) {
         return inventoryService.getProductsByIds(ids);
     }

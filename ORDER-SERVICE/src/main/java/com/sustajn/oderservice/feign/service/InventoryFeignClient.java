@@ -13,7 +13,7 @@ import java.util.List;
         configuration = FeignClientConfig.class
 )
 public interface InventoryFeignClient {
-    @PostMapping(value = "/inventory/by-ids",consumes = "application/json"
+    @PostMapping(value = "/inventory/getProductsByIds",consumes = "application/json"
     )
     List<ProductResponse> getProductsByIds(@RequestBody List<Integer> ids);
 }
