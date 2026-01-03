@@ -358,6 +358,7 @@ public class UserServiceImpl implements UserService {
                     .userName(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .subscriptionPlanId(request.getSubscriptionPlanId())
                     .address(request.getAddress())
                     .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
                     .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
