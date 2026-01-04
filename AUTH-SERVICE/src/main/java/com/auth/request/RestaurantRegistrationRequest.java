@@ -19,7 +19,7 @@ public class RestaurantRegistrationRequest {
     private String password;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private String dateOfBirth;
-    private String address;
+    private AddressRequest address;
     private Double latitude;
     private Double longitude;
     private Integer subscriptionPlanId;
@@ -70,6 +70,20 @@ public class RestaurantRegistrationRequest {
     public static class SocialMediaRequest {
         private String socialMediaType;
         private String link;
+    }
+
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AddressRequest {
+        private String addressType;
+        private String flatDoorHouseDetails;
+        private String areaStreetCityBlockDetails;
+        private String poBoxOrPostalCode;
+        private String status;
     }
 }
 

@@ -8,10 +8,11 @@ import com.auth.request.*;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
-import com.auth.response.FeedbackResponse;
 import com.auth.request.UpdateBankDetailsRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
+import com.auth.validation.CreateGroup;
+import com.auth.validation.UpdateGroup;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +25,9 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -300,4 +301,24 @@ public class AuthController {
             ));
         }
     }
+
+    // save new address
+    @PostMapping("/saveAddress")
+    public ResponseEntity<?> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
+        return ResponseEntity.ok(userService.saveNewAddress(request));
+    }
+
+    //update address
+    @PostMapping("/updateAddress")
+    public ResponseEntity<?> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+        return ResponseEntity.ok(userService.updateAddress(request));
+    }
+
+    //Delete address
+    @PostMapping("/deleteAddress")
+    public ResponseEntity<?> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+        return ResponseEntity.ok(userService.deleteAddress(request));
+    }
+
+
 }

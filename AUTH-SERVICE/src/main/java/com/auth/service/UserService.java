@@ -1,20 +1,13 @@
 package com.auth.service;
 
+import com.auth.model.Address;
 import com.auth.model.User;
 import com.auth.model.UserDto;
-import com.auth.request.RestaurantRegistrationRequest;
-import com.auth.request.SubscriptionRequest;
-import com.auth.response.LoginResponse;
-import com.auth.response.RestaurantRegisterResponse;
-import com.auth.response.ProfileResponse;
-import com.auth.request.UpdateBankDetailsRequest;
-import com.auth.response.BankDetailsResponse;
-import com.auth.request.FeedbackRequest;
-import com.auth.response.FeedbackResponse;
+import com.auth.request.*;
+import com.auth.response.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import com.auth.request.UpdateProfileRequest;
 
 
 import java.util.List;
@@ -59,6 +52,14 @@ public interface UserService {
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
+
+//    Map<String, Object> getCustomerProfileDetails(Long userId);
+
+    ApiResponse<Address> saveNewAddress(AddressRequest request);
+
+    ApiResponse<Address> updateAddress(AddressRequest request);
+
+    ApiResponse<Address> deleteAddress(AddressRequest request);
 }
 
 
