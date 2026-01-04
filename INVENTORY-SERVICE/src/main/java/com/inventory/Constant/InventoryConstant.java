@@ -10,4 +10,5 @@ public class InventoryConstant {
     public static final String ERROR = "error";
     public static final String CONTAINER="container";
 
+    public static final String DETAILS = "details";
 }

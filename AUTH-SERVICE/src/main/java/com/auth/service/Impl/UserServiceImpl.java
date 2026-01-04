@@ -10,6 +10,7 @@ import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.SubscriptionRequest;
 import com.auth.response.*;
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
@@ -357,6 +358,7 @@ public class UserServiceImpl implements UserService {
                     .userName(request.getEmail())
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .subscriptionPlanId(request.getSubscriptionPlanId())
                     .address(request.getAddress())
                     .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
                     .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
@@ -492,8 +494,10 @@ public class UserServiceImpl implements UserService {
                     .fullName(request.getFullName())
                     .email(request.getEmail())
                     .userName(request.getEmail())
+                    .customerId(generateUniqueCustomerId(request.getFullName()))
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
+                    .subscriptionPlanId(request.getSubscriptionPlanId())
                     .dateOfBirth(dob)
                     .address(request.getAddress())
                     .latitude(request.getLatitude() != null
@@ -700,5 +704,108 @@ public class UserServiceImpl implements UserService {
             return response;
         }
     }
+
+    @Override
+    public Map<String, Object> getUserById(Long userId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (userId == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "User ID is required");
+                return Map.of();
+            }
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
+                response.put(AuthConstant.MESSAGE, "User details fetched successfully");
+                response.put(AuthConstant.DATA, user);
+                return response;
+            }
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.MESSAGE, "User not found");
+            return response;
+        } catch (Exception e) {
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.MESSAGE, "Failed to fetch user details");
+            response.put(AuthConstant.DETAILS, e.getMessage());
+        }
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> upgradeUserSubscription(SubscriptionRequest subscriptionRequest) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (subscriptionRequest.getUserId() == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "User ID is required");
+                return response;
+            }
+            if (subscriptionRequest.getSubscriptionPlanId() == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Subscription Plan ID is required");
+                return response;
+            }
+            Optional<User> userOpt = userRepository.findById(subscriptionRequest.getUserId());
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                user.setSubscriptionPlanId(subscriptionRequest.getSubscriptionPlanId());
+                userRepository.save(user);
+                response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
+                response.put(AuthConstant.MESSAGE, "User subscription updated successfully");
+                return response;
+            }
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.MESSAGE, "User not found");
+            return response;
+
+        } catch (Exception e) {
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.MESSAGE, "Failed to update user subscription");
+            response.put(AuthConstant.DETAILS, e.getMessage());
+        }
+        return response;
+    }
+
+
+    public String generateUniqueCustomerId(String fullName) {
+
+        // Remove spaces and take first 4 characters
+        String cleanedName = fullName.replaceAll("\\s+", "");
+        String namePart = cleanedName.length() >= 4
+                ? cleanedName.substring(0, 4).toUpperCase()
+                : cleanedName.toUpperCase();
+
+        // Date in DDMMYY format
+        LocalDate today = LocalDate.now();
+        String datePart = String.format("%02d%02d%02d",
+                today.getDayOfMonth(),
+                today.getMonthValue(),
+                today.getYear() % 100
+        );
+
+        // Base ID
+        String baseId = namePart + datePart;
+
+        // Fetch existing IDs from DB
+        List<String> existingIds = userRepository.findCustomerIdStartingWith(baseId);
+
+        if (existingIds.isEmpty()) {
+            return baseId;
+        }
+
+        // Find next available counter
+        int counter = 1;
+        String newId;
+
+        do {
+            newId = String.format("%s_%02d", baseId, counter);
+            counter++;
+        } while (existingIds.contains(newId));
+
+        return newId;
+    }
+
 
 }

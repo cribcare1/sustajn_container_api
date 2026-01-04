@@ -38,6 +38,9 @@ public class User {
     @Column(name = "full_name", length = 100)
     private String fullName;
 
+    @Column(name = "customer_id", length = 100, unique = true)
+    private String customerId;
+
 
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", length = 20)
@@ -101,6 +104,9 @@ public class User {
 
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
+
+    @Column(name = "subscription_plan_id")
+    private Integer subscriptionPlanId;
 
     @PrePersist
     protected void onCreate() {

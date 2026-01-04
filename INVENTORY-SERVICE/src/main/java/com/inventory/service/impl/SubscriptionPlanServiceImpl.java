@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.inventory.Constant.InventoryConstant;
+import com.inventory.feignClient.AuthFeignClient;
+import com.inventory.request.SubscriptionRequest;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,14 +18,11 @@ import com.inventory.service.SubscriptionPlanService;
 import com.inventory.dto.SubscriptionPlanSummary;
 
 @Service
+@RequiredArgsConstructor
 public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
     private final SubscriptionPlanRepository repository;
-
-    @Autowired
-    public SubscriptionPlanServiceImpl(SubscriptionPlanRepository repository) {
-        this.repository = repository;
-    }
+    private final AuthFeignClient authFeignClient;
 
     private Map<String, Object> buildResponse(String message, String status, Object data) {
         Map<String, Object> resp = new HashMap<>();
@@ -121,5 +122,60 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
             return buildResponse("Failed to retrieve summaries: " + ex.getMessage(), "error", null);
         }
     }
+
+
+    @Override
+    public Map<String, Object> upgradeSubscriptionDetails(SubscriptionRequest subscriptionRequest) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Validate user ID
+            if (subscriptionRequest.getUserId() == null) {
+                response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+                response.put(InventoryConstant.MESSAGE, "User ID is required!");
+                return response;
+            }
+            // Validate subscription plan ID
+            if (subscriptionRequest.getSubscriptionPlanId() == null) {
+                response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+                response.put(InventoryConstant.MESSAGE, "Subscription Plan ID is required!");
+                return response;
+            }
+            // Fetch the subscription plan
+            Optional<SubscriptionPlan> subscriptionPlanOptional = repository.findById(subscriptionRequest.getSubscriptionPlanId());
+            if (subscriptionPlanOptional.isEmpty()) {
+                response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+                response.put(InventoryConstant.MESSAGE, "Subscription Plan not found!");
+                return response;
+            }
+
+            // Validate User's current subscription and upgrade logic here
+            Map<String,Object> userResponse = authFeignClient.getUserDetails(subscriptionRequest.getUserId());
+            if (!InventoryConstant.SUCCESS.equals(userResponse.get(InventoryConstant.STATUS))) {
+                response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+                response.put(InventoryConstant.MESSAGE, "User not found!");
+                return response;
+            }
+
+            // Update user's subscription details via Auth Service
+            Map<String, Object> updateResponse = authFeignClient.upgradeSubscription(subscriptionRequest);
+            if (!InventoryConstant.SUCCESS.equals(updateResponse.get(InventoryConstant.STATUS))) {
+                response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+                response.put(InventoryConstant.MESSAGE, "Failed to upgrade subscription!");
+                return response;
+            }
+
+            response.put(InventoryConstant.STATUS, InventoryConstant.SUCCESS);
+            response.put(InventoryConstant.MESSAGE, "Subscription upgraded successfully!");
+            return response;
+
+        } catch (Exception e) {
+            response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+            response.put(InventoryConstant.MESSAGE, "Failed to update subscription details!");
+            response.put(InventoryConstant.DETAILS, e.getMessage());
+        }
+
+        return response;
+    }
+
 
 }

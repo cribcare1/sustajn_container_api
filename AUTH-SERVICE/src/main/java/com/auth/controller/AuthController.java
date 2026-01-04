@@ -1,14 +1,10 @@
 package com.auth.controller;
 
-import com.auth.exception.BadRequestException;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.repository.UserRepository;
-import com.auth.request.ChangePasswordRequest;
-import com.auth.request.LoginRequest;
-import com.auth.request.RestaurantRegistrationRequest;
-import com.auth.request.UpdateProfileRequest;
+import com.auth.request.*;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
@@ -259,6 +255,19 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/userDetails/{userId}")
+    public ResponseEntity<?> getUserById(@PathVariable Long userId) {
+        Map<String, Object> response = userService.getUserById(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/upgradeSubscription")
+    public ResponseEntity<?> upgradeUserSubscription(
+            @RequestBody SubscriptionRequest subscriptionRequest
+    ) {
+        Map<String, Object> response = userService.upgradeUserSubscription(subscriptionRequest);
+        return ResponseEntity.ok(response);
+    }
 
     @PostMapping("/submitFeedback")
     public ResponseEntity<?> submitFeedback(@RequestBody FeedbackRequest request) {
