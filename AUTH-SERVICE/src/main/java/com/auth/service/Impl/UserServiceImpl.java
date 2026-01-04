@@ -3,9 +3,7 @@ package com.auth.service.Impl;
 import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
-import com.auth.exception.BadRequestException;
 import com.auth.exception.ResourceNotFoundException;
-import com.auth.exception.SuccessResponse;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.*;
@@ -301,7 +299,7 @@ public class UserServiceImpl implements UserService {
 //    }
 
     @Override
-    public SuccessResponse saveNewAddress(AddressRequest request) {
+    public ApiResponse<Address> saveNewAddress(AddressRequest request) {
         // Save Address
         Address address = Address.builder()
                 .userId(request.getUserId())
@@ -313,14 +311,14 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         addressRepository.save(address);
-        return new SuccessResponse("Address created successfully", HttpStatus.OK);
+        return new ApiResponse<>("Address created successfully", AuthConstant.SUCCESS);
     }
 
     @Override
-    public SuccessResponse updateAddress(AddressRequest request) {
+    public ApiResponse<Address> updateAddress(AddressRequest request) {
 
         Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found", AuthConstant.ERROR));
 
         // Update only non-null fields
         Optional.ofNullable(request.getAddressType()).ifPresent(address::setAddressType);
@@ -330,18 +328,18 @@ public class UserServiceImpl implements UserService {
 
         addressRepository.save(address);
 
-        return new SuccessResponse("Address updated successfully", HttpStatus.OK);
+        return new ApiResponse<>("Address updated successfully", AuthConstant.SUCCESS);
     }
 
     @Override
-    public SuccessResponse deleteAddress(AddressRequest request) {
+    public ApiResponse<Address> deleteAddress(AddressRequest request) {
 
         Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found", AuthConstant.ERROR));
 
         address.setStatus(AuthConstant.IN_ACTIVE);
         addressRepository.save(address);
-        return new SuccessResponse("Address deleted successfully", HttpStatus.OK);
+        return new ApiResponse<>("Address deleted successfully", AuthConstant.SUCCESS);
     }
 
 

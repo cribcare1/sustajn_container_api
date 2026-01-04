@@ -1,14 +1,10 @@
 package com.auth.service;
 
-import com.auth.exception.SuccessResponse;
+import com.auth.model.Address;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.*;
-import com.auth.response.LoginResponse;
-import com.auth.response.RestaurantRegisterResponse;
-import com.auth.response.ProfileResponse;
-import com.auth.response.BankDetailsResponse;
-import com.auth.response.FeedbackResponse;
+import com.auth.response.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -59,11 +55,11 @@ public interface UserService {
 
 //    Map<String, Object> getCustomerProfileDetails(Long userId);
 
-    SuccessResponse saveNewAddress(AddressRequest request);
+    ApiResponse<Address> saveNewAddress(AddressRequest request);
 
-    SuccessResponse updateAddress(AddressRequest request);
+    ApiResponse<Address> updateAddress(AddressRequest request);
 
-    SuccessResponse deleteAddress(AddressRequest request);
+    ApiResponse<Address> deleteAddress(AddressRequest request);
 }
 
 

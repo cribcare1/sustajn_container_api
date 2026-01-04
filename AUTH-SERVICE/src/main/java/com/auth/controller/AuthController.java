@@ -1,7 +1,5 @@
 package com.auth.controller;
 
-import com.auth.constant.AuthConstant;
-import com.auth.exception.SuccessResponse;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.model.UserDto;
@@ -10,7 +8,6 @@ import com.auth.request.*;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
-import com.auth.response.FeedbackResponse;
 import com.auth.request.UpdateBankDetailsRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
@@ -31,9 +28,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.net.CacheRequest;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -322,10 +316,8 @@ public class AuthController {
 
     //Delete address
     @PostMapping("/deleteAddress")
-    public ResponseEntity<SuccessResponse> deleteAddress(
-            @RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
-        SuccessResponse response = userService.deleteAddress(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+        return ResponseEntity.ok(userService.deleteAddress(request));
     }
 
 
