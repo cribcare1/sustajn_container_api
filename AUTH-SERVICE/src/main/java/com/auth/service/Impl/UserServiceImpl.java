@@ -3,6 +3,9 @@ package com.auth.service.Impl;
 import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
+import com.auth.exception.BadRequestException;
+import com.auth.exception.ResourceNotFoundException;
+import com.auth.exception.SuccessResponse;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.*;
@@ -22,6 +25,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -276,137 +280,70 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    @Override
-    public Map<String, Object> getCustomerProfileDetails(Long userId) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            if (userId == null) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "User ID is required");
-                return response;
-            }
+    //todo
+//    @Override
+//    public Map<String, Object> getCustomerProfileDetails(Long userId) {
+//        Map<String, Object> response = new HashMap<>();
+//        try {
+//            if (userId == null) {
+//                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+//                response.put(AuthConstant.MESSAGE, "User ID is required");
+//                return response;
+//            }
+//
+//            return Map.of();
+//        } catch (Exception e) {
+//            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+//            response.put(AuthConstant.MESSAGE, "Failed to fetch customer profile details");
+//            response.put(AuthConstant.DETAILS, e.getMessage());
+//        }
+//        return response;
+//    }
 
-            return Map.of();
-        } catch (Exception e) {
-            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-            response.put(AuthConstant.MESSAGE, "Failed to fetch customer profile details");
-            response.put(AuthConstant.DETAILS, e.getMessage());
-        }
-        return response;
+    @Override
+    public SuccessResponse saveNewAddress(AddressRequest request) {
+        // Save Address
+        Address address = Address.builder()
+                .userId(request.getUserId())
+                .addressType(request.getAddressType())
+                .flatDoorHouseDetails(request.getFlatDoorHouseDetails())
+                .areaStreetCityBlockDetails(request.getAreaStreetCityBlockDetails())
+                .poBoxOrPostalCode(request.getPoBoxOrPostalCode())
+                .status(AuthConstant.ACTIVE)
+                .build();
+
+        addressRepository.save(address);
+        return new SuccessResponse("Address created successfully", HttpStatus.OK);
     }
 
     @Override
-    public Map<String, Object> saveNewAddress(AddressRequest request) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            if (request.getUserId() == null) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "User ID is required");
-                return response;
-            }
-            if (request.getFlatDoorHouseDetails() == null || request.getFlatDoorHouseDetails().isBlank()) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Flat/Door/House details are required");
-                return response;
-            }
-            if (request.getAreaStreetCityBlockDetails() == null || request.getAreaStreetCityBlockDetails().isBlank()) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Area/Street/City/Block details are required");
-                return response;
-            }
-            if (request.getPoBoxOrPostalCode() == null || request.getPoBoxOrPostalCode().isBlank()) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "PO Box or Postal Code is required");
-                return response;
-            }
+    public SuccessResponse updateAddress(AddressRequest request) {
 
-            // Save Address
-            Address address = Address.builder()
-                    .userId(request.getUserId())
-                    .addressType(request.getAddressType())
-                    .flatDoorHouseDetails(request.getFlatDoorHouseDetails())
-                    .areaStreetCityBlockDetails(request.getAreaStreetCityBlockDetails())
-                    .poBoxOrPostalCode(request.getPoBoxOrPostalCode())
-                    .status(AuthConstant.ACTIVE)
-                    .build();
-            addressRepository.save(address);
+        Address address = addressRepository.findById(request.getAddressId())
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found", HttpStatus.NOT_FOUND));
 
-            response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
-            response.put(AuthConstant.MESSAGE, "New address saved successfully");
+        // Update only non-null fields
+        Optional.ofNullable(request.getAddressType()).ifPresent(address::setAddressType);
+        Optional.ofNullable(request.getFlatDoorHouseDetails()).ifPresent(address::setFlatDoorHouseDetails);
+        Optional.ofNullable(request.getAreaStreetCityBlockDetails()).ifPresent(address::setAreaStreetCityBlockDetails);
+        Optional.ofNullable(request.getPoBoxOrPostalCode()).ifPresent(address::setPoBoxOrPostalCode);
 
-            return response;
+        addressRepository.save(address);
 
-        } catch (Exception e) {
-            response.put(AuthConstant.MESSAGE, "Failed to save new address");
-            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-            response.put(AuthConstant.DETAILS, e.getMessage());
-        }
-        return response;
+        return new SuccessResponse("Address updated successfully", HttpStatus.OK);
     }
 
     @Override
-    public Map<String, Object> updateAddress(AddressRequest request) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            if (request.getAddressId() == null) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Address ID is required");
-                return response;
-            }
-            Optional<Address> addressOpt = addressRepository.findById(request.getAddressId());
-            if (addressOpt.isEmpty()) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Address not found");
-                return response;
-            }
-            Address address = addressOpt.get();
-            Optional.ofNullable(request.getAddressType()).ifPresent(address::setAddressType);
-            Optional.ofNullable(request.getFlatDoorHouseDetails()).ifPresent(address::setFlatDoorHouseDetails);
-            Optional.ofNullable(request.getAreaStreetCityBlockDetails()).ifPresent(address::setAreaStreetCityBlockDetails);
-            Optional.ofNullable(request.getPoBoxOrPostalCode()).ifPresent(address::setPoBoxOrPostalCode);
-            addressRepository.save(address);
+    public SuccessResponse deleteAddress(AddressRequest request) {
 
-            response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
-            response.put(AuthConstant.MESSAGE, "Address updated successfully");
-            return response;
-        } catch (Exception e) {
-            response.put(AuthConstant.MESSAGE, "Failed to update address");
-            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-            response.put(AuthConstant.DETAILS, e.getMessage());
-        }
-        return response;
+        Address address = addressRepository.findById(request.getAddressId())
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found", HttpStatus.NOT_FOUND));
+
+        address.setStatus(AuthConstant.IN_ACTIVE);
+        addressRepository.save(address);
+        return new SuccessResponse("Address deleted successfully", HttpStatus.OK);
     }
 
-    @Override
-    public Map<String, Object> deleteAddress(Long addressId) {
-        Map<String, Object> response = new HashMap<>();
-        try {
-            if (addressId == null) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Address ID is required");
-                return response;
-            }
-            Optional<Address> addressOpt = addressRepository.findById(addressId);
-            if (addressOpt.isEmpty()) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Address not found");
-                return response;
-            }
-            Address address = addressOpt.get();
-            address.setStatus(AuthConstant.IN_ACTIVE);
-            addressRepository.save(address);
-
-            response.put(AuthConstant.MESSAGE, "Address deleted successfully");
-            response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
-
-            return response;
-        } catch (Exception e) {
-            response.put(AuthConstant.MESSAGE, "Failed to delete address");
-            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-            response.put(AuthConstant.DETAILS, e.getMessage());
-        }
-        return response;
-    }
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
         try{
@@ -867,7 +804,7 @@ public class UserServiceImpl implements UserService {
             if (userId == null) {
                 response.put(AuthConstant.STATUS, AuthConstant.ERROR);
                 response.put(AuthConstant.MESSAGE, "User ID is required");
-                return Map.of();
+                return response;
             }
             Optional<User> userOpt = userRepository.findById(userId);
             if (userOpt.isPresent()) {

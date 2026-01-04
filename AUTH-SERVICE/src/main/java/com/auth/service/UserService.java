@@ -1,5 +1,6 @@
 package com.auth.service;
 
+import com.auth.exception.SuccessResponse;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.*;
@@ -56,13 +57,13 @@ public interface UserService {
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
 
-    Map<String, Object> getCustomerProfileDetails(Long userId);
+//    Map<String, Object> getCustomerProfileDetails(Long userId);
 
-    Map<String, Object> saveNewAddress(AddressRequest request);
+    SuccessResponse saveNewAddress(AddressRequest request);
 
-    Map<String, Object> updateAddress(AddressRequest request);
+    SuccessResponse updateAddress(AddressRequest request);
 
-    Map<String, Object> deleteAddress(Long addressId);
+    SuccessResponse deleteAddress(AddressRequest request);
 }
 
 

@@ -1,6 +1,7 @@
 package com.auth.controller;
 
 import com.auth.constant.AuthConstant;
+import com.auth.exception.SuccessResponse;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.model.UserDto;
@@ -13,6 +14,8 @@ import com.auth.response.FeedbackResponse;
 import com.auth.request.UpdateBankDetailsRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
+import com.auth.validation.CreateGroup;
+import com.auth.validation.UpdateGroup;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +28,12 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.net.CacheRequest;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -304,31 +310,23 @@ public class AuthController {
 
     // save new address
     @PostMapping("/saveAddress")
-    public ResponseEntity<?> saveNewAddress(@RequestBody AddressRequest request) {
-        try {
-            return ResponseEntity.ok(userService.saveNewAddress(request));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(AuthConstant.MESSAGE, e.getMessage(), AuthConstant.STATUS, AuthConstant.ERROR));
-        }
+    public ResponseEntity<?> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
+        return ResponseEntity.ok(userService.saveNewAddress(request));
     }
 
     //update address
     @PostMapping("/updateAddress")
-    public ResponseEntity<?> updateAddress(@RequestBody AddressRequest request) {
-        try {
-            return ResponseEntity.ok(userService.updateAddress(request));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(AuthConstant.MESSAGE, e.getMessage(), AuthConstant.STATUS, AuthConstant.ERROR));
-        }
+    public ResponseEntity<?> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+        return ResponseEntity.ok(userService.updateAddress(request));
     }
 
     //Delete address
-    @PostMapping("/deleteAddress/{addressId}")
-    public ResponseEntity<?> deleteAddress(@PathVariable Long addressId) {
-        try {
-            return ResponseEntity.ok(userService.deleteAddress(addressId));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(AuthConstant.MESSAGE, e.getMessage(), AuthConstant.STATUS, AuthConstant.ERROR));
-        }
+    @PostMapping("/deleteAddress")
+    public ResponseEntity<SuccessResponse> deleteAddress(
+            @RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+        SuccessResponse response = userService.deleteAddress(request);
+        return ResponseEntity.ok(response);
     }
+
+
 }

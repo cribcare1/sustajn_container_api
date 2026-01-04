@@ -6,9 +6,8 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "addresses", indexes = {
+@Table(name = "address", indexes = {
     @Index(name = "idx_postal_code", columnList = "po_box_or_postal_code"),
-    @Index(name = "idx_address_type", columnList = "address_type"),
     @Index(name = "idx_address_id", columnList = "id")
 })
 @AllArgsConstructor
