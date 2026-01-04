@@ -10,6 +10,7 @@ import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
 import com.auth.response.FeedbackResponse;
 import com.auth.request.UpdateBankDetailsRequest;
+import com.auth.request.UpdateBusinessInfoRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -293,6 +294,21 @@ public class AuthController {
     ) {
         try {
             return ResponseEntity.ok(userService.updateBankDetails(userId, request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "status", "error",
+                    "message", e.getMessage()
+            ));
+        }
+    }
+    @PutMapping("/{restaurantId}/updateBusinessInfo")
+    public ResponseEntity<?> updateBusinessInfo(
+            @PathVariable Long restaurantId,  // <--- Renamed variable
+            @RequestBody UpdateBusinessInfoRequest request
+    ) {
+        try {
+            // Pass restaurantId to the service (it matches the Long type expected)
+            return ResponseEntity.ok(userService.updateBusinessInfo(restaurantId, request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",

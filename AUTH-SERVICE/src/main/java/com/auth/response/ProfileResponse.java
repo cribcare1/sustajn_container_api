@@ -21,4 +21,12 @@ public class ProfileResponse {
     private String phoneNumber;
     private String profilePictureUrl;
     private BankDetailsResponse bankDetails;
+    private BusinessInfoResponse businessInfo;
+
+
+    @Builder
+    public static class BusinessInfoResponse {
+        private String businessType;
+        private String website;
+    }
 }

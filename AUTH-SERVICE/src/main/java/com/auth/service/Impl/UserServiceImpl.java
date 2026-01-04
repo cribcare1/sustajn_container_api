@@ -10,6 +10,7 @@ import com.auth.repository.BasicRestaurantDetailsRepository;
 import com.auth.repository.SocialMediaDetailsRepository;
 import com.auth.repository.UserRepository;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.UpdateBusinessInfoRequest;
 import com.auth.request.SubscriptionRequest;
 import com.auth.response.*;
 import com.auth.response.CustomerDetailsBasic;
@@ -118,6 +119,15 @@ public class UserServiceImpl implements UserService {
                     .taxNumber(bankDetails.getTaxNumber())
                     .build();
         }
+        BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
+
+        ProfileResponse.BusinessInfoResponse businessInfoResponse = null;
+        if (business != null) {
+            businessInfoResponse = ProfileResponse.BusinessInfoResponse.builder()
+                    .businessType(business.getBusinessType())
+                    .website(business.getWebsiteDetails()) // Map websiteDetails -> website
+                    .build();
+        }
 
         return ProfileResponse.builder()
                 .id(user.getId())
@@ -127,6 +137,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(user.getPhoneNumber())
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .bankDetails(bankResponse)
+                .businessInfo(businessInfoResponse)
                 .build();
     }
 
@@ -168,6 +179,15 @@ public class UserServiceImpl implements UserService {
                     .taxNumber(bankDetails.getTaxNumber())
                     .build();
         }
+        BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
+
+        ProfileResponse.BusinessInfoResponse businessInfoResponse = null;
+        if (business != null) {
+            businessInfoResponse = ProfileResponse.BusinessInfoResponse.builder()
+                    .businessType(business.getBusinessType())
+                    .website(business.getWebsiteDetails()) // Map websiteDetails -> website
+                    .build();
+        }
 
 
         return new ProfileResponse(
@@ -177,7 +197,8 @@ public class UserServiceImpl implements UserService {
                 user.getAddress(),
                 user.getPhoneNumber(),
                 user.getProfilePictureUrl(),
-                bankResponse
+                bankResponse,
+                businessInfoResponse
         );
     }
 
@@ -193,7 +214,7 @@ public class UserServiceImpl implements UserService {
 
             Feedback feedback = Feedback.builder()
                     .customer(customer) // Changed .sender(sender) to .customer(customer)
-                    .restaurantId(request.getRestaurantId())
+//                    .restaurantId(request.getRestaurantId())
                     .rating(request.getRating())
                     .subject(request.getSubject())
                     .remark(request.getRemark())
@@ -283,6 +304,29 @@ public class UserServiceImpl implements UserService {
                 .iBanNumber(savedBank.getIBanNumber())
                 .taxNumber(savedBank.getTaxNumber())
                 .build();
+    }
+    @Override
+    public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request) {
+        // Use basicRepo (which you already have injected)
+        // Note: Using findByRestaurantId because your Entity uses 'restaurantId'
+        BasicRestaurantDetails details = basicRepo.findByRestaurantId(userId)
+                .orElse(BasicRestaurantDetails.builder()
+                        .restaurantId(userId)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build());
+
+        // Update fields if they are present in request
+        if (request.getBusinessType() != null) {
+            details.setBusinessType(request.getBusinessType());
+        }
+        if (request.getWebsite() != null) {
+            details.setWebsiteDetails(request.getWebsite()); // Map website -> websiteDetails
+        }
+
+        basicRepo.save(details);
+
+        return Map.of("status", "success", "message", "Business info updated successfully");
     }
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
