@@ -5,12 +5,8 @@ import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
-import com.auth.repository.BankDetailsRepository;
-import com.auth.repository.BasicRestaurantDetailsRepository;
-import com.auth.repository.SocialMediaDetailsRepository;
-import com.auth.repository.UserRepository;
-import com.auth.request.RestaurantRegistrationRequest;
-import com.auth.request.SubscriptionRequest;
+import com.auth.repository.*;
+import com.auth.request.*;
 import com.auth.response.*;
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
@@ -18,11 +14,7 @@ import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
-import com.auth.repository.FeedbackRepository; // Import exists
-import com.auth.request.FeedbackRequest;
-import com.auth.request.UpdateBankDetailsRequest;
 import com.auth.response.FeedbackResponse;
-
 import com.auth.service.UserService;
 import com.auth.util.DistanceUtil;
 import com.auth.util.JwtUtil;
@@ -33,8 +25,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import com.auth.request.UpdateProfileRequest;
-
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -53,6 +43,7 @@ public class UserServiceImpl implements UserService {
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
     private final FeedbackRepository feedbackRepository;
+    private final AddressRepository addressRepository;
 
     @Override
     public LoginResponse generateToken(String username) {
@@ -285,6 +276,138 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
+    @Override
+    public Map<String, Object> getCustomerProfileDetails(Long userId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (userId == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "User ID is required");
+                return response;
+            }
+
+            return Map.of();
+        } catch (Exception e) {
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.MESSAGE, "Failed to fetch customer profile details");
+            response.put(AuthConstant.DETAILS, e.getMessage());
+        }
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> saveNewAddress(AddressRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (request.getUserId() == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "User ID is required");
+                return response;
+            }
+            if (request.getFlatDoorHouseDetails() == null || request.getFlatDoorHouseDetails().isBlank()) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Flat/Door/House details are required");
+                return response;
+            }
+            if (request.getAreaStreetCityBlockDetails() == null || request.getAreaStreetCityBlockDetails().isBlank()) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Area/Street/City/Block details are required");
+                return response;
+            }
+            if (request.getPoBoxOrPostalCode() == null || request.getPoBoxOrPostalCode().isBlank()) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "PO Box or Postal Code is required");
+                return response;
+            }
+
+            // Save Address
+            Address address = Address.builder()
+                    .userId(request.getUserId())
+                    .addressType(request.getAddressType())
+                    .flatDoorHouseDetails(request.getFlatDoorHouseDetails())
+                    .areaStreetCityBlockDetails(request.getAreaStreetCityBlockDetails())
+                    .poBoxOrPostalCode(request.getPoBoxOrPostalCode())
+                    .status(AuthConstant.ACTIVE)
+                    .build();
+            addressRepository.save(address);
+
+            response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
+            response.put(AuthConstant.MESSAGE, "New address saved successfully");
+
+            return response;
+
+        } catch (Exception e) {
+            response.put(AuthConstant.MESSAGE, "Failed to save new address");
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.DETAILS, e.getMessage());
+        }
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> updateAddress(AddressRequest request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (request.getAddressId() == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Address ID is required");
+                return response;
+            }
+            Optional<Address> addressOpt = addressRepository.findById(request.getAddressId());
+            if (addressOpt.isEmpty()) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Address not found");
+                return response;
+            }
+            Address address = addressOpt.get();
+            Optional.ofNullable(request.getAddressType()).ifPresent(address::setAddressType);
+            Optional.ofNullable(request.getFlatDoorHouseDetails()).ifPresent(address::setFlatDoorHouseDetails);
+            Optional.ofNullable(request.getAreaStreetCityBlockDetails()).ifPresent(address::setAreaStreetCityBlockDetails);
+            Optional.ofNullable(request.getPoBoxOrPostalCode()).ifPresent(address::setPoBoxOrPostalCode);
+            addressRepository.save(address);
+
+            response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
+            response.put(AuthConstant.MESSAGE, "Address updated successfully");
+            return response;
+        } catch (Exception e) {
+            response.put(AuthConstant.MESSAGE, "Failed to update address");
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.DETAILS, e.getMessage());
+        }
+        return response;
+    }
+
+    @Override
+    public Map<String, Object> deleteAddress(Long addressId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (addressId == null) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Address ID is required");
+                return response;
+            }
+            Optional<Address> addressOpt = addressRepository.findById(addressId);
+            if (addressOpt.isEmpty()) {
+                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+                response.put(AuthConstant.MESSAGE, "Address not found");
+                return response;
+            }
+            Address address = addressOpt.get();
+            address.setStatus(AuthConstant.IN_ACTIVE);
+            addressRepository.save(address);
+
+            response.put(AuthConstant.MESSAGE, "Address deleted successfully");
+            response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
+
+            return response;
+        } catch (Exception e) {
+            response.put(AuthConstant.MESSAGE, "Failed to delete address");
+            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
+            response.put(AuthConstant.DETAILS, e.getMessage());
+        }
+        return response;
+    }
+
     public Map<String,Object> changePassword(Long userId, String newPassword){
         try{
             User user = userRepository.findById(userId)
@@ -359,7 +482,6 @@ public class UserServiceImpl implements UserService {
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .subscriptionPlanId(request.getSubscriptionPlanId())
-                    .address(request.getAddress())
                     .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
                     .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
                     .profilePictureUrl(profileImageUrl)
@@ -378,6 +500,23 @@ public class UserServiceImpl implements UserService {
                     .build();
 
             basicRepo.save(basic);
+
+
+            // ---------------- CREATE ADDRESS DETAILS ----------------
+            if (request.getAddress() != null){
+                RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
+
+                // You can create an AddressDetails entity and save it if needed
+                Address addressDetails = Address.builder()
+                        .userId(savedUser.getId())
+                        .addressType(addressReq.getAddressType())
+                        .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
+                        .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
+                        .poBoxOrPostalCode(addressReq.getPoBoxOrPostalCode())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+                addressRepository.save(addressDetails);
+            }
 
 
             // ---------------- BANK DETAILS ----------------
@@ -499,7 +638,6 @@ public class UserServiceImpl implements UserService {
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .subscriptionPlanId(request.getSubscriptionPlanId())
                     .dateOfBirth(dob)
-                    .address(request.getAddress())
                     .latitude(request.getLatitude() != null
                             ? BigDecimal.valueOf(request.getLatitude())
                             : null)
@@ -514,7 +652,24 @@ public class UserServiceImpl implements UserService {
 
             User savedUser = userRepository.save(user);
 
-//            // ---------------- CREATE BANK DETAILS ----------------
+
+            // ---------------- CREATE ADDRESS DETAILS ----------------
+            if (request.getAddress() != null){
+                RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
+
+                // You can create an AddressDetails entity and save it if needed
+                Address addressDetails = Address.builder()
+                        .userId(savedUser.getId())
+                        .addressType(addressReq.getAddressType())
+                        .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
+                        .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
+                        .poBoxOrPostalCode(addressReq.getPoBoxOrPostalCode())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+                addressRepository.save(addressDetails);
+            }
+
+            // ---------------- CREATE BANK DETAILS ----------------
             if( request.getBankDetails() != null) {
                 RestaurantRegistrationRequest.BankDetailsRequest bankReq =
                         request.getBankDetails();

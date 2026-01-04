@@ -1,5 +1,6 @@
 package com.auth.controller;
 
+import com.auth.constant.AuthConstant;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.model.UserDto;
@@ -298,6 +299,36 @@ public class AuthController {
                     "status", "error",
                     "message", e.getMessage()
             ));
+        }
+    }
+
+    // save new address
+    @PostMapping("/saveAddress")
+    public ResponseEntity<?> saveNewAddress(@RequestBody AddressRequest request) {
+        try {
+            return ResponseEntity.ok(userService.saveNewAddress(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(AuthConstant.MESSAGE, e.getMessage(), AuthConstant.STATUS, AuthConstant.ERROR));
+        }
+    }
+
+    //update address
+    @PostMapping("/updateAddress")
+    public ResponseEntity<?> updateAddress(@RequestBody AddressRequest request) {
+        try {
+            return ResponseEntity.ok(userService.updateAddress(request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(AuthConstant.MESSAGE, e.getMessage(), AuthConstant.STATUS, AuthConstant.ERROR));
+        }
+    }
+
+    //Delete address
+    @PostMapping("/deleteAddress/{addressId}")
+    public ResponseEntity<?> deleteAddress(@PathVariable Long addressId) {
+        try {
+            return ResponseEntity.ok(userService.deleteAddress(addressId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of(AuthConstant.MESSAGE, e.getMessage(), AuthConstant.STATUS, AuthConstant.ERROR));
         }
     }
 }
