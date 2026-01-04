@@ -29,8 +29,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
         u.fullName,
         u.email,
         u.phoneNumber,
-        u.profilePictureUrl,
-        u.address
+        u.profilePictureUrl
     )
     FROM User u
     WHERE u.id IN :ids
@@ -51,5 +50,8 @@ public interface UserRepository extends JpaRepository<User,Long> {
             ")" +
             "AND r.accountStatus = 'active'")
     List<User> searchRestaurantsByKeyword(@Param("keyword") String keyword);
+
+    @Query("SELECT u.customerId FROM User u WHERE u.customerId = :baseId")
+    List<String> findCustomerIdStartingWith(String baseId);
 
 }

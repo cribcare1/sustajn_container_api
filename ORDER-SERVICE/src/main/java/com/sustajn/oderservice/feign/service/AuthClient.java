@@ -11,7 +11,7 @@ import java.util.List;
 @FeignClient(name = "AUTH-SERVICE",configuration = FeignClientConfig.class)
 public interface AuthClient {
     @PostMapping(
-            value = "/auth/by-ids",
+            value = "/auth/getRestaurants",
             consumes = "application/json"
     )
     List<RestaurantRegisterResponse> getRestaurantsByIds(

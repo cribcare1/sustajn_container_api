@@ -3,9 +3,14 @@ package com.auth.service;
 import com.auth.model.User;
 import com.auth.request.UserDto;
 import com.auth.request.RestaurantRegistrationRequest;
+import com.auth.request.SubscriptionRequest;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
+import com.auth.request.UpdateBankDetailsRequest;
+import com.auth.response.BankDetailsResponse;
+import com.auth.request.FeedbackRequest;
+import com.auth.response.FeedbackResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,13 +40,25 @@ public interface UserService {
 
 
 
+
     public Map<String, Object> registerUserWithBankDetails(
             RestaurantRegistrationRequest request,
             MultipartFile profileImage
     );
+
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable);
     public Map<String, Object> getActiveCustomersMap(Pageable pageable);
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds);
     public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon);
+    public Map<String, Object> submitFeedback(FeedbackRequest request);
 
+
+    Map<String, Object> getUserById(Long userId);
+    Map<String, Object> upgradeUserSubscription(SubscriptionRequest subscriptionRequest);
+
+    // Single API for both
+    public List<FeedbackResponse> getFeedbackByType(Long id, String type);
+    BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
 }
+
+

@@ -17,7 +17,7 @@ import java.time.LocalDateTime;
 @Table(name = "users", indexes = {
         @Index(name = "idx_email", columnList = "email"),
         @Index(name = "idx_user_id", columnList = "user_id"),
-        @Index(name = "idx_city_id", columnList = "city_id"),
+//        @Index(name = "idx_city_id", columnList = "city_id"),
         @Index(name = "idx_account_status", columnList = "account_status")
 })
 @Data
@@ -37,6 +37,9 @@ public class User {
 
     @Column(name = "full_name", length = 100)
     private String fullName;
+
+    @Column(name = "customer_id", length = 100, unique = true)
+    private String customerId;
 
 
     @Enumerated(EnumType.STRING)
@@ -101,6 +104,9 @@ public class User {
 
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
+
+    @Column(name = "subscription_plan_id")
+    private Integer subscriptionPlanId;
 
     @PrePersist
     protected void onCreate() {
