@@ -301,7 +301,7 @@ public class AuthController {
             ));
         }
     }
-    @PutMapping("/{restaurantId}/updateBusinessInfo")
+    @PutMapping("/updateBusinessInfo/{restaurantId}")
     public ResponseEntity<?> updateBusinessInfo(
             @PathVariable Long restaurantId,  // <--- Renamed variable
             @RequestBody UpdateBusinessInfoRequest request
