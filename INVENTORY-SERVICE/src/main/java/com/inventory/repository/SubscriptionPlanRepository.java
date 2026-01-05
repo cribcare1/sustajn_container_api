@@ -29,4 +29,6 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
 	@Query("SELECT new com.inventory.dto.SubscriptionPlanSummary(s.planId, s.planName, s.planStatus, s.totalContainers, s.billingCycle) FROM SubscriptionPlan s WHERE (:status IS NULL OR s.planStatus = :status)")
 	java.util.List<SubscriptionPlanSummary> findSummariesByStatus(@Param("status") SubscriptionPlan.PlanStatus status);
 
+	@Query("SELECT s FROM SubscriptionPlan s WHERE s.planFor = :role AND s.planStatus = 'ACTIVE'")
+	List<SubscriptionPlan> findAllPlans(@Param("role") String role);
 }

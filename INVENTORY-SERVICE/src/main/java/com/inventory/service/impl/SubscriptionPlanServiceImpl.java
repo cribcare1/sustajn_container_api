@@ -8,6 +8,7 @@ import java.util.Optional;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.feignClient.AuthFeignClient;
 import com.inventory.request.SubscriptionRequest;
+import com.inventory.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import com.inventory.entity.SubscriptionPlan;
 import com.inventory.repository.SubscriptionPlanRepository;
 import com.inventory.service.SubscriptionPlanService;
 import com.inventory.dto.SubscriptionPlanSummary;
+import org.springframework.util.CollectionUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -102,14 +104,18 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
         }
     }
 
+    //need to change based on roles
     @Override
-    public Map<String, Object> listAllPlans() {
+    public ApiResponse<List<SubscriptionPlan>> listAllPlansBasedOnRoles(String role) {
         try {
             // Using repository.findAll() which we annotated with @EntityGraph to avoid n+1
-            List<SubscriptionPlan> list = repository.findAll();
-            return buildResponse("Subscription plans retrieved", "success", list);
+            List<SubscriptionPlan> planList = repository.findAllPlans(role);
+            if (CollectionUtils.isEmpty(planList)){
+                return new ApiResponse<>("error", "No subscription plans found", null);
+            }
+            return new ApiResponse<>("success", "Subscription plans retrieved", planList);
         } catch (Exception ex) {
-            return buildResponse("Failed to list subscription plans: " + ex.getMessage(), "error", null);
+            return new ApiResponse<>("error", "Failed to retrieve subscription plans: " + ex.getMessage(), null);
         }
     }
 

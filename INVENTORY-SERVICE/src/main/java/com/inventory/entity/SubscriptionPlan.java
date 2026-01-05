@@ -68,6 +68,9 @@ public class SubscriptionPlan {
     @Column(name = "plan_status", length = 20)
     private PlanStatus planStatus;
 
+    @Column(name = "plan_for", length = 30)
+    private String planFor; // Restaurants, Customer
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
