@@ -278,25 +278,59 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-    //todo
-//    @Override
-//    public Map<String, Object> getCustomerProfileDetails(Long userId) {
-//        Map<String, Object> response = new HashMap<>();
-//        try {
-//            if (userId == null) {
-//                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-//                response.put(AuthConstant.MESSAGE, "User ID is required");
-//                return response;
-//            }
-//
-//            return Map.of();
-//        } catch (Exception e) {
-//            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-//            response.put(AuthConstant.MESSAGE, "Failed to fetch customer profile details");
-//            response.put(AuthConstant.DETAILS, e.getMessage());
-//        }
-//        return response;
-//    }
+    @Override
+    public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
+        try {
+            List<Object[]> rows = userRepository.findCustomerProfileRaw(userId);
+
+            if (rows == null || rows.isEmpty()) {
+                return new ApiResponse<>(AuthConstant.ERROR, "Customer not found",  null);
+            }
+
+            Object[] first = rows.get(0);
+
+            CustomerProfileResponse response = new CustomerProfileResponse();
+            response.setId((Long) first[0]);
+            response.setFullName((String) first[1]);
+            response.setMobileNumber((String) first[2]);
+            response.setCustomerId((String) first[3]);
+
+            // Map bank details (only one expected)
+            if (first[4] != null) {
+                BankDetailsResponse bank = new BankDetailsResponse();
+                bank.setId((Long) first[4]);
+                bank.setUserId((Long) first[0]);
+                bank.setBankName((String) first[5]);
+                bank.setAccountNumber((String) first[6]);
+                bank.setIBanNumber((String) first[7]);
+                bank.setTaxNumber((String) first[8]);
+                response.setBankDetailsResponse(bank);
+            }
+
+            // Map addresses
+            List<AddressResponse> addressList = new ArrayList<>();
+            for (Object[] row : rows) {
+                if (row[9] != null) {
+                    AddressResponse address = new AddressResponse();
+                    address.setId((Long) row[9]);
+                    address.setAddressType((String) row[10]);
+                    address.setFlatDoorHouseDetails((String) row[11]);
+                    address.setAreaStreetCityBlockDetails((String) row[12]);
+                    address.setPoBoxOrPostalCode((String) row[13]);
+                    addressList.add(address);
+                }
+            }
+
+            response.setAddressResponses(addressList);
+
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Customer profile fetched successfully", response);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new ApiResponse<>(AuthConstant.ERROR,"Failed to fetch customer profile",  null);
+        }
+    }
+
 
     @Override
     public ApiResponse<Address> saveNewAddress(AddressRequest request) {

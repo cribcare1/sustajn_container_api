@@ -53,7 +53,7 @@ public interface UserService {
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
 
-//    Map<String, Object> getCustomerProfileDetails(Long userId);
+    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
     ApiResponse<Address> saveNewAddress(AddressRequest request);
 

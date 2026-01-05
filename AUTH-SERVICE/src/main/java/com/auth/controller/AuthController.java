@@ -15,6 +15,7 @@ import com.auth.validation.CreateGroup;
 import com.auth.validation.UpdateGroup;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -318,6 +319,12 @@ public class AuthController {
     @PostMapping("/deleteAddress")
     public ResponseEntity<?> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.deleteAddress(request));
+    }
+
+    //Get Profile details
+    @GetMapping("/getProfileDetails/{userId}")
+    public ResponseEntity<?> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
+        return ResponseEntity.ok(userService.getCustomerProfileDetails(userId));
     }
 
 
