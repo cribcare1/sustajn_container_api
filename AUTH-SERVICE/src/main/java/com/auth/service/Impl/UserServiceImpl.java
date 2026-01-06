@@ -21,11 +21,13 @@ import com.auth.util.DistanceUtil;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
@@ -280,55 +282,79 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
-        try {
-            List<Object[]> rows = userRepository.findCustomerProfileRaw(userId);
 
-            if (rows == null || rows.isEmpty()) {
-                return new ApiResponse<>(AuthConstant.ERROR, "Customer not found",  null);
+        try {
+            List<Object[]> profileResultRows =
+                    userRepository.getCustomerProfileDetailsByUserId(userId);
+
+            if (CollectionUtils.isEmpty(profileResultRows)) {
+                return new ApiResponse<>(AuthConstant.ERROR, "Customer not found", null);
             }
 
-            Object[] first = rows.get(0);
+            Object[] baseProfileRow = profileResultRows.get(0);
 
             CustomerProfileResponse response = new CustomerProfileResponse();
-            response.setId((Long) first[0]);
-            response.setFullName((String) first[1]);
-            response.setMobileNumber((String) first[2]);
-            response.setCustomerId((String) first[3]);
+            response.setId((Long) baseProfileRow[0]);
+            response.setFullName((String) baseProfileRow[1]);
+            response.setMobileNumber((String) baseProfileRow[2]);
+            response.setCustomerId((String) baseProfileRow[3]);
 
-            // Map bank details (only one expected)
-            if (first[4] != null) {
-                BankDetailsResponse bank = new BankDetailsResponse();
-                bank.setId((Long) first[4]);
-                bank.setUserId((Long) first[0]);
-                bank.setBankName((String) first[5]);
-                bank.setAccountNumber((String) first[6]);
-                bank.setIBanNumber((String) first[7]);
-                bank.setTaxNumber((String) first[8]);
-                response.setBankDetailsResponse(bank);
+            // 🏦 Bank Details
+            if (baseProfileRow[4] != null) {
+                BankDetailsResponse bankDetails = new BankDetailsResponse();
+                bankDetails.setId((Long) baseProfileRow[4]);
+                bankDetails.setUserId(response.getId());
+                bankDetails.setBankName((String) baseProfileRow[5]);
+                bankDetails.setAccountNumber((String) baseProfileRow[6]);
+                bankDetails.setIBanNumber((String) baseProfileRow[7]);
+                bankDetails.setTaxNumber((String) baseProfileRow[8]);
+                bankDetails.setCardHolderName((String) baseProfileRow[9]);
+                bankDetails.setCardNumber((String) baseProfileRow[10]);
+                bankDetails.setExpiryDate((String) baseProfileRow[11]);
+                bankDetails.setPaymentGatewayId((String) baseProfileRow[12]);
+                bankDetails.setPaymentGatewayName((String) baseProfileRow[13]);
+
+                response.setBankDetailsResponse(bankDetails);
             }
 
-            // Map addresses
-            List<AddressResponse> addressList = new ArrayList<>();
-            for (Object[] row : rows) {
-                if (row[9] != null) {
-                    AddressResponse address = new AddressResponse();
-                    address.setId((Long) row[9]);
-                    address.setAddressType((String) row[10]);
-                    address.setFlatDoorHouseDetails((String) row[11]);
-                    address.setAreaStreetCityBlockDetails((String) row[12]);
-                    address.setPoBoxOrPostalCode((String) row[13]);
-                    addressList.add(address);
-                }
-            }
+            // 🏠 Address List
+            List<AddressResponse> addresses = getAddressResponses(profileResultRows);
 
-            response.setAddressResponses(addressList);
+            response.setAddressResponses(addresses);
 
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Customer profile fetched successfully", response);
+            return new ApiResponse<>(
+                    AuthConstant.SUCCESS,
+                    "Customer profile fetched successfully",
+                    response
+            );
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            return new ApiResponse<>(AuthConstant.ERROR,"Failed to fetch customer profile",  null);
+            return new ApiResponse<>(AuthConstant.ERROR,
+                    "Failed to fetch customer profile",
+                    null);
         }
+    }
+
+    private static @NonNull List<AddressResponse> getAddressResponses(List<Object[]> profileResultRows) {
+        List<AddressResponse> addresses = new ArrayList<>();
+        Set<Long> processedAddressIds = new HashSet<>();
+
+        for (Object[] row : profileResultRows) {
+
+            if (row[14] != null && processedAddressIds.add((Long) row[14])) {
+
+                AddressResponse address = new AddressResponse();
+                address.setId((Long) row[14]);
+                address.setAddressType((String) row[15]);
+                address.setFlatDoorHouseDetails((String) row[16]);
+                address.setAreaStreetCityBlockDetails((String) row[17]);
+                address.setPoBoxOrPostalCode((String) row[18]);
+
+                addresses.add(address);
+            }
+        }
+        return addresses;
     }
 
 

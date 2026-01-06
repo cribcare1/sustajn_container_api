@@ -67,6 +67,11 @@ public interface UserRepository extends JpaRepository<User,Long> {
         b.accountNumber,
         b.iBanNumber,
         b.taxNumber,
+        b.cardHolderName,
+        b.cardNumber,
+        b.expiryDate,
+        b.paymentGatewayId,
+        b.paymentGatewayName,
     
         a.id,
         a.addressType,
@@ -78,7 +83,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
     LEFT JOIN Address a ON a.userId = u.id
     WHERE u.id = :userId
     """)
-    List<Object[]> findCustomerProfileRaw(@Param("userId") Long userId);
+    List<Object[]> getCustomerProfileDetailsByUserId(@Param("userId") Long userId);
 
 
 }
