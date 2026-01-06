@@ -1,6 +1,7 @@
 package com.auth.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.persistence.Column;
 import lombok.*;
 import java.time.LocalDate;
 import java.util.List;
@@ -57,8 +58,13 @@ public class RestaurantRegistrationRequest {
         private String bankName;
         private String taxNumber;
         private String accountNumber;
-
         public String iBanNumber;
+        private String cardHolderName;
+        private String cardNumber;
+        private String expiryDate;
+        private String cvv;
+        private String paymentGatewayId;
+        private String paymentGatewayName;
 
     }
 

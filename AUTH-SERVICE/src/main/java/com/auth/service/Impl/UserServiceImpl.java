@@ -649,6 +649,12 @@ public class UserServiceImpl implements UserService {
                         .accountNumber(bankReq.getAccountNumber())
                         .iBanNumber(bankReq.getIBanNumber())
                         .taxNumber(bankReq.getTaxNumber())
+                        .cardHolderName(bankReq.getCardHolderName())
+                        .cardNumber(bankReq.getCardNumber())
+                        .expiryDate(bankReq.getExpiryDate())
+                        .cvv(bankReq.getCvv())
+                        .paymentGatewayId(bankReq.getPaymentGatewayId())
+                        .paymentGatewayName(bankReq.getPaymentGatewayName())
                         .build();
 
                 bankRepo.save(bankDetails);

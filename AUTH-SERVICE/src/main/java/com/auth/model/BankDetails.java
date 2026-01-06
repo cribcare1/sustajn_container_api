@@ -29,6 +29,26 @@ public class BankDetails {
     @Column(name = "tax_number", nullable = false, length = 100)
     private String taxNumber;
 
+    @Column(name = "card_holder_name", length = 100)
+    private String cardHolderName;
+
+    @Column(name = "card_number", length = 50)
+    private String cardNumber;
+
+    @Column(name = "expiry_date", length = 10)
+    private String expiryDate;
+
+    @Column(name = "cvv", length = 10)
+    private String cvv;
+
+    @Column(name = "payment_gateway_id", length = 100)
+    private String paymentGatewayId;
+
+    @Column(name = "payment_gateway_name", length = 100)
+    private String paymentGatewayName;
+
+
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
