@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -241,43 +240,34 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request) {
-        // 1. Verify User exists
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request) {
+        try {
+            // 1. Find existing bank details OR create new ones
+            BankDetails bankDetails = bankRepo.findById(request.getId()).orElse(null);
 
-        // 2. Find existing bank details OR create new ones
-        BankDetails bankDetails = bankRepo.findByUserId(user.getId())
-                .orElse(BankDetails.builder()
-                        .userId(user.getId())
-                        .build());
+            if (bankDetails != null){
+                // 2. Update only non-null fields
+                Optional.ofNullable(request.getBankName()).ifPresent(bankDetails::setBankName);
+                Optional.ofNullable(request.getAccountNumber()).ifPresent(bankDetails::setAccountNumber);
+                Optional.ofNullable(request.getIBanNumber()).ifPresent(bankDetails::setIBanNumber);
+                Optional.ofNullable(request.getTaxNumber()).ifPresent(bankDetails::setTaxNumber);
+                Optional.ofNullable(request.getCardHolderName()).ifPresent(bankDetails::setCardHolderName);
+                Optional.ofNullable(request.getCardNumber()).ifPresent(bankDetails::setCardNumber);
+                Optional.ofNullable(request.getExpiryDate()).ifPresent(bankDetails::setExpiryDate);
+                Optional.ofNullable(request.getCvv()).ifPresent(bankDetails::setCvv);
+                Optional.ofNullable(request.getPaymentGatewayId()).ifPresent(bankDetails::setPaymentGatewayId);
+                Optional.ofNullable(request.getPaymentGatewayName()).ifPresent(bankDetails::setPaymentGatewayName);
 
-        // 3. Update fields if they are not null
-        if (request.getBankName() != null) {
-            bankDetails.setBankName(request.getBankName());
-        }
-        if (request.getAccountNumber() != null) {
-            bankDetails.setAccountNumber(request.getAccountNumber());
-        }
-        if (request.getIBanNumber() != null) {
-            bankDetails.setIBanNumber(request.getIBanNumber());
-        }
-        if (request.getTaxNumber() != null) {
-            bankDetails.setTaxNumber(request.getTaxNumber());
-        }
+                // 4. Save to DB
+                BankDetails savedBank = bankRepo.save(bankDetails);
 
-        // 4. Save to DB
-        BankDetails savedBank = bankRepo.save(bankDetails);
+                return new ApiResponse<>("Bank details updated successfully", AuthConstant.SUCCESS, savedBank);
+            }
+            return new ApiResponse<>("No bank details available", AuthConstant.ERROR, null);
 
-        // 5. Return Response
-        return BankDetailsResponse.builder()
-                .id(savedBank.getId())
-                .userId(savedBank.getUserId())
-                .bankName(savedBank.getBankName())
-                .accountNumber(savedBank.getAccountNumber())
-                .iBanNumber(savedBank.getIBanNumber())
-                .taxNumber(savedBank.getTaxNumber())
-                .build();
+        } catch (Exception e) {
+            return new ApiResponse<>("Error on updating Bank details", AuthConstant.ERROR, null);
+        }
     }
 
     @Override
@@ -400,6 +390,31 @@ public class UserServiceImpl implements UserService {
         address.setStatus(AuthConstant.IN_ACTIVE);
         addressRepository.save(address);
         return new ApiResponse<>("Address deleted successfully", AuthConstant.SUCCESS);
+    }
+
+    @Override
+    public ApiResponse<BankDetails> createBankDetails(BankDetailsRequest bankDetailsRequest) {
+        try {
+            BankDetails bankDetails = BankDetails.builder()
+                    .userId(bankDetailsRequest.getUserId())
+                    .accountNumber(bankDetailsRequest.getAccountNumber())
+                    .bankName(bankDetailsRequest.getBankName())
+                    .iBanNumber(bankDetailsRequest.getIBanNumber())
+                    .taxNumber(bankDetailsRequest.getTaxNumber())
+                    .cardNumber(bankDetailsRequest.getCardNumber())
+                    .cardHolderName(bankDetailsRequest.getCardHolderName())
+                    .cvv(passwordEncoder.encode(bankDetailsRequest.getCvv()))
+                    .expiryDate(bankDetailsRequest.getExpiryDate())
+                    .paymentGatewayId(bankDetailsRequest.getPaymentGatewayId())
+                    .paymentGatewayName(bankDetailsRequest.getPaymentGatewayName())
+                    .build();
+
+            bankRepo.save(bankDetails);
+
+            return new ApiResponse<>("Bank details created successfully", AuthConstant.SUCCESS, bankDetails);
+        } catch (Exception e) {
+            return new ApiResponse<>("Error on creating bank details",AuthConstant.ERROR, null);
+        }
     }
 
 

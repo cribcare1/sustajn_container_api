@@ -1,6 +1,7 @@
 package com.auth.service;
 
 import com.auth.model.Address;
+import com.auth.model.BankDetails;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.*;
@@ -51,7 +52,7 @@ public interface UserService {
 
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
-    BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
+    ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request);
 
     ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
@@ -60,6 +61,8 @@ public interface UserService {
     ApiResponse<Address> updateAddress(AddressRequest request);
 
     ApiResponse<Address> deleteAddress(AddressRequest request);
+
+    ApiResponse<BankDetails> createBankDetails(BankDetailsRequest bankDetailsRequest);
 
 }
 

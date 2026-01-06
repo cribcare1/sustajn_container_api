@@ -8,7 +8,7 @@ import com.auth.request.*;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
-import com.auth.request.UpdateBankDetailsRequest;
+import com.auth.request.BankDetailsRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.auth.validation.CreateGroup;
@@ -288,19 +288,15 @@ public class AuthController {
             return ResponseEntity.status(400).body(Map.of("status", "error", "message", e.getMessage()));
         }
     }
-    @PutMapping("/updateBankDetails/{userId}")
-    public ResponseEntity<?> updateBankDetails(
-            @PathVariable Long userId,
-            @RequestBody UpdateBankDetailsRequest request
-    ) {
-        try {
-            return ResponseEntity.ok(userService.updateBankDetails(userId, request));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
-        }
+
+    @PostMapping("/createBankDetails")
+    public ResponseEntity<?> createBankDetails(@RequestBody @Validated BankDetailsRequest bankDetailsRequest){
+        return ResponseEntity.ok(userService.createBankDetails(bankDetailsRequest));
+    }
+
+    @PostMapping("/updateBankDetails")
+    public ResponseEntity<?> updateBankDetails(@RequestBody BankDetailsRequest request) {
+            return ResponseEntity.ok(userService.updateBankDetails(request));
     }
 
     // save new address

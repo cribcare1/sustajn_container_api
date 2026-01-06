@@ -32,13 +32,13 @@ public class BankDetails {
     @Column(name = "card_holder_name", length = 100)
     private String cardHolderName;
 
-    @Column(name = "card_number", length = 50)
+    @Column(name = "card_number", length = 100)
     private String cardNumber;
 
-    @Column(name = "expiry_date", length = 10)
+    @Column(name = "expiry_date", length = 100)
     private String expiryDate;
 
-    @Column(name = "cvv", length = 10)
+    @Column(name = "cvv", length = 100)
     private String cvv;
 
     @Column(name = "payment_gateway_id", length = 100)
