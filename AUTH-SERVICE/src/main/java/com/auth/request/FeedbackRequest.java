@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class FeedbackRequest {
-    private Long customerId;    // RENAMED
-    private Long restaurantId;
+    private Long userId;
+
     private String rating;
     private String subject;
     private String remark;
