@@ -12,6 +12,7 @@ import com.auth.response.*;
 import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
+import com.auth.request.UpdateBusinessInfoRequest;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
@@ -111,6 +112,15 @@ public class UserServiceImpl implements UserService {
                     .taxNumber(bankDetails.getTaxNumber())
                     .build();
         }
+        BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
+
+        ProfileResponse.BusinessInfoResponse businessInfoResponse = null;
+        if (business != null) {
+            businessInfoResponse = ProfileResponse.BusinessInfoResponse.builder()
+                    .businessType(business.getBusinessType())
+                    .website(business.getWebsiteDetails()) // Map websiteDetails -> website
+                    .build();
+        }
 
         return ProfileResponse.builder()
                 .id(user.getId())
@@ -120,6 +130,7 @@ public class UserServiceImpl implements UserService {
                 .phoneNumber(user.getPhoneNumber())
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .bankDetails(bankResponse)
+                .businessInfo(businessInfoResponse)
                 .build();
     }
 
@@ -161,6 +172,16 @@ public class UserServiceImpl implements UserService {
                     .taxNumber(bankDetails.getTaxNumber())
                     .build();
         }
+        BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
+
+        ProfileResponse.BusinessInfoResponse businessInfoResponse = null;
+        if (business != null) {
+            businessInfoResponse = ProfileResponse.BusinessInfoResponse.builder()
+                    .businessType(business.getBusinessType())
+                    .website(business.getWebsiteDetails()) // Map websiteDetails -> website
+                    .build();
+        }
+
 
 
         return new ProfileResponse(
@@ -170,7 +191,8 @@ public class UserServiceImpl implements UserService {
                 user.getAddress(),
                 user.getPhoneNumber(),
                 user.getProfilePictureUrl(),
-                bankResponse
+                bankResponse,
+                businessInfoResponse
         );
     }
 
@@ -180,24 +202,30 @@ public class UserServiceImpl implements UserService {
     @Override
     public Map<String, Object> submitFeedback(FeedbackRequest request) {
         try {
-            // Changed request.getSenderId() to request.getCustomerId()
-            User customer = userRepository.findById(request.getCustomerId())
-                    .orElseThrow(() -> new RuntimeException("Customer not found"));
+            // 1. Find the User (Works for both Customer and Restaurant)
+            User user = userRepository.findById(request.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
+            // 2. Build Feedback
+            // Note: We are saving the user in the 'customer' field of the Feedback entity
+            // because 'customer' is a User object. It acts as the "Submitter".
             Feedback feedback = Feedback.builder()
-                    .customer(customer) // Changed .sender(sender) to .customer(customer)
-                    .restaurantId(request.getRestaurantId())
+                    .customer(user)
+                    .restaurantId(null) // No specific target restaurant (App Feedback)
                     .rating(request.getRating())
                     .subject(request.getSubject())
                     .remark(request.getRemark())
                     .createdAt(LocalDateTime.now())
                     .build();
 
+            // Optional: You can add logic here if you want to store "Type" in feedback
+            // e.g. feedback.setSubmitterType(user.getUserType().name());
+
             feedbackRepository.save(feedback);
 
             return Map.of(
                     "status", "success",
-                    "message", "Feedback submitted successfully"
+                    "message", user.getUserType() + " feedback submitted successfully"
             );
         } catch (Exception e) {
             return Map.of(
@@ -277,6 +305,30 @@ public class UserServiceImpl implements UserService {
                 .taxNumber(savedBank.getTaxNumber())
                 .build();
     }
+    @Override
+    public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request) {
+        // Use basicRepo (which you already have injected)
+        // Note: Using findByRestaurantId because your Entity uses 'restaurantId'
+        BasicRestaurantDetails details = basicRepo.findByRestaurantId(userId)
+                .orElse(BasicRestaurantDetails.builder()
+                        .restaurantId(userId)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build());
+
+        // Update fields if they are present in request
+        if (request.getBusinessType() != null) {
+            details.setBusinessType(request.getBusinessType());
+        }
+        if (request.getWebsite() != null) {
+            details.setWebsiteDetails(request.getWebsite()); // Map website -> websiteDetails
+        }
+
+        basicRepo.save(details);
+
+        return Map.of("status", "success", "message", "Business info updated successfully");
+    }
+
 
     //todo
 //    @Override

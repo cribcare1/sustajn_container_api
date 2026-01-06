@@ -5,6 +5,7 @@ import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.request.*;
 import com.auth.response.*;
+import com.auth.request.UpdateBusinessInfoRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,6 +53,7 @@ public interface UserService {
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     BankDetailsResponse updateBankDetails(Long userId, UpdateBankDetailsRequest request);
+    Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
 //    Map<String, Object> getCustomerProfileDetails(Long userId);
 

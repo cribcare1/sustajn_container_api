@@ -22,6 +22,9 @@ public class BasicRestaurantDetails {
     @Column
     private String speciality;
 
+    @Column(name = "business_type")
+    private String businessType;
+
     @Column(name = "website_details")
     private String websiteDetails;
 
