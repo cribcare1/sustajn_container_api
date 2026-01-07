@@ -8,13 +8,14 @@ import com.auth.request.*;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
-import com.auth.request.UpdateBankDetailsRequest;
+import com.auth.request.BankDetailsRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.auth.validation.CreateGroup;
 import com.auth.validation.UpdateGroup;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -287,13 +288,24 @@ public class AuthController {
             return ResponseEntity.status(400).body(Map.of("status", "error", "message", e.getMessage()));
         }
     }
-    @PutMapping("/updateBankDetails/{userId}")
-    public ResponseEntity<?> updateBankDetails(
-            @PathVariable Long userId,
-            @RequestBody UpdateBankDetailsRequest request
+
+    @PostMapping("/createBankDetails")
+    public ResponseEntity<?> createBankDetails(@RequestBody @Validated BankDetailsRequest bankDetailsRequest){
+        return ResponseEntity.ok(userService.createBankDetails(bankDetailsRequest));
+    }
+
+    @PostMapping("/updateBankDetails")
+    public ResponseEntity<?> updateBankDetails(@RequestBody BankDetailsRequest request) {
+            return ResponseEntity.ok(userService.updateBankDetails(request));
+    }
+    @PutMapping("/updateBusinessInfo/{restaurantId}")
+    public ResponseEntity<?> updateBusinessInfo(
+            @PathVariable Long restaurantId,  // <--- Renamed variable
+            @RequestBody UpdateBusinessInfoRequest request
     ) {
         try {
-            return ResponseEntity.ok(userService.updateBankDetails(userId, request));
+            // Pass restaurantId to the service (it matches the Long type expected)
+            return ResponseEntity.ok(userService.updateBusinessInfo(restaurantId, request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of(
                     "status", "error",
@@ -318,6 +330,12 @@ public class AuthController {
     @PostMapping("/deleteAddress")
     public ResponseEntity<?> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.deleteAddress(request));
+    }
+
+    //Get Profile details
+    @GetMapping("/getProfileDetails/{userId}")
+    public ResponseEntity<?> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
+        return ResponseEntity.ok(userService.getCustomerProfileDetails(userId));
     }
 
 
