@@ -27,7 +27,9 @@ public static final List<String> publicEndpoints = List.of(
         "/auth/registerCostumer",
         "/auth/validate-token/**", // match any token path
         "/auth/change-password/**",
-        "/auth/images/**"
+        "/auth/images/**",
+        "/inventory/subscription-plans/getPlans/**"
+
 );
 
 

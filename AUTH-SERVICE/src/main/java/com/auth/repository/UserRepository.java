@@ -54,4 +54,36 @@ public interface UserRepository extends JpaRepository<User,Long> {
     @Query("SELECT u.customerId FROM User u WHERE u.customerId = :baseId")
     List<String> findCustomerIdStartingWith(String baseId);
 
+
+    @Query("""
+    SELECT 
+        u.id,
+        u.fullName,
+        u.phoneNumber,
+        u.customerId,
+    
+        b.id,
+        b.bankName,
+        b.accountNumber,
+        b.iBanNumber,
+        b.taxNumber,
+        b.cardHolderName,
+        b.cardNumber,
+        b.expiryDate,
+        b.paymentGatewayId,
+        b.paymentGatewayName,
+    
+        a.id,
+        a.addressType,
+        a.flatDoorHouseDetails,
+        a.areaStreetCityBlockDetails,
+        a.poBoxOrPostalCode
+    FROM User u
+    LEFT JOIN BankDetails b ON b.userId = u.id
+    LEFT JOIN Address a ON a.userId = u.id
+    WHERE u.id = :userId
+    """)
+    List<Object[]> getCustomerProfileDetailsByUserId(@Param("userId") Long userId);
+
+
 }

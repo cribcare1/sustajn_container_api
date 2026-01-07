@@ -1,0 +1,23 @@
+package com.auth.response;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.List;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+public class CustomerProfileResponse {
+
+    private Long id;
+    private String fullName;
+    private String mobileNumber;
+    private String customerId;
+    private BankDetailsResponse bankDetailsResponse;
+    private List<AddressResponse> addressResponses;
+
+}
