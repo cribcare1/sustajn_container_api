@@ -8,7 +8,7 @@ import com.auth.request.*;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
-import com.auth.request.BankDetailsRequest;
+import com.auth.request.BankCardPaymentGetWayDetailsRequest;
 import com.auth.response.ProfileResponse;
 import com.auth.service.UserService;
 import com.auth.validation.CreateGroup;
@@ -290,12 +290,12 @@ public class AuthController {
     }
 
     @PostMapping("/createBankDetails")
-    public ResponseEntity<?> createBankDetails(@RequestBody @Validated BankDetailsRequest bankDetailsRequest){
-        return ResponseEntity.ok(userService.createBankDetails(bankDetailsRequest));
+    public ResponseEntity<?> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
+        return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
     }
 
     @PostMapping("/updateBankDetails")
-    public ResponseEntity<?> updateBankDetails(@RequestBody BankDetailsRequest request) {
+    public ResponseEntity<?> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
             return ResponseEntity.ok(userService.updateBankDetails(request));
     }
     @PutMapping("/updateBusinessInfo/{restaurantId}")

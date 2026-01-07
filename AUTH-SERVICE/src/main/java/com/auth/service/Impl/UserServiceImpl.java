@@ -268,42 +268,83 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request) {
+    @Transactional
+    public ApiResponse<BankDetails> updateBankDetails(BankCardPaymentGetWayDetailsRequest request) {
         try {
-            // 1. Find existing bank details OR create new ones
-            BankDetails bankDetails = bankRepo.findById(request.getId()).orElse(null);
 
-            if (bankDetails != null){
-                // 2. Update only non-null fields
-                Optional.ofNullable(request.getBankName()).ifPresent(bankDetails::setBankName);
-                Optional.ofNullable(request.getAccountNumber()).ifPresent(bankDetails::setAccountNumber);
-                Optional.ofNullable(request.getIBanNumber()).ifPresent(bankDetails::setIBanNumber);
-                Optional.ofNullable(request.getTaxNumber()).ifPresent(bankDetails::setTaxNumber);
-                Optional.ofNullable(request.getCardHolderName()).ifPresent(bankDetails::setCardHolderName);
-                Optional.ofNullable(request.getCardNumber()).ifPresent(bankDetails::setCardNumber);
-                Optional.ofNullable(request.getExpiryDate()).ifPresent(bankDetails::setExpiryDate);
-                Optional.ofNullable(request.getCvv()).ifPresent(bankDetails::setCvv);
-                Optional.ofNullable(request.getPaymentGatewayId()).ifPresent(bankDetails::setPaymentGatewayId);
-                Optional.ofNullable(request.getPaymentGatewayName()).ifPresent(bankDetails::setPaymentGatewayName);
+            BankDetails bankDetails = null;
 
-                // 4. Save to DB
-                BankDetails savedBank = bankRepo.save(bankDetails);
+            // ========== 🏦 BANK DETAILS ==========
+            if (request.getBankDetailsRequest() != null) {
+                var r = request.getBankDetailsRequest();
 
-                return new ApiResponse<>("Bank details updated successfully", AuthConstant.SUCCESS, savedBank);
+                BankDetails bankRow = (r.getId() != null)
+                        ? bankRepo.findById(r.getId()).orElse(new BankDetails())
+                        : new BankDetails();
+
+                bankRow.setUserId(r.getUserId());
+
+                Optional.ofNullable(r.getBankName()).ifPresent(bankRow::setBankName);
+                Optional.ofNullable(r.getAccountNumber()).ifPresent(bankRow::setAccountNumber);
+                Optional.ofNullable(r.getIBanNumber()).ifPresent(bankRow::setIBanNumber);
+                Optional.ofNullable(r.getTaxNumber()).ifPresent(bankRow::setTaxNumber);
+
+                bankRow.setStatus("ACTIVE");
+
+                bankDetails = bankRepo.save(bankRow);
             }
-            return new ApiResponse<>("No bank details available", AuthConstant.ERROR, null);
+
+            // ========== 💳 CARD DETAILS ==========
+            if (request.getCardDetailsRequest() != null) {
+                var r = request.getCardDetailsRequest();
+
+                BankDetails cardRow = (r.getId() != null)
+                        ? bankRepo.findById(r.getId()).orElse(new BankDetails())
+                        : new BankDetails();
+
+                cardRow.setUserId(r.getUserId());
+
+                Optional.ofNullable(r.getCardHolderName()).ifPresent(cardRow::setCardHolderName);
+                Optional.ofNullable(r.getCardNumber()).ifPresent(cardRow::setCardNumber);
+                Optional.ofNullable(r.getExpiryDate()).ifPresent(cardRow::setExpiryDate);
+                Optional.ofNullable(r.getCvv()).ifPresent(cardRow::setCvv);
+
+                cardRow.setStatus("ACTIVE");
+
+                bankDetails = bankRepo.save(cardRow);
+            }
+
+            // ========== 🧾 PAYMENT GATEWAY ==========
+            if (request.getPaymentGetWayRequest() != null) {
+                var r = request.getPaymentGetWayRequest();
+
+                BankDetails payRow = (r.getId() != null)
+                        ? bankRepo.findById(r.getId()).orElse(new BankDetails())
+                        : new BankDetails();
+
+                payRow.setUserId(r.getUserId());
+
+                Optional.ofNullable(r.getPaymentGatewayId()).ifPresent(payRow::setPaymentGatewayId);
+                Optional.ofNullable(r.getPaymentGatewayName()).ifPresent(payRow::setPaymentGatewayName);
+
+                payRow.setStatus("ACTIVE");
+
+                bankDetails = bankRepo.save(payRow);
+            }
+
+            return new ApiResponse<>("Details updated successfully", AuthConstant.SUCCESS, bankDetails);
 
         } catch (Exception e) {
-            return new ApiResponse<>("Error on updating Bank details", AuthConstant.ERROR, null);
+            return new ApiResponse<>("Error on updating details", AuthConstant.ERROR, null);
         }
     }
+
 
     @Override
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
 
         try {
-            List<Object[]> profileResultRows =
-                    userRepository.getCustomerProfileDetailsByUserId(userId);
+            List<Object[]> profileResultRows  = userRepository.getCustomerProfileDetailsByUserId(userId);
 
             if (CollectionUtils.isEmpty(profileResultRows)) {
                 return new ApiResponse<>(AuthConstant.ERROR, "Customer not found", null);
@@ -317,40 +358,57 @@ public class UserServiceImpl implements UserService {
             response.setMobileNumber((String) baseProfileRow[2]);
             response.setCustomerId((String) baseProfileRow[3]);
 
-            // 🏦 Bank Details
+            // 🏦 Bank
             if (baseProfileRow[4] != null) {
-                BankDetailsResponse bankDetails = new BankDetailsResponse();
-                bankDetails.setId((Long) baseProfileRow[4]);
-                bankDetails.setUserId(response.getId());
-                bankDetails.setBankName((String) baseProfileRow[5]);
-                bankDetails.setAccountNumber((String) baseProfileRow[6]);
-                bankDetails.setIBanNumber((String) baseProfileRow[7]);
-                bankDetails.setTaxNumber((String) baseProfileRow[8]);
-                bankDetails.setCardHolderName((String) baseProfileRow[9]);
-                bankDetails.setCardNumber((String) baseProfileRow[10]);
-                bankDetails.setExpiryDate((String) baseProfileRow[11]);
-                bankDetails.setPaymentGatewayId((String) baseProfileRow[12]);
-                bankDetails.setPaymentGatewayName((String) baseProfileRow[13]);
-
-                response.setBankDetailsResponse(bankDetails);
+                response.setBankDetailsResponse(new BankDetailsResponse(
+                        (Long) baseProfileRow[4], userId,
+                        (String) baseProfileRow[5], (String) baseProfileRow[6],
+                        (String) baseProfileRow[7], (String) baseProfileRow[8]
+                ));
             }
 
-            // 🏠 Address List
-            List<AddressResponse> addresses = getAddressResponses(profileResultRows);
+            // 💳 Card
+            if (baseProfileRow[9] != null) {
+                response.setCardDetailsResponse(new CardDetailsResponse(
+                        (Long) baseProfileRow[9],
+                        (String) baseProfileRow[10],
+                        (String) baseProfileRow[11],
+                        (String) baseProfileRow[12]
+                ));
+            }
 
-            response.setAddressResponses(addresses);
+            // 🧾 Payment Gateway
+            if (baseProfileRow[13] != null) {
+                response.setPaymentGetWayResponse(new PaymentGetWayResponse(
+                        (Long) baseProfileRow[13],
+                        (String) baseProfileRow[14],
+                        (String) baseProfileRow[15]
+                ));
+            }
 
-            return new ApiResponse<>(
-                    AuthConstant.SUCCESS,
-                    "Customer profile fetched successfully",
-                    response
-            );
+            // 🏠 Addresses
+            List<AddressResponse> addressList = new ArrayList<>();
+            for (Object[] profileResult : profileResultRows) {
+                if (profileResult[16] != null) {
+                    addressList.add(new AddressResponse(
+                            (Long) profileResult[16],
+                            (String) profileResult[17],
+                            (String) profileResult[18],
+                            (String) profileResult[19],
+                            (String) profileResult[20]
+                    ));
+                }
+            }
 
-        } catch (Exception ex) {
-            ex.printStackTrace();
+            response.setAddressResponses(addressList);
+
+            return new ApiResponse<>(AuthConstant.SUCCESS,
+                    "Customer profile fetched successfully", response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
             return new ApiResponse<>(AuthConstant.ERROR,
-                    "Failed to fetch customer profile",
-                    null);
+                    "Failed to fetch customer profile", null);
         }
     }
 
@@ -445,29 +503,62 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<BankDetails> createBankDetails(BankDetailsRequest bankDetailsRequest) {
+    public ApiResponse<BankDetails> createBankDetails(
+            BankCardPaymentGetWayDetailsRequest request) {
+
         try {
-            BankDetails bankDetails = BankDetails.builder()
-                    .userId(bankDetailsRequest.getUserId())
-                    .accountNumber(bankDetailsRequest.getAccountNumber())
-                    .bankName(bankDetailsRequest.getBankName())
-                    .iBanNumber(bankDetailsRequest.getIBanNumber())
-                    .taxNumber(bankDetailsRequest.getTaxNumber())
-                    .cardNumber(bankDetailsRequest.getCardNumber())
-                    .cardHolderName(bankDetailsRequest.getCardHolderName())
-                    .cvv(passwordEncoder.encode(bankDetailsRequest.getCvv()))
-                    .expiryDate(bankDetailsRequest.getExpiryDate())
-                    .paymentGatewayId(bankDetailsRequest.getPaymentGatewayId())
-                    .paymentGatewayName(bankDetailsRequest.getPaymentGatewayName())
-                    .build();
+            BankDetails bankDetails = new BankDetails();
 
-            bankRepo.save(bankDetails);
+            // ====== BANK DETAILS ======
+            if (request.getBankDetailsRequest() != null) {
+                BankCardPaymentGetWayDetailsRequest.BankDetailsRequest bankReq =
+                        request.getBankDetailsRequest();
 
-            return new ApiResponse<>("Bank details created successfully", AuthConstant.SUCCESS, bankDetails);
+                bankDetails.setUserId(bankReq.getUserId());
+                bankDetails.setBankName(bankReq.getBankName());
+                bankDetails.setTaxNumber(bankReq.getTaxNumber());
+                bankDetails.setAccountNumber(bankReq.getAccountNumber());
+                bankDetails.setIBanNumber(bankReq.getIBanNumber());
+            }
+
+            // ====== CARD DETAILS ======
+            if (request.getCardDetailsRequest() != null) {
+                BankCardPaymentGetWayDetailsRequest.CardDetailsRequest cardReq =
+                        request.getCardDetailsRequest();
+
+                bankDetails.setCardHolderName(cardReq.getCardHolderName());
+                bankDetails.setCardNumber(cardReq.getCardNumber());
+                bankDetails.setExpiryDate(cardReq.getExpiryDate());
+                bankDetails.setCvv(cardReq.getCvv());
+                bankDetails.setPaymentGatewayId(cardReq.getPaymentGatewayId());
+                bankDetails.setPaymentGatewayName(cardReq.getPaymentGatewayName());
+            }
+
+            // ====== PAYMENT GATEWAY DETAILS ======
+            if (request.getPaymentGetWayRequest() != null) {
+                BankCardPaymentGetWayDetailsRequest.PaymentGetWayRequest payReq =
+                        request.getPaymentGetWayRequest();
+
+                bankDetails.setPaymentGatewayId(payReq.getPaymentGatewayId());
+                bankDetails.setPaymentGatewayName(payReq.getPaymentGatewayName());
+            }
+
+            // ====== DEFAULT STATUS ======
+            bankDetails.setStatus("ACTIVE");
+
+            // ====== SAVE ======
+            BankDetails saved = bankRepo.save(bankDetails);
+
+            return new ApiResponse<>("Bank details created successfully",
+                    AuthConstant.SUCCESS, saved);
+
         } catch (Exception e) {
-            return new ApiResponse<>("Error on creating bank details",AuthConstant.ERROR, null);
+            e.printStackTrace();
+            return new ApiResponse<>("Error on creating bank details",
+                    AuthConstant.ERROR, null);
         }
     }
+
 
 
     public Map<String,Object> changePassword(Long userId, String newPassword){
@@ -582,14 +673,47 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- BANK DETAILS ----------------
-            BankDetails bank = BankDetails.builder()
-                    .userId(savedUser.getId())
-                    .bankName(request.getBankDetails().getBankName())
-                    .accountNumber(request.getBankDetails().getAccountNumber())
-                    .taxNumber(request.getBankDetails().getTaxNumber())
-                    .build();
+            if( request.getBankDetails() != null) {
+                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
+                        request.getBankDetails();
 
-            bankRepo.save(bank);
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .bankName(bankReq.getBankName())
+                        .accountNumber(bankReq.getAccountNumber())
+                        .iBanNumber(bankReq.getIBanNumber())
+                        .taxNumber(bankReq.getTaxNumber())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+
+                bankRepo.save(bankDetails);
+            }
+
+            if (request.getCardDetails() != null) {
+                RestaurantRegistrationRequest.CardDetailsRequest cardReq =
+                        request.getCardDetails();
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .cardHolderName(cardReq.getCardHolderName())
+                        .cardNumber(cardReq.getCardNumber())
+                        .expiryDate(cardReq.getExpiryDate())
+                        .cvv(passwordEncoder.encode(cardReq.getCvv()))
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+                bankRepo.save(bankDetails);
+            }
+
+            if (request.getPaymentGetWay() != null) {
+                RestaurantRegistrationRequest.PaymentGetWayRequest payReq =
+                        request.getPaymentGetWay();
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .paymentGatewayId(payReq.getPaymentGatewayId())
+                        .paymentGatewayName(payReq.getPaymentGatewayName())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+                bankRepo.save(bankDetails);
+            }
 
 
             // ---------------- SOCIAL MEDIA LINKS ----------------
@@ -742,14 +866,35 @@ public class UserServiceImpl implements UserService {
                         .accountNumber(bankReq.getAccountNumber())
                         .iBanNumber(bankReq.getIBanNumber())
                         .taxNumber(bankReq.getTaxNumber())
-                        .cardHolderName(bankReq.getCardHolderName())
-                        .cardNumber(bankReq.getCardNumber())
-                        .expiryDate(bankReq.getExpiryDate())
-                        .cvv(bankReq.getCvv())
-                        .paymentGatewayId(bankReq.getPaymentGatewayId())
-                        .paymentGatewayName(bankReq.getPaymentGatewayName())
+                        .status(AuthConstant.ACTIVE)
                         .build();
 
+                bankRepo.save(bankDetails);
+            }
+
+            if (request.getCardDetails() != null) {
+                RestaurantRegistrationRequest.CardDetailsRequest cardReq =
+                        request.getCardDetails();
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .cardHolderName(cardReq.getCardHolderName())
+                        .cardNumber(cardReq.getCardNumber())
+                        .expiryDate(cardReq.getExpiryDate())
+                        .cvv(passwordEncoder.encode(cardReq.getCvv()))
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+                bankRepo.save(bankDetails);
+            }
+
+            if (request.getPaymentGetWay() != null) {
+                RestaurantRegistrationRequest.PaymentGetWayRequest payReq =
+                        request.getPaymentGetWay();
+                BankDetails bankDetails = BankDetails.builder()
+                        .userId(savedUser.getId())
+                        .paymentGatewayId(payReq.getPaymentGatewayId())
+                        .paymentGatewayName(payReq.getPaymentGatewayName())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
                 bankRepo.save(bankDetails);
             }
 

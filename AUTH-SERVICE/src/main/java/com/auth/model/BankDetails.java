@@ -20,13 +20,13 @@ public class BankDetails {
 
     private Long userId;
 
-    @Column(name = "bank_name", nullable = false, length = 255)
+    @Column(name = "bank_name", length = 255)
     private String bankName;
     private String accountNumber;
 
     private String iBanNumber;
 
-    @Column(name = "tax_number", nullable = false, length = 100)
+    @Column(name = "tax_number", length = 100)
     private String taxNumber;
 
     @Column(name = "card_holder_name", length = 100)
@@ -46,6 +46,9 @@ public class BankDetails {
 
     @Column(name = "payment_gateway_name", length = 100)
     private String paymentGatewayName;
+
+    @Column(name = "status", length = 50)
+    private String status;
 
 
 

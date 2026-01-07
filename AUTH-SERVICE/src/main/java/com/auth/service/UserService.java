@@ -54,7 +54,7 @@ public interface UserService {
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
 
-  ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request);
+  ApiResponse<BankDetails> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
 
     ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
@@ -64,7 +64,9 @@ public interface UserService {
 
     ApiResponse<Address> deleteAddress(AddressRequest request);
 
-    ApiResponse<BankDetails> createBankDetails(BankDetailsRequest bankDetailsRequest);
+    ApiResponse<BankDetails> createBankDetails(BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest);
+
+    public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
 }
 
