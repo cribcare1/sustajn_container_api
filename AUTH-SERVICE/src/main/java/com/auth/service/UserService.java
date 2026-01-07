@@ -2,7 +2,7 @@ package com.auth.service;
 
 import com.auth.model.Address;
 import com.auth.model.User;
-import com.auth.model.UserDto;
+import com.auth.request.UserDto;
 import com.auth.request.*;
 import com.auth.response.*;
 import org.springframework.data.domain.Pageable;

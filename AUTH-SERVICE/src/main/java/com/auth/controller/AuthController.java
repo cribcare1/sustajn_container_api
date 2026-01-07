@@ -2,7 +2,7 @@ package com.auth.controller;
 
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
-import com.auth.model.UserDto;
+import com.auth.request.UserDto;
 import com.auth.repository.UserRepository;
 import com.auth.request.*;
 import com.auth.response.LoginResponse;
