@@ -18,11 +18,14 @@ import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
 import com.auth.response.FeedbackResponse;
 import com.auth.service.UserService;
+import com.auth.util.AuthUtil;
 import com.auth.util.DistanceUtil;
+import com.auth.util.FileStorageUtil;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -48,6 +51,11 @@ public class UserServiceImpl implements UserService {
     private final NotificationFeignClientService notificationFeignClientService;
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
+
+    @Value("{upload.user.profile.path}")
+    private String userProfilePath;
+
+    private final FileStorageUtil fileStorageUtil;
 
     @Override
     public LoginResponse generateToken(String username) {
@@ -150,14 +158,10 @@ public class UserServiceImpl implements UserService {
         if (request.getFullName() != null)
             user.setFullName(request.getFullName());
 
-        if (request.getAddress() != null)
-            user.setAddress(request.getAddress());
 
         if (request.getPhoneNumber() != null)
             user.setPhoneNumber(request.getPhoneNumber());
 
-        if (request.getProfilePictureUrl() != null)
-            user.setProfilePictureUrl(request.getProfilePictureUrl());
 
         userRepository.save(user);
         BankDetails bankDetails =
@@ -573,6 +577,39 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             e.printStackTrace();
             return new ApiResponse<>("Error on deleting bank details",
+                    AuthConstant.ERROR, null);
+        }
+    }
+
+    @Override
+    public ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage) {
+        try {
+            UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
+            if (request == null){
+                return new ApiResponse<>("Please provide valid request", AuthConstant.ERROR, null);
+            }
+
+            Optional<User> userOptional = userRepository.findById(request.getUserId());
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+
+                Optional.ofNullable(request.getFullName()).ifPresent(user::setFullName);
+                Optional.ofNullable(request.getPhoneNumber()).ifPresent(user::setPhoneNumber);
+
+                // save profile image if present
+                if (profileImage != null || !profileImage.isEmpty()){
+                    String profileImageName = fileStorageUtil.storeFile(profileImage, userProfilePath);
+                    user.setProfilePictureUrl(profileImageName);
+                }
+
+                userRepository.save(user);
+
+                return new ApiResponse<>("User profile updated successfully", AuthConstant.SUCCESS, user);
+            }
+
+            return new ApiResponse<>("User not found", AuthConstant.ERROR, null);
+        } catch (Exception e) {
+            return new ApiResponse<>("Error on updating profile details",
                     AuthConstant.ERROR, null);
         }
     }

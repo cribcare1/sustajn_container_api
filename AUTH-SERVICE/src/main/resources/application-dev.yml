@@ -32,3 +32,9 @@ eureka:
       defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
+
+
+upload:
+  user:
+    profile:
+      path=C://uploads//sustajn//user//profile:
