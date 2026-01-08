@@ -1,10 +1,12 @@
 package com.auth.controller;
 
 import com.auth.feignClient.service.NotificationFeignClientService;
+import com.auth.model.BankDetails;
 import com.auth.model.User;
 import com.auth.model.UserDto;
 import com.auth.repository.UserRepository;
 import com.auth.request.*;
+import com.auth.response.ApiResponse;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.request.FeedbackRequest;
@@ -290,7 +292,7 @@ public class AuthController {
     }
 
     @PostMapping("/createBankDetails")
-    public ResponseEntity<?> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
+    public ResponseEntity<ApiResponse> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
         return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
     }
 
