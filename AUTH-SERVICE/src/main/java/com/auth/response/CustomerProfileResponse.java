@@ -18,6 +18,8 @@ public class CustomerProfileResponse {
     private String mobileNumber;
     private String customerId;
     private BankDetailsResponse bankDetailsResponse;
+    private CardDetailsResponse cardDetailsResponse;
+    private PaymentGetWayResponse paymentGetWayResponse;
     private List<AddressResponse> addressResponses;
 
 }

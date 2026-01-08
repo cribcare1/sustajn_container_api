@@ -55,7 +55,7 @@ public interface UserService {
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
-  ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request);
+  ApiResponse<BankDetails> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
 
    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
@@ -65,7 +65,11 @@ public interface UserService {
 
     ApiResponse<Address> deleteAddress(AddressRequest request);
 
-    ApiResponse<BankDetails> createBankDetails(BankDetailsRequest bankDetailsRequest);
+    ApiResponse<BankDetails> createBankDetails(BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest);
+
+    ApiResponse<BankDetails> deleteBankDetails(Long id);
+
+    public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
 }
 
