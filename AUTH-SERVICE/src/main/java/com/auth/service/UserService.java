@@ -69,8 +69,6 @@ public interface UserService {
 
     ApiResponse<BankDetails> deleteBankDetails(Long id);
 
-    public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
-
 }
 
 
