@@ -74,13 +74,13 @@ SELECT
 FROM User u
 
 LEFT JOIN BankDetails b1 
-    ON b1.userId = u.id AND b1.bankName IS NOT NULL
+    ON b1.userId = u.id AND b1.bankName IS NOT NULL AND b1.status = 'active'
 
 LEFT JOIN BankDetails c1 
-    ON c1.userId = u.id AND c1.cardNumber IS NOT NULL
+    ON c1.userId = u.id AND c1.cardNumber IS NOT NULL AND c1.status = 'active'
 
 LEFT JOIN BankDetails p1 
-    ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL
+    ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL AND p1.status = 'active'
 
 LEFT JOIN Address a ON a.userId = u.id
 

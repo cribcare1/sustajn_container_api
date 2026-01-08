@@ -294,6 +294,11 @@ public class AuthController {
         return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
     }
 
+    @PostMapping("/deleteBankDetails/{id}")
+    public ResponseEntity<?> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
+        return ResponseEntity.ok(userService.deleteBankDetails(id));
+    }
+
     @PostMapping("/updateBankDetails")
     public ResponseEntity<?> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
             return ResponseEntity.ok(userService.updateBankDetails(request));

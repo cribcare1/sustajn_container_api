@@ -559,6 +559,23 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public ApiResponse<BankDetails> deleteBankDetails(Long id) {
+        try {
+            Optional<BankDetails> bankDetailsOptional = bankRepo.findById(id);
+            if (bankDetailsOptional.isPresent()) {
+                BankDetails bankDetails = bankDetailsOptional.get();
+                bankDetails.setStatus(AuthConstant.IN_ACTIVE);
+                bankRepo.save(bankDetails);
+                return new ApiResponse<>("Bank details deleted successfully", AuthConstant.SUCCESS, null);
+            }
+            return new ApiResponse<>("Bank details not found", AuthConstant.ERROR, null);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>("Error on deleting bank details",
+                    AuthConstant.ERROR, null);
+        }
+    }
 
 
     public Map<String,Object> changePassword(Long userId, String newPassword){

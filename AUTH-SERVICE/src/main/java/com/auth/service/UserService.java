@@ -66,6 +66,8 @@ public interface UserService {
 
     ApiResponse<BankDetails> createBankDetails(BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest);
 
+    ApiResponse<BankDetails> deleteBankDetails(Long id);
+
     public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
 }
