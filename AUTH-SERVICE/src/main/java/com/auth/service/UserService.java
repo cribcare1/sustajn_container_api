@@ -53,10 +53,11 @@ public interface UserService {
 
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
+    Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
   ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request);
 
-    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
+   ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
     ApiResponse<Address> saveNewAddress(AddressRequest request);
 
