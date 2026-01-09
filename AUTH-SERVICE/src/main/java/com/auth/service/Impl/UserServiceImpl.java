@@ -20,7 +20,6 @@ import com.auth.response.FeedbackResponse;
 import com.auth.service.UserService;
 import com.auth.util.AuthUtil;
 import com.auth.util.DistanceUtil;
-import com.auth.util.FileStorageUtil;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -52,10 +51,8 @@ public class UserServiceImpl implements UserService {
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
 
-    @Value("{upload.user.profile.path}")
+    @Value("${image.storage.root-path}")
     private String userProfilePath;
-
-    private final FileStorageUtil fileStorageUtil;
 
     @Override
     public LoginResponse generateToken(String username) {
@@ -594,12 +591,27 @@ public class UserServiceImpl implements UserService {
                 User user = userOptional.get();
 
                 Optional.ofNullable(request.getFullName()).ifPresent(user::setFullName);
-                Optional.ofNullable(request.getPhoneNumber()).ifPresent(user::setPhoneNumber);
+
+                // Validate and update phone number
+                if (request.getPhoneNumber() != null) {
+                    Optional<User> otherUserOptional =
+                            userRepository.findByPhoneNumber(request.getPhoneNumber());
+
+                    if (otherUserOptional.isPresent()
+                            && !otherUserOptional.get().getId().equals(user.getId())) {
+
+                        return new ApiResponse<>("Phone number already in use by another user",
+                                AuthConstant.ERROR, null);
+                    }
+
+                    user.setPhoneNumber(request.getPhoneNumber());
+                }
 
                 // save profile image if present
-                if (profileImage != null || !profileImage.isEmpty()){
-                    String profileImageName = fileStorageUtil.storeFile(profileImage, userProfilePath);
-                    user.setProfilePictureUrl(profileImageName);
+                String profileImageUrl = null;
+                if (profileImage != null && !profileImage.isEmpty()) {
+                    profileImageUrl = notificationFeignClientService.uploadImage("profile", profileImage);
+                    user.setProfilePictureUrl(profileImageUrl);
                 }
 
                 userRepository.save(user);
@@ -609,6 +621,7 @@ public class UserServiceImpl implements UserService {
 
             return new ApiResponse<>("User not found", AuthConstant.ERROR, null);
         } catch (Exception e) {
+            e.printStackTrace();
             return new ApiResponse<>("Error on updating profile details",
                     AuthConstant.ERROR, null);
         }

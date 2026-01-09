@@ -89,5 +89,5 @@ WHERE u.id = :userId
     List<Object[]> getCustomerProfileDetailsByUserId(@Param("userId") Long userId);
 
 
-
+    Optional<User> findByPhoneNumber(String phoneNumber);
 }
