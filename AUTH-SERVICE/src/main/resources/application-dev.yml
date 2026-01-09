@@ -34,7 +34,6 @@ eureka:
     prefer-ip-address: true
 
 
-upload:
-  user:
-    profile:
-      path=C://uploads//sustajn//user//profile:
+image:
+  storage:
+    root-path: C:/uploads
