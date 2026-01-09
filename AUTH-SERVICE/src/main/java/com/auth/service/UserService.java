@@ -69,6 +69,8 @@ public interface UserService {
 
     ApiResponse<BankDetails> deleteBankDetails(Long id);
 
+    ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage);
+
 }
 
 
