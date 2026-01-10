@@ -12,7 +12,8 @@ import lombok.Setter;
 public class ReceivedResponse {
 
     private String productsName; //if multiple product have one order id then | separated names
-    private String borrowId;
+    private Long orderId;
+    private String transactionId;
     private String returnDateTime; //yyyy-MM-dd|HH:mm am/pm
     private Integer returnedQuantity;
 }

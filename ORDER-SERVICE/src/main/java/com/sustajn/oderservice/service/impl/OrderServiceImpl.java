@@ -381,7 +381,9 @@ public class OrderServiceImpl implements OrderService {
 
                 String dateTime = list.get(0).getBorrowedAt().format(formatter);
 
-                leasedResponses.add(new LeasedResponse(products, transactionId, dateTime, totalQty));
+                leasedResponses.add(
+                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty)
+                );
             }
 
             // ================= RECEIVED SECTION =================
@@ -411,7 +413,9 @@ public class OrderServiceImpl implements OrderService {
 
                 String dateTime = returns.get(0).getReturnedAt().format(formatter);
 
-                receivedResponses.add(new ReceivedResponse(products, transactionId, dateTime, totalReturnedQty));
+                receivedResponses.add(
+                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty)
+                );
             }
 
             // ================= FINAL RESPONSE =================

@@ -12,7 +12,8 @@ import lombok.Setter;
 public class LeasedResponse {
 
     private String productsName; //if multiple product have one order id then | separated names
-    private String orderId;
+    private Long orderId;
+    private String transactionId;
     private String leasedStartDateTime; //yyyy-MM-dd|HH:mm am/pm
     private Integer leasedQuantity;
 }
