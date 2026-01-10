@@ -1,5 +1,7 @@
 package com.sustajn.oderservice.service;
 
+import com.sustajn.oderservice.dto.ApiResponse;
+import com.sustajn.oderservice.dto.OrderHistoryResponse;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.ReturnRequest;
 import org.springframework.stereotype.Service;
@@ -18,4 +20,6 @@ public interface OrderService {
     public Map<String, Object> getOrderDetailsByOrderId(Long orderId);
     public Map<String, Object> getMonthWiseOrders(Long userId, int year);
     public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status);
+
+    ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId);
 }

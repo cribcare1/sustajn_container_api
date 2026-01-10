@@ -1,5 +1,7 @@
 package com.sustajn.oderservice.service.impl;
 
+import com.inventory.response.RestaurantOrderedResponse;
+import com.sustajn.oderservice.constant.OrderServiceConstant;
 import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Order;
@@ -307,6 +309,126 @@ public class OrderServiceImpl implements OrderService {
             response.put("message", "Unexpected error while fetching user order details");
             response.put("details", ex.getMessage());
             return response;
+        }
+    }
+
+    @Override
+    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
+        try {
+
+            // ================= FETCH LOCAL DATA =================
+            List<BorrowOrder> borrowOrders = borrowOrderRepository.findByRestaurantId(restaurantId);
+            List<ReturnOrder> returnOrders = returnOrderRepository.findByRestaurantId(restaurantId);
+
+            // ================= FETCH ORDERED DATA FROM INVENTORY =================
+            ApiResponse<List<RestaurantOrderedResponse>> orderedApiResponse =
+                    inventoryFeignClient.getOrderHistory(restaurantId);
+
+            List<RestaurantOrderedResponse> orderedResponses =
+                    orderedApiResponse != null && orderedApiResponse.getData() != null
+                            ? orderedApiResponse.getData()
+                            : new ArrayList<>();
+
+            // ================= FETCH ORDER ENTITIES =================
+            Set<Long> orderIds = borrowOrders.stream()
+                    .map(BorrowOrder::getOrderId)
+                    .collect(Collectors.toSet());
+
+            List<Order> orders = orderRepository.findAllById(orderIds);
+
+            Map<Long, String> orderTransactionMap = orders.stream()
+                    .collect(Collectors.toMap(Order::getId, Order::getTransactionId));
+
+            // ================= BUILD LOOKUP MAPS =================
+            Map<Long, BorrowOrder> borrowById = borrowOrders.stream()
+                    .collect(Collectors.toMap(BorrowOrder::getId, b -> b));
+
+            Set<Integer> productIds = borrowOrders.stream()
+                    .map(b -> b.getProductId().intValue())
+                    .collect(Collectors.toSet());
+
+            Map<Long, String> productNameMap = inventoryFeignClient
+                    .getProductsByIds(new ArrayList<>(productIds))
+                    .stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getProductId().longValue(),
+                            ProductResponse::getProductName
+                    ));
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy|hh:mm a");
+
+            // ================= LEASED SECTION =================
+            Map<Long, List<BorrowOrder>> leasedGrouped =
+                    borrowOrders.stream().collect(Collectors.groupingBy(BorrowOrder::getOrderId));
+
+            List<LeasedResponse> leasedResponses = new ArrayList<>();
+
+            for (Map.Entry<Long, List<BorrowOrder>> entry : leasedGrouped.entrySet()) {
+
+                Long orderId = entry.getKey();
+                String transactionId = orderTransactionMap.get(orderId);
+
+                List<BorrowOrder> list = entry.getValue();
+
+                String products = list.stream()
+                        .map(b -> productNameMap.get(b.getProductId()))
+                        .distinct()
+                        .collect(Collectors.joining("|"));
+
+                int totalQty = list.stream()
+                        .mapToInt(BorrowOrder::getQuantity)
+                        .sum();
+
+                String dateTime = list.get(0).getBorrowedAt().format(formatter);
+
+                leasedResponses.add(
+                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty)
+                );
+            }
+
+            // ================= RECEIVED SECTION =================
+            Map<Long, List<ReturnOrder>> returnedGrouped =
+                    returnOrders.stream().collect(Collectors.groupingBy(
+                            r -> borrowById.get(r.getBorrowOrderId()).getOrderId()
+                    ));
+
+            List<ReceivedResponse> receivedResponses = new ArrayList<>();
+
+            for (Map.Entry<Long, List<ReturnOrder>> entry : returnedGrouped.entrySet()) {
+
+                Long orderId = entry.getKey();
+                String transactionId = orderTransactionMap.get(orderId);
+
+                List<ReturnOrder> returns = entry.getValue();
+                List<BorrowOrder> relatedBorrows = leasedGrouped.get(orderId);
+
+                String products = relatedBorrows.stream()
+                        .map(b -> productNameMap.get(b.getProductId()))
+                        .distinct()
+                        .collect(Collectors.joining("|"));
+
+                int totalReturnedQty = returns.stream()
+                        .mapToInt(ReturnOrder::getReturnedQuantity)
+                        .sum();
+
+                String dateTime = returns.get(0).getReturnedAt().format(formatter);
+
+                receivedResponses.add(
+                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty)
+                );
+            }
+
+            // ================= FINAL RESPONSE =================
+            OrderHistoryResponse response =
+                    new OrderHistoryResponse(leasedResponses, receivedResponses, orderedResponses);
+
+            return new ApiResponse<>("Order history fetched successfully",
+                    OrderServiceConstant.STATUS_SUCCESS, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>("Failed to fetch order history",
+                    OrderServiceConstant.STATUS_ERROR, null);
         }
     }
 

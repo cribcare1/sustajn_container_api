@@ -3,6 +3,7 @@ package com.sustajn.oderservice.controller;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.service.OrderService;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -80,6 +81,11 @@ public class OrderController {
     @GetMapping("/productsSummary/{userId}")
     public ResponseEntity<?> getBorrowSummary(@PathVariable Long userId) {
         return ResponseEntity.ok(orderService.getBorrowedProductSummary(userId));
+    }
+
+    @GetMapping("/orderHistory/{restaurantId}")
+    public ResponseEntity<?> getOrderHistory(@PathVariable @NotNull(message = "please provide resturant id") Long restaurantId) {
+        return ResponseEntity.ok(orderService.getOrderHistory(restaurantId));
     }
 
 }

@@ -32,3 +32,7 @@ eureka:
       defaultZone: http://35.154.182.218:8761/eureka/
   instance:
     prefer-ip-address: true
+
+image:
+  storage:
+    root-path: C:/uploads
