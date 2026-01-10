@@ -1,6 +1,7 @@
 package com.inventory.service.impl;
 
 import com.inventory.Constant.AdminOrderStatus;
+import com.inventory.Constant.InventoryConstant;
 import com.inventory.Constant.TransactionType;
 import com.inventory.dto.RestaurantContainerDetails;
 import com.inventory.entity.AdminOrder;
@@ -12,6 +13,8 @@ import com.inventory.repository.AdminOrderRepository;
 import com.inventory.repository.RestaurantContainerInventoryRepository;
 import com.inventory.request.AdminOrderApproveRequest;
 import com.inventory.request.AdminOrderCreateRequest;
+import com.inventory.response.ApiResponse;
+import com.inventory.response.RestaurantOrderedResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -289,6 +292,22 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
             response.put("message", "Failed to fetch available containers"+e.getMessage());
             response.put("containersDetails", null);
             return response;
+        }
+    }
+
+    @Override
+    public ApiResponse<List<RestaurantOrderedResponse>> getRestaurantOrderDetails(Long restaurantId) {
+        try {
+            List<RestaurantOrderedResponse> response =
+                    adminOrderRepository.findOrdersByRestaurantId(restaurantId);
+
+            return new ApiResponse<>("Order details fetched successfully",
+                    InventoryConstant.SUCCESS, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>("Failed to fetch order details",
+                    InventoryConstant.ERROR, null);
         }
     }
 

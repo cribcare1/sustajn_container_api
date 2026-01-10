@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "admin_orders",
@@ -37,5 +38,8 @@ public class AdminOrder extends BaseEntity {
     private String adminRemark;        // rejection/approval message
 
     private LocalDateTime decisionAt;  // when admin acted
+
+    @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
+    private List<AdminOrderItem> items;
 }
 
