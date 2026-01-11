@@ -72,7 +72,25 @@ public class UserServiceImpl implements UserService {
                 user.getFullName(),
                 token,
                 "Bearer"   // token type
-        );    }
+        );
+    }
+
+
+    private LoginResponse generateTokenWithLoginDetails(User user) {
+
+        String token = jwtUtil.generateToken(user.getUserName());
+
+        return new LoginResponse(
+                user.getId(),
+                user.getProfilePictureUrl(),
+                user.getUserType().name(),
+                user.getEmail(),
+                user.getAddress(),
+                user.getFullName(),
+                token,
+                "Bearer"   // token type
+        );
+    }
 
     @Override
     public UserDto saveUser(User user) {
@@ -183,7 +201,6 @@ public class UserServiceImpl implements UserService {
                     .website(business.getWebsiteDetails()) // Map websiteDetails -> website
                     .build();
         }
-
 
 
         return new ProfileResponse(
@@ -345,7 +362,7 @@ public class UserServiceImpl implements UserService {
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
 
         try {
-            List<Object[]> profileResultRows  = userRepository.getCustomerProfileDetailsByUserId(userId);
+            List<Object[]> profileResultRows = userRepository.getCustomerProfileDetailsByUserId(userId);
 
             if (CollectionUtils.isEmpty(profileResultRows)) {
                 return new ApiResponse<>(AuthConstant.ERROR, "Customer not found", null);
@@ -433,6 +450,7 @@ public class UserServiceImpl implements UserService {
         }
         return addresses;
     }
+
     @Override
     public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request) {
         // Use basicRepo (which you already have injected)
@@ -456,7 +474,6 @@ public class UserServiceImpl implements UserService {
 
         return Map.of("status", "success", "message", "Business info updated successfully");
     }
-
 
 
     @Override
@@ -582,7 +599,7 @@ public class UserServiceImpl implements UserService {
     public ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage) {
         try {
             UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
-            if (request == null){
+            if (request == null) {
                 return new ApiResponse<>("Please provide valid request", AuthConstant.ERROR, null);
             }
 
@@ -628,8 +645,8 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    public Map<String,Object> changePassword(Long userId, String newPassword){
-        try{
+    public Map<String, Object> changePassword(Long userId, String newPassword) {
+        try {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             user.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -638,7 +655,7 @@ public class UserServiceImpl implements UserService {
                     "message", "Password changed successfully",
                     "status", "success"
             );
-        } catch (Exception e){
+        } catch (Exception e) {
             return Map.of(
                     "message", "Error changing password: " + e.getMessage(),
                     "status", "error"
@@ -646,8 +663,8 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-    public Map<String,Object> changePassword(String email, String newPassword){
-        try{
+    public Map<String, Object> changePassword(String email, String newPassword) {
+        try {
             User user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found"));
             user.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -656,7 +673,7 @@ public class UserServiceImpl implements UserService {
                     "message", "Password changed successfully",
                     "status", "success"
             );
-        } catch (Exception e){
+        } catch (Exception e) {
             return Map.of(
                     "message", "Error changing password: " + e.getMessage(),
                     "status", "error"
@@ -667,8 +684,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public Map<String, Object> registerRestaurant(
-            RestaurantRegistrationRequest request,
-            MultipartFile profileImage
+            RestaurantRegistrationRequest request
     ) {
         Map<String, Object> response = new HashMap<>();
 
@@ -689,10 +705,6 @@ public class UserServiceImpl implements UserService {
                 return error("Password must be at least 6 characters");
             }
 
-            String profileImageUrl = null;
-            if (profileImage != null && !profileImage.isEmpty()) {
-                profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
-            }
 
             User user = User.builder()
                     .userType(UserType.RESTAURANT)
@@ -704,7 +716,6 @@ public class UserServiceImpl implements UserService {
                     .subscriptionPlanId(request.getSubscriptionPlanId())
                     .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
                     .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
-                    .profilePictureUrl(profileImageUrl)
                     .accountStatus(AccountStatus.active)
                     .emailVerified(false)
                     .phoneVerified(false)
@@ -723,7 +734,7 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- CREATE ADDRESS DETAILS ----------------
-            if (request.getAddress() != null){
+            if (request.getAddress() != null) {
                 RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
 
                 // You can create an AddressDetails entity and save it if needed
@@ -740,7 +751,7 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- BANK DETAILS ----------------
-            if( request.getBankDetails() != null) {
+            if (request.getBankDetails() != null) {
                 RestaurantRegistrationRequest.BankDetailsRequest bankReq =
                         request.getBankDetails();
 
@@ -795,15 +806,9 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- RESPONSE DTO ----------------
-            RestaurantRegisterResponse data = RestaurantRegisterResponse.builder()
-                    .restaurantId(savedUser.getId())
-                    .name(savedUser.getFullName())
-                    .email(savedUser.getEmail())
-                    .phoneNumber(savedUser.getPhoneNumber())
-                    .profileImageUrl(savedUser.getProfilePictureUrl())
-                    .build();
+            LoginResponse loginResponse = generateTokenWithLoginDetails(user);
 
-            return Map.of("message","Restaurant registered successfully","restaurantRegistrationData" ,data,"status","success");
+            return Map.of("message", "Restaurant registered successfully", "data", loginResponse, "status", "success");
 
         } catch (Exception e) {
             return error("Something went wrong: " + e.getMessage());
@@ -823,8 +828,7 @@ public class UserServiceImpl implements UserService {
     @Transactional
     @Override
     public Map<String, Object> registerUserWithBankDetails(
-            RestaurantRegistrationRequest request,
-            MultipartFile profileImage
+            RestaurantRegistrationRequest request
     ) {
 
         try {
@@ -858,22 +862,7 @@ public class UserServiceImpl implements UserService {
 //                throw new IllegalArgumentException("Bank details are required");
 //            }
 
-            // ---------------- PROFILE IMAGE UPLOAD ----------------
-            String profileImageUrl = null;
 
-            if (profileImage != null && !profileImage.isEmpty()) {
-
-                if (profileImage.getContentType() == null ||
-                        !profileImage.getContentType().startsWith("image/")) {
-                    throw new IllegalArgumentException("Only image files are allowed");
-                }
-
-             if (profileImage != null && !profileImage.isEmpty()) {
-                profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
-                System.err.println("profileImageUrl = " + profileImageUrl);
-            }
-
-            }
             LocalDate dob = null;
             if (request.getDateOfBirth() != null) {
                 dob = LocalDate.parse(request.getDateOfBirth());
@@ -897,7 +886,6 @@ public class UserServiceImpl implements UserService {
                     .longitude(request.getLongitude() != null
                             ? BigDecimal.valueOf(request.getLongitude())
                             : null)
-                    .profilePictureUrl(profileImageUrl)
                     .accountStatus(AccountStatus.active)
                     .emailVerified(false)
                     .phoneVerified(false)
@@ -907,7 +895,7 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- CREATE ADDRESS DETAILS ----------------
-            if (request.getAddress() != null){
+            if (request.getAddress() != null) {
                 RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
 
                 // You can create an AddressDetails entity and save it if needed
@@ -923,7 +911,7 @@ public class UserServiceImpl implements UserService {
             }
 
             // ---------------- CREATE BANK DETAILS ----------------
-            if( request.getBankDetails() != null) {
+            if (request.getBankDetails() != null) {
                 RestaurantRegistrationRequest.BankDetailsRequest bankReq =
                         request.getBankDetails();
 
@@ -965,13 +953,13 @@ public class UserServiceImpl implements UserService {
                 bankRepo.save(bankDetails);
             }
 
+            LoginResponse loginResponse = generateTokenWithLoginDetails(savedUser);
 
             // ---------------- SUCCESS RESPONSE ----------------
             Map<String, Object> success = new HashMap<>();
             success.put("status", "success");
             success.put("message", "User registered successfully with bank details");
-            success.put("userId", savedUser.getId());
-            success.put("profileImageUrl", profileImageUrl);
+            success.put("data", loginResponse);
 
             return success;
 
@@ -984,7 +972,6 @@ public class UserServiceImpl implements UserService {
             return error(ex.getMessage());
         }
     }
-
 
 
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable) {
@@ -1068,7 +1055,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds) {
-        return userRepository.findRestaurantsByIds(restaurantIds,UserType.RESTAURANT,AccountStatus.active);
+        return userRepository.findRestaurantsByIds(restaurantIds, UserType.RESTAURANT, AccountStatus.active);
     }
 
 
@@ -1242,5 +1229,37 @@ public class UserServiceImpl implements UserService {
         return newId;
     }
 
+    @Override
+    public ApiResponse<?> uploadImage(MultipartFile profileImage, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", AuthConstant.ERROR));
+        try {
+            if(user.getProfilePictureUrl()!=null){
+                String existingImageName = user.getProfilePictureUrl();
+                notificationFeignClientService.deleteContainer("profile",existingImageName);
+            }
 
+            String profileImageUrl = null;
+
+            if (profileImage != null && !profileImage.isEmpty()) {
+
+                if (profileImage.getContentType() == null ||
+                        !profileImage.getContentType().startsWith("image/")) {
+                    throw new IllegalArgumentException("Only image files are allowed");
+                }
+
+                    profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
+                    System.err.println("profileImageUrl = " + profileImageUrl);
+                }
+
+
+            System.err.println("Uploaded image URL: " + profileImageUrl);
+            user.setProfilePictureUrl(profileImageUrl);
+            userRepository.save(user);
+            return new ApiResponse<>("Profile image updated successfully", AuthConstant.SUCCESS, profileImageUrl);
+        } catch (Exception e) {
+            return new ApiResponse<>("Error updating profile image", AuthConstant.ERROR, null);
+        }
+
+    }
 }

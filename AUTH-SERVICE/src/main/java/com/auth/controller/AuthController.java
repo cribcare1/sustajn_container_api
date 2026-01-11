@@ -4,7 +4,7 @@ import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.Address;
 import com.auth.model.BankDetails;
 import com.auth.model.User;
-import com.auth.model.UserDto;
+import com.auth.request.UserDto;
 import com.auth.repository.UserRepository;
 import com.auth.request.*;
 import com.auth.response.*;
@@ -158,37 +158,25 @@ public class AuthController {
 
     @PostMapping(
             value = "/register-restaurant",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+            consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> registerRestaurant(
-            @RequestPart("data") String data,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
-    ) throws Exception {
-
-        ObjectMapper mapper = new ObjectMapper();
-        RestaurantRegistrationRequest request =
-                mapper.readValue(data, RestaurantRegistrationRequest.class);
-
+            @RequestBody RestaurantRegistrationRequest data)  {
         return ResponseEntity.ok(
-                userService.registerRestaurant(request, profileImage)
+                userService.registerRestaurant(data)
         );
     }
 
 
     @PostMapping(
             value = "/registerCostumer",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
-            produces = MediaType.APPLICATION_JSON_VALUE
+            consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> registerUserWithBankDetails(
-            @RequestPart("data") String request,
-            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage
-    ) throws JsonProcessingException {
-        ObjectMapper mapper = new ObjectMapper();
-        RestaurantRegistrationRequest regRequest =
-                mapper.readValue(request, RestaurantRegistrationRequest.class);
+            @RequestBody RestaurantRegistrationRequest request
+    )  {
         return ResponseEntity.ok(
-                userService.registerUserWithBankDetails(regRequest, profileImage)
+                userService.registerUserWithBankDetails(request)
         );
     }
 
@@ -345,5 +333,11 @@ public class AuthController {
         return ResponseEntity.ok(userService.updateUserProfile(userData, profileImage));
     }
 
+
+    @PostMapping("/uploadImage/{userId}")
+    public ResponseEntity<?> uploadImage(@RequestPart MultipartFile image,@PathVariable Long userId) {
+      ApiResponse apiResponse=  userService.uploadImage(image,userId);
+        return ResponseEntity.ok(apiResponse);
+    }
 
 }

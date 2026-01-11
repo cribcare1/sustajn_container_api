@@ -17,6 +17,7 @@ import com.inventory.response.ApiResponse;
 import com.inventory.response.RestaurantOrderedResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -30,7 +31,7 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
 
     private final AdminOrderRepository adminOrderRepository;
     private final AdminOrderItemRepository adminOrderItemRepository;
-    private RestaurantContainerInventoryRepository inventoryRepository;
+    private  final RestaurantContainerInventoryRepository inventoryRepository;
 
     @Override
     @Transactional
@@ -261,15 +262,9 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // 1️⃣ Validate input
-            if (restaurantId == null || restaurantId <= 0) {
-                response.put("status", "error");
-                response.put("message", "Invalid restaurant ID");
-                response.put("containersDetails", null);
-                return response;
-            }
 
-            // 2️⃣ Fetch containers
+
+            //  Fetch containers
             List<RestaurantContainerDetails> containers = inventoryRepository.findContainersWithDetails(restaurantId);
 
             // 3️⃣ Check if data is empty
