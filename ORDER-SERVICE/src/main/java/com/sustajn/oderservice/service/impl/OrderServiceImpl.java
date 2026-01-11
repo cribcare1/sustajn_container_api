@@ -310,7 +310,7 @@ public class OrderServiceImpl implements OrderService {
             return response;
         }
     }
-    
+
     @Override
     public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
         try {

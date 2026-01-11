@@ -17,6 +17,8 @@ public class CustomerProfileResponse {
     private String fullName;
     private String mobileNumber;
     private String customerId;
+    private String emailId;
+    private String profileImageUrl;
     private BankDetailsResponse bankDetailsResponse;
     private CardDetailsResponse cardDetailsResponse;
     private PaymentGetWayResponse paymentGetWayResponse;

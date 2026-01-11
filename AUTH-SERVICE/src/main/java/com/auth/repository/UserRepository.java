@@ -61,6 +61,8 @@ SELECT
     u.fullName,
     u.phoneNumber,
     u.customerId,
+    u.email,
+    u.profilePictureUrl,
 
     b1.id, b1.bankName, b1.accountNumber, b1.iBanNumber, b1.taxNumber,
 
