@@ -56,34 +56,38 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
 
     @Query("""
-    SELECT 
-        u.id,
-        u.fullName,
-        u.phoneNumber,
-        u.customerId,
-    
-        b.id,
-        b.bankName,
-        b.accountNumber,
-        b.iBanNumber,
-        b.taxNumber,
-        b.cardHolderName,
-        b.cardNumber,
-        b.expiryDate,
-        b.paymentGatewayId,
-        b.paymentGatewayName,
-    
-        a.id,
-        a.addressType,
-        a.flatDoorHouseDetails,
-        a.areaStreetCityBlockDetails,
-        a.poBoxOrPostalCode
-    FROM User u
-    LEFT JOIN BankDetails b ON b.userId = u.id
-    LEFT JOIN Address a ON a.userId = u.id
-    WHERE u.id = :userId
-    """)
+SELECT 
+    u.id,
+    u.fullName,
+    u.phoneNumber,
+    u.customerId,
+
+    b1.id, b1.bankName, b1.accountNumber, b1.iBanNumber, b1.taxNumber,
+
+    c1.id, c1.cardHolderName, c1.cardNumber, c1.expiryDate,
+
+    p1.id, p1.paymentGatewayId, p1.paymentGatewayName,
+
+    a.id, a.addressType, a.flatDoorHouseDetails, 
+    a.areaStreetCityBlockDetails, a.poBoxOrPostalCode
+
+FROM User u
+
+LEFT JOIN BankDetails b1 
+    ON b1.userId = u.id AND b1.bankName IS NOT NULL AND b1.status = 'active'
+
+LEFT JOIN BankDetails c1 
+    ON c1.userId = u.id AND c1.cardNumber IS NOT NULL AND c1.status = 'active'
+
+LEFT JOIN BankDetails p1 
+    ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL AND p1.status = 'active'
+
+LEFT JOIN Address a ON a.userId = u.id
+
+WHERE u.id = :userId
+""")
     List<Object[]> getCustomerProfileDetailsByUserId(@Param("userId") Long userId);
 
 
+    Optional<User> findByPhoneNumber(String phoneNumber);
 }

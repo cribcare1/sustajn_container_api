@@ -75,4 +75,7 @@ WHERE b.user_id = :userId
 GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
 """, nativeQuery = true)
     List<Object[]> getProductBorrowReturnSummary(@Param("userId") Long userId);
+
+
+    List<BorrowOrder> findByRestaurantId(Long restaurantId);
 }

@@ -33,9 +33,6 @@ eureka:
   instance:
     prefer-ip-address: true
 
-springdoc:
-  enable: true
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
+image:
+  storage:
+    root-path: C:/uploads

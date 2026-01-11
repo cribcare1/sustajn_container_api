@@ -1,15 +1,15 @@
 package com.auth.controller;
 
 import com.auth.feignClient.service.NotificationFeignClientService;
+import com.auth.model.Address;
+import com.auth.model.BankDetails;
 import com.auth.model.User;
 import com.auth.request.UserDto;
 import com.auth.repository.UserRepository;
 import com.auth.request.*;
-import com.auth.response.LoginResponse;
-import com.auth.response.RestaurantRegisterResponse;
+import com.auth.response.*;
 import com.auth.request.FeedbackRequest;
-import com.auth.request.BankDetailsRequest;
-import com.auth.response.ProfileResponse;
+import com.auth.request.BankCardPaymentGetWayDetailsRequest;
 import com.auth.service.UserService;
 import com.auth.validation.CreateGroup;
 import com.auth.validation.UpdateGroup;
@@ -43,11 +43,7 @@ public class AuthController {
     private final NotificationFeignClientService notificationFeignClientService;
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-//    @PostMapping("/register-user")
-//    public UserDto registerUser(@RequestBody User user){
-//        UserDto userDto = userService.saveUser(user);
-//        return userDto;
-//    }
+    
     @PostMapping("/register-user")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
 
@@ -290,12 +286,17 @@ public class AuthController {
     }
 
     @PostMapping("/createBankDetails")
-    public ResponseEntity<?> createBankDetails(@RequestBody @Validated BankDetailsRequest bankDetailsRequest){
-        return ResponseEntity.ok(userService.createBankDetails(bankDetailsRequest));
+    public ResponseEntity<ApiResponse<BankDetails>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
+        return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
+    }
+
+    @PostMapping("/deleteBankDetails/{id}")
+    public ResponseEntity<ApiResponse<BankDetails>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
+        return ResponseEntity.ok(userService.deleteBankDetails(id));
     }
 
     @PostMapping("/updateBankDetails")
-    public ResponseEntity<?> updateBankDetails(@RequestBody BankDetailsRequest request) {
+    public ResponseEntity<ApiResponse<BankDetails>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
             return ResponseEntity.ok(userService.updateBankDetails(request));
     }
     @PutMapping("/updateBusinessInfo/{restaurantId}")
@@ -316,26 +317,32 @@ public class AuthController {
 
     // save new address
     @PostMapping("/saveAddress")
-    public ResponseEntity<?> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<Address>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.saveNewAddress(request));
     }
 
     //update address
     @PostMapping("/updateAddress")
-    public ResponseEntity<?> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<Address>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.updateAddress(request));
     }
 
     //Delete address
     @PostMapping("/deleteAddress")
-    public ResponseEntity<?> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<Address>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.deleteAddress(request));
     }
 
     //Get Profile details
     @GetMapping("/getProfileDetails/{userId}")
-    public ResponseEntity<?> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
         return ResponseEntity.ok(userService.getCustomerProfileDetails(userId));
+    }
+
+    //Update profile details
+    @PostMapping("/updateProfileDetails")
+    public ResponseEntity<ApiResponse<User>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
+        return ResponseEntity.ok(userService.updateUserProfile(userData, profileImage));
     }
 
 

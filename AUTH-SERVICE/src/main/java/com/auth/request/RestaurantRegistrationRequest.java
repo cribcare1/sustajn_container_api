@@ -30,6 +30,8 @@ public class RestaurantRegistrationRequest {
 
     // ========== BANK DETAILS ==========
     private BankDetailsRequest bankDetails;
+    private CardDetailsRequest cardDetails;
+    private PaymentGetWayRequest paymentGetWay;
 
     // ========== SOCIAL MEDIA DETAILS ==========
     private List<SocialMediaRequest> socialMediaList;
@@ -59,13 +61,28 @@ public class RestaurantRegistrationRequest {
         private String taxNumber;
         private String accountNumber;
         public String iBanNumber;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class CardDetailsRequest {
         private String cardHolderName;
         private String cardNumber;
         private String expiryDate;
         private String cvv;
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class PaymentGetWayRequest {
         private String paymentGatewayId;
         private String paymentGatewayName;
-
     }
 
     @Getter

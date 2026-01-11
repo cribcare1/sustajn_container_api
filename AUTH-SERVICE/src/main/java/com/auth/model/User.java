@@ -6,6 +6,7 @@ import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.DeviceOS;
 import com.auth.enumDetails.Gender;
 import com.auth.enumDetails.UserType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -62,6 +63,7 @@ public class User {
     private String phoneNumber;
 
     @Column(name = "password_hash", length = 250)
+    @JsonIgnore
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)

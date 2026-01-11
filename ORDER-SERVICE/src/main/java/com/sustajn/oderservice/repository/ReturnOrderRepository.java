@@ -19,4 +19,6 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
             @Param("userId") Long userId,
             @Param("year") int year
     );
+
+    List<ReturnOrder> findByRestaurantId(Long restaurantId);
 }

@@ -53,10 +53,11 @@ public interface UserService {
 
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
+    Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
-  ApiResponse<BankDetails> updateBankDetails(BankDetailsRequest request);
+  ApiResponse<BankDetails> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
 
-    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
+   ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
     ApiResponse<Address> saveNewAddress(AddressRequest request);
 
@@ -64,7 +65,11 @@ public interface UserService {
 
     ApiResponse<Address> deleteAddress(AddressRequest request);
 
-    ApiResponse<BankDetails> createBankDetails(BankDetailsRequest bankDetailsRequest);
+    ApiResponse<BankDetails> createBankDetails(BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest);
+
+    ApiResponse<BankDetails> deleteBankDetails(Long id);
+
+    ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage);
 
 }
 
