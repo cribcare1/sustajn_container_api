@@ -312,6 +312,126 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+//    @Override
+//    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
+//        try {
+//
+//            // ================= FETCH LOCAL DATA =================
+//            List<BorrowOrder> borrowOrders = borrowOrderRepository.findByRestaurantId(restaurantId);
+//            List<ReturnOrder> returnOrders = returnOrderRepository.findByRestaurantId(restaurantId);
+//
+//            // ================= FETCH ORDERED DATA FROM INVENTORY =================
+//            ApiResponse<List<RestaurantOrderedResponse>> orderedApiResponse =
+//                    inventoryFeignClient.getOrderHistory(restaurantId);
+//
+//            List<RestaurantOrderedResponse> orderedResponses =
+//                    orderedApiResponse != null && orderedApiResponse.getData() != null
+//                            ? orderedApiResponse.getData()
+//                            : new ArrayList<>();
+//
+//            // ================= FETCH ORDER ENTITIES =================
+//            Set<Long> orderIds = borrowOrders.stream()
+//                    .map(BorrowOrder::getOrderId)
+//                    .collect(Collectors.toSet());
+//
+//            List<Order> orders = orderRepository.findAllById(orderIds);
+//
+//            Map<Long, String> orderTransactionMap = orders.stream()
+//                    .collect(Collectors.toMap(Order::getId, Order::getTransactionId));
+//
+//            // ================= BUILD LOOKUP MAPS =================
+//            Map<Long, BorrowOrder> borrowById = borrowOrders.stream()
+//                    .collect(Collectors.toMap(BorrowOrder::getId, b -> b));
+//
+//            Set<Integer> productIds = borrowOrders.stream()
+//                    .map(b -> b.getProductId().intValue())
+//                    .collect(Collectors.toSet());
+//
+//            Map<Long, String> productNameMap = inventoryFeignClient
+//                    .getProductsByIds(new ArrayList<>(productIds))
+//                    .stream()
+//                    .collect(Collectors.toMap(
+//                            p -> p.getProductId().longValue(),
+//                            ProductResponse::getProductName
+//                    ));
+//
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy|hh:mm a");
+//
+//            // ================= LEASED SECTION =================
+//            Map<Long, List<BorrowOrder>> leasedGrouped =
+//                    borrowOrders.stream().collect(Collectors.groupingBy(BorrowOrder::getOrderId));
+//
+//            List<LeasedResponse> leasedResponses = new ArrayList<>();
+//
+//            for (Map.Entry<Long, List<BorrowOrder>> entry : leasedGrouped.entrySet()) {
+//
+//                Long orderId = entry.getKey();
+//                String transactionId = orderTransactionMap.get(orderId);
+//
+//                List<BorrowOrder> list = entry.getValue();
+//
+//                String products = list.stream()
+//                        .map(b -> productNameMap.get(b.getProductId()))
+//                        .distinct()
+//                        .collect(Collectors.joining("|"));
+//
+//                int totalQty = list.stream()
+//                        .mapToInt(BorrowOrder::getQuantity)
+//                        .sum();
+//
+//                String dateTime = list.get(0).getBorrowedAt().format(formatter);
+//
+//                leasedResponses.add(
+//                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty)
+//                );
+//            }
+//
+//            // ================= RECEIVED SECTION =================
+//            Map<Long, List<ReturnOrder>> returnedGrouped =
+//                    returnOrders.stream().collect(Collectors.groupingBy(
+//                            r -> borrowById.get(r.getBorrowOrderId()).getOrderId()
+//                    ));
+//
+//            List<ReceivedResponse> receivedResponses = new ArrayList<>();
+//
+//            for (Map.Entry<Long, List<ReturnOrder>> entry : returnedGrouped.entrySet()) {
+//
+//                Long orderId = entry.getKey();
+//                String transactionId = orderTransactionMap.get(orderId);
+//
+//                List<ReturnOrder> returns = entry.getValue();
+//                List<BorrowOrder> relatedBorrows = leasedGrouped.get(orderId);
+//
+//                String products = relatedBorrows.stream()
+//                        .map(b -> productNameMap.get(b.getProductId()))
+//                        .distinct()
+//                        .collect(Collectors.joining("|"));
+//
+//                int totalReturnedQty = returns.stream()
+//                        .mapToInt(ReturnOrder::getReturnedQuantity)
+//                        .sum();
+//
+//                String dateTime = returns.get(0).getReturnedAt().format(formatter);
+//
+//                receivedResponses.add(
+//                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty)
+//                );
+//            }
+//
+//            // ================= FINAL RESPONSE =================
+//            OrderHistoryResponse response =
+//                    new OrderHistoryResponse(leasedResponses, receivedResponses, orderedResponses);
+//
+//            return new ApiResponse<>("Order history fetched successfully",
+//                    OrderServiceConstant.STATUS_SUCCESS, response);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return new ApiResponse<>("Failed to fetch order history",
+//                    OrderServiceConstant.STATUS_ERROR, null);
+//        }
+//    }
+
     @Override
     public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
         try {
@@ -367,7 +487,6 @@ public class OrderServiceImpl implements OrderService {
 
                 Long orderId = entry.getKey();
                 String transactionId = orderTransactionMap.get(orderId);
-
                 List<BorrowOrder> list = entry.getValue();
 
                 String products = list.stream()
@@ -375,14 +494,30 @@ public class OrderServiceImpl implements OrderService {
                         .distinct()
                         .collect(Collectors.joining("|"));
 
-                int totalQty = list.stream()
-                        .mapToInt(BorrowOrder::getQuantity)
-                        .sum();
+                int totalQty = list.stream().mapToInt(BorrowOrder::getQuantity).sum();
 
                 String dateTime = list.get(0).getBorrowedAt().format(formatter);
 
+                List<ProductOrderListResponse> productOrderListResponses = list.stream()
+                        .map(b -> {
+                            ProductResponse p = inventoryFeignClient
+                                    .getProductsByIds(List.of(b.getProductId().intValue()))
+                                    .get(0);
+
+                            return new ProductOrderListResponse(
+                                    p.getProductId(),
+                                    p.getProductName(),
+                                    p.getCapacity(),
+                                    b.getQuantity(),                 // containerCount
+                                    p.getProductImageUrl(),
+                                    p.getProductUniqueId()
+                            );
+                        })
+                        .collect(Collectors.toList());
+
+
                 leasedResponses.add(
-                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty)
+                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty, productOrderListResponses)
                 );
             }
 
@@ -407,14 +542,36 @@ public class OrderServiceImpl implements OrderService {
                         .distinct()
                         .collect(Collectors.joining("|"));
 
-                int totalReturnedQty = returns.stream()
-                        .mapToInt(ReturnOrder::getReturnedQuantity)
-                        .sum();
+                int totalReturnedQty = returns.stream().mapToInt(ReturnOrder::getReturnedQuantity).sum();
 
                 String dateTime = returns.get(0).getReturnedAt().format(formatter);
 
+                List<ProductOrderListResponse> productOrderListResponses = relatedBorrows.stream()
+                        .map(b -> {
+                            int returnedQty = returns.stream()
+                                    .filter(r -> r.getProductId().equals(b.getProductId()))
+                                    .mapToInt(ReturnOrder::getReturnedQuantity)
+                                    .sum();
+
+                            ProductResponse p = inventoryFeignClient
+                                    .getProductsByIds(List.of(b.getProductId().intValue()))
+                                    .get(0);
+
+                            return new ProductOrderListResponse(
+                                    p.getProductId(),
+                                    p.getProductName(),
+                                    p.getCapacity(),
+                                    returnedQty,                     // containerCount
+                                    p.getProductImageUrl(),
+                                    p.getProductUniqueId()
+                            );
+                        })
+                        .collect(Collectors.toList());
+
+
+
                 receivedResponses.add(
-                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty)
+                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty, productOrderListResponses)
                 );
             }
 

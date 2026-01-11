@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.util.List;
 
 @Getter
 @Setter
@@ -16,4 +17,5 @@ public class ReceivedResponse {
     private String transactionId;
     private String returnDateTime; //yyyy-MM-dd|HH:mm am/pm
     private Integer returnedQuantity;
+    private List<ProductOrderListResponse> productOrderListResponses;
 }
