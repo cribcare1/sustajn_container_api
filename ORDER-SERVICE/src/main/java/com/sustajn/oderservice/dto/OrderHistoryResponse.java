@@ -1,6 +1,5 @@
 package com.sustajn.oderservice.dto;
 
-import com.inventory.response.RestaurantOrderedResponse;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
