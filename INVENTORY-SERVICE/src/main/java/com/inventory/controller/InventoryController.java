@@ -8,6 +8,10 @@ import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
 import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -205,9 +209,13 @@ public class InventoryController {
     }
 
     // 4️⃣ Get available containers for a restaurant
-    @GetMapping("/restaurant/{restaurantId}/containers")
+//    @GetMapping("/restaurant/getAvailableContainers/{restaurantId}")
+    @GetMapping({
+            "/restaurant/getAvailableContainers/{restaurantId}"
+    })
     public ResponseEntity<?> getAvailableContainers(
-            @PathVariable("restaurantId") Long restaurantId
+            @PathVariable(required = false)
+          @NotNull(message = "restaurantId must not be null")Long restaurantId
     ) {
         Map<String, Object> response = adminOrderService.getAvailableContainers(restaurantId);
         return ResponseEntity.ok(response);

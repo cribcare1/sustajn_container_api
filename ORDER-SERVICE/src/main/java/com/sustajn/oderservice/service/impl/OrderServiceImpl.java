@@ -1,6 +1,5 @@
 package com.sustajn.oderservice.service.impl;
 
-import com.inventory.response.RestaurantOrderedResponse;
 import com.sustajn.oderservice.constant.OrderServiceConstant;
 import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;

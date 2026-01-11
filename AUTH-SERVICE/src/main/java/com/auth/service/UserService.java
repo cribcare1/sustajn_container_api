@@ -23,8 +23,7 @@ public interface UserService {
     public Map<String,Object> changePassword(String email, String newPassword);
 
     public Map<String,Object> registerRestaurant(
-            RestaurantRegistrationRequest request,
-            MultipartFile profileImage
+            RestaurantRegistrationRequest request
     );
     ProfileResponse getRestaurantProfileById(Long restaurantId);
     ProfileResponse updateRestaurantProfileById(
@@ -37,8 +36,7 @@ public interface UserService {
 
 
     public Map<String, Object> registerUserWithBankDetails(
-            RestaurantRegistrationRequest request,
-            MultipartFile profileImage
+            RestaurantRegistrationRequest request
     );
 
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable);
@@ -70,7 +68,7 @@ public interface UserService {
     ApiResponse<BankDetails> deleteBankDetails(Long id);
 
     ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage);
-
+    ApiResponse<?> uploadImage(MultipartFile file, Long userId);
 }
 
 

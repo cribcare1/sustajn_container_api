@@ -1,9 +1,9 @@
 package com.sustajn.oderservice.feign.service;
 
-import com.inventory.response.RestaurantOrderedResponse;
 import com.sustajn.oderservice.config.FeignClientConfig;
 import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.ProductResponse;
+import com.sustajn.oderservice.dto.RestaurantOrderedResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
