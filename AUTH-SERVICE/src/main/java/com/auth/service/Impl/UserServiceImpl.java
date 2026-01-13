@@ -371,49 +371,56 @@ public class UserServiceImpl implements UserService {
             Object[] baseProfileRow = profileResultRows.get(0);
 
             CustomerProfileResponse response = new CustomerProfileResponse();
+
+            // 🧍 User Basic Info
             response.setId((Long) baseProfileRow[0]);
             response.setFullName((String) baseProfileRow[1]);
             response.setMobileNumber((String) baseProfileRow[2]);
             response.setCustomerId((String) baseProfileRow[3]);
+            response.setEmailId((String) baseProfileRow[4]);
+            response.setProfileImageUrl((String) baseProfileRow[5]);
 
-            // 🏦 Bank
-            if (baseProfileRow[4] != null) {
+            // 🏦 Bank Details
+            if (baseProfileRow[6] != null) {
                 response.setBankDetailsResponse(new BankDetailsResponse(
-                        (Long) baseProfileRow[4], userId,
-                        (String) baseProfileRow[5], (String) baseProfileRow[6],
-                        (String) baseProfileRow[7], (String) baseProfileRow[8]
+                        (Long) baseProfileRow[6],        // bank id
+                        userId,
+                        (String) baseProfileRow[7],      // bank name
+                        (String) baseProfileRow[8],      // account number
+                        (String) baseProfileRow[9],      // iban number
+                        (String) baseProfileRow[10]      // tax number
                 ));
             }
 
-            // 💳 Card
-            if (baseProfileRow[9] != null) {
+            // 💳 Card Details
+            if (baseProfileRow[11] != null) {
                 response.setCardDetailsResponse(new CardDetailsResponse(
-                        (Long) baseProfileRow[9],
-                        (String) baseProfileRow[10],
-                        (String) baseProfileRow[11],
-                        (String) baseProfileRow[12]
+                        (Long) baseProfileRow[11],       // card id
+                        (String) baseProfileRow[12],     // card holder
+                        (String) baseProfileRow[13],     // card number
+                        (String) baseProfileRow[14]      // expiry date
                 ));
             }
 
             // 🧾 Payment Gateway
-            if (baseProfileRow[13] != null) {
+            if (baseProfileRow[15] != null) {
                 response.setPaymentGetWayResponse(new PaymentGetWayResponse(
-                        (Long) baseProfileRow[13],
-                        (String) baseProfileRow[14],
-                        (String) baseProfileRow[15]
+                        (Long) baseProfileRow[15],       // gateway id
+                        (String) baseProfileRow[16],     // gateway code
+                        (String) baseProfileRow[17]      // gateway name
                 ));
             }
 
             // 🏠 Addresses
             List<AddressResponse> addressList = new ArrayList<>();
-            for (Object[] profileResult : profileResultRows) {
-                if (profileResult[16] != null) {
+            for (Object[] row : profileResultRows) {
+                if (row[18] != null) {
                     addressList.add(new AddressResponse(
-                            (Long) profileResult[16],
-                            (String) profileResult[17],
-                            (String) profileResult[18],
-                            (String) profileResult[19],
-                            (String) profileResult[20]
+                            (Long) row[18],               // address id
+                            (String) row[19],             // type
+                            (String) row[20],             // flat/door/house
+                            (String) row[21],             // area/street/city/block
+                            (String) row[22]              // postal code
                     ));
                 }
             }

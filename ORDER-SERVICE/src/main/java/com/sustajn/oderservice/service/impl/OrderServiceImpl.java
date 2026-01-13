@@ -366,7 +366,6 @@ public class OrderServiceImpl implements OrderService {
 
                 Long orderId = entry.getKey();
                 String transactionId = orderTransactionMap.get(orderId);
-
                 List<BorrowOrder> list = entry.getValue();
 
                 String products = list.stream()
@@ -374,14 +373,30 @@ public class OrderServiceImpl implements OrderService {
                         .distinct()
                         .collect(Collectors.joining("|"));
 
-                int totalQty = list.stream()
-                        .mapToInt(BorrowOrder::getQuantity)
-                        .sum();
+                int totalQty = list.stream().mapToInt(BorrowOrder::getQuantity).sum();
 
                 String dateTime = list.get(0).getBorrowedAt().format(formatter);
 
+                List<ProductOrderListResponse> productOrderListResponses = list.stream()
+                        .map(b -> {
+                            ProductResponse p = inventoryFeignClient
+                                    .getProductsByIds(List.of(b.getProductId().intValue()))
+                                    .get(0);
+
+                            return new ProductOrderListResponse(
+                                    p.getProductId(),
+                                    p.getProductName(),
+                                    p.getCapacity(),
+                                    b.getQuantity(),                 // containerCount
+                                    p.getProductImageUrl(),
+                                    p.getProductUniqueId()
+                            );
+                        })
+                        .collect(Collectors.toList());
+
+
                 leasedResponses.add(
-                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty)
+                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty, productOrderListResponses)
                 );
             }
 
@@ -406,14 +421,36 @@ public class OrderServiceImpl implements OrderService {
                         .distinct()
                         .collect(Collectors.joining("|"));
 
-                int totalReturnedQty = returns.stream()
-                        .mapToInt(ReturnOrder::getReturnedQuantity)
-                        .sum();
+                int totalReturnedQty = returns.stream().mapToInt(ReturnOrder::getReturnedQuantity).sum();
 
                 String dateTime = returns.get(0).getReturnedAt().format(formatter);
 
+                List<ProductOrderListResponse> productOrderListResponses = relatedBorrows.stream()
+                        .map(b -> {
+                            int returnedQty = returns.stream()
+                                    .filter(r -> r.getProductId().equals(b.getProductId()))
+                                    .mapToInt(ReturnOrder::getReturnedQuantity)
+                                    .sum();
+
+                            ProductResponse p = inventoryFeignClient
+                                    .getProductsByIds(List.of(b.getProductId().intValue()))
+                                    .get(0);
+
+                            return new ProductOrderListResponse(
+                                    p.getProductId(),
+                                    p.getProductName(),
+                                    p.getCapacity(),
+                                    returnedQty,                     // containerCount
+                                    p.getProductImageUrl(),
+                                    p.getProductUniqueId()
+                            );
+                        })
+                        .collect(Collectors.toList());
+
+
+
                 receivedResponses.add(
-                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty)
+                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty, productOrderListResponses)
                 );
             }
 
