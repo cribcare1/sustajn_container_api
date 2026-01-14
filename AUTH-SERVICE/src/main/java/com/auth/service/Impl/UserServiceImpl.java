@@ -24,6 +24,7 @@ import com.auth.util.DistanceUtil;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -38,7 +39,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
@@ -113,7 +114,7 @@ public class UserServiceImpl implements UserService {
             emailReq.setNotificationType("SIGNUP"); // Flag for Welcome Email
             notificationFeignClientService.sendEmail(emailReq);
         } catch (Exception e) {
-            System.err.println("Failed to send signup email: " + e.getMessage());
+            log.error("Failed to send signup email: {}", e.getMessage(), e);
         }
         // -----------------------------------------------------
 
@@ -745,7 +746,7 @@ public class UserServiceImpl implements UserService {
                 emailReq.setNotificationType("SIGNUP"); // Flag for Welcome Email
                 notificationFeignClientService.sendEmail(emailReq);
             } catch (Exception e) {
-                System.err.println("Failed to send restaurant signup email: " + e.getMessage());
+                log.error("Failed to send signup email: {}", e.getMessage(), e);
             }
 
             BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
@@ -923,7 +924,7 @@ public class UserServiceImpl implements UserService {
                 emailReq.setNotificationType("SIGNUP"); // Flag for Welcome Email
                 notificationFeignClientService.sendEmail(emailReq);
             } catch (Exception e) {
-                System.err.println("Failed to send customer signup email: " + e.getMessage());
+                log.error("Failed to send signup email: {}", e.getMessage(), e);
             }
 
 

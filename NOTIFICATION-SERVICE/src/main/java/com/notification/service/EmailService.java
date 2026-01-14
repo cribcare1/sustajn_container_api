@@ -35,7 +35,7 @@ public class EmailService {
 
         // 1. SIGNUP Logic
         if ("SIGNUP".equalsIgnoreCase(type)) {
-            msg.setSubject("Welcome to Our App!");
+            msg.setSubject("Sustajn Sign Up Request !");
             msg.setText("Hello,\n\n" +
                     "Welcome to the application! We are excited to have you on This App.\n" +
                     "Your registration was successful.");
