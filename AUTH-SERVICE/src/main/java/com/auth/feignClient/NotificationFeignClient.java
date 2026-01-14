@@ -1,6 +1,7 @@
 package com.auth.feignClient;
 
 import com.auth.config.FeignMultipartConfig;
+import com.auth.request.EmailRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,9 @@ import java.util.Map;
 //    Map<String, String> verifyToken(@RequestBody VerifyRequest request);
 
     /* ---------- IMAGE APIs ---------- */
-
+// Add this new method signature
+    @PostMapping("/notification/send-email")
+    void sendEmail(@RequestBody EmailRequest request);
     @PostMapping(
             value = "/images/{type}",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE

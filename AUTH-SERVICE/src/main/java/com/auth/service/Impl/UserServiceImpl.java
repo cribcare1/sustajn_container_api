@@ -13,6 +13,7 @@ import com.auth.response.CustomerDetailsBasic;
 import com.auth.response.LoginResponse;
 import com.auth.response.RestaurantBasicDetailsResponse;
 import com.auth.request.UpdateBusinessInfoRequest;
+import com.auth.request.EmailRequest;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.ProfileResponse;
 import com.auth.response.BankDetailsResponse;
@@ -106,6 +107,15 @@ public class UserServiceImpl implements UserService {
         user.setUserType(UserType.ADMIN);
 
         User savedUser = userRepository.save(user);
+        try {
+            EmailRequest emailReq = new EmailRequest();
+            emailReq.setTo(savedUser.getEmail());
+            emailReq.setNotificationType("SIGNUP"); // Flag for Welcome Email
+            notificationFeignClientService.sendEmail(emailReq);
+        } catch (Exception e) {
+            System.err.println("Failed to send signup email: " + e.getMessage());
+        }
+        // -----------------------------------------------------
 
         return new UserDto(
                 savedUser.getId(),
@@ -729,6 +739,14 @@ public class UserServiceImpl implements UserService {
                     .build();
 
             User savedUser = userRepository.save(user);
+            try {
+                EmailRequest emailReq = new EmailRequest();
+                emailReq.setTo(savedUser.getEmail());
+                emailReq.setNotificationType("SIGNUP"); // Flag for Welcome Email
+                notificationFeignClientService.sendEmail(emailReq);
+            } catch (Exception e) {
+                System.err.println("Failed to send restaurant signup email: " + e.getMessage());
+            }
 
             BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
                     .restaurantId(savedUser.getId())
@@ -899,6 +917,14 @@ public class UserServiceImpl implements UserService {
                     .build();
 
             User savedUser = userRepository.save(user);
+            try {
+                EmailRequest emailReq = new EmailRequest();
+                emailReq.setTo(savedUser.getEmail());
+                emailReq.setNotificationType("SIGNUP"); // Flag for Welcome Email
+                notificationFeignClientService.sendEmail(emailReq);
+            } catch (Exception e) {
+                System.err.println("Failed to send customer signup email: " + e.getMessage());
+            }
 
 
             // ---------------- CREATE ADDRESS DETAILS ----------------

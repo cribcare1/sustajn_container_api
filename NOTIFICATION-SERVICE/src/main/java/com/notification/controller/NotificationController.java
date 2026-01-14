@@ -4,6 +4,7 @@ import com.notification.dto.DeviceTokenRequest;
 import com.notification.dto.ForgotRequest;
 import com.notification.dto.NotificationRequestNew;
 import com.notification.dto.VerifyRequest;
+import com.notification.dto.EmailRequest;
 import com.notification.entity.DeviceToken;
 import com.notification.service.DeviceTokenService;
 import com.notification.service.EmailService;
@@ -32,6 +33,16 @@ public class NotificationController {
         this.emailService = emailService;
         this.notificationService=notificationService;
         this.deviceTokenService=deviceTokenService;
+    }
+    @PostMapping("/send-email")
+    public ResponseEntity<?> sendEmailNotification(@RequestBody EmailRequest request) {
+        // The service will check request.getNotificationType() and send the correct email
+        emailService.sendEmail(request);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "success",
+                "message", "Email processed successfully"
+        ));
     }
 
     @PostMapping("/forgot-password")

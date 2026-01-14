@@ -1,6 +1,7 @@
 package com.auth.feignClient.service;
 
 import com.auth.feignClient.NotificationFeignClient;
+import com.auth.request.EmailRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -9,6 +10,11 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class NotificationFeignClientService {
     private final NotificationFeignClient notificationClient;
+
+    public void sendEmail(EmailRequest request) {
+        // Delegates the call to the actual Feign Client
+        notificationClient.sendEmail(request);
+    }
 
     public String uploadImage(String imageType,MultipartFile file) {
         return notificationClient.uploadImage(imageType, file);
