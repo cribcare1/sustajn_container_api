@@ -358,7 +358,7 @@ public class UserServiceImpl implements UserService {
             return new ApiResponse<>("Error on updating details", AuthConstant.ERROR, null);
         }
     }
-    
+
     @Override
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
 

@@ -23,6 +23,7 @@ public class AdminOrder extends BaseEntity {
 
     private Long restaurantId;
 
+    @Column(unique = true)
     private String orderId;        // reference to order service order ID
 
     private LocalDateTime orderDate;
@@ -42,7 +43,7 @@ public class AdminOrder extends BaseEntity {
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<AdminOrderItem> items;
 
-    @PrePersist
+    @PostPersist
     public void generateOrderId() {
         if (orderId == null && id != null) {
             this.orderId = "ORD-" + id;
