@@ -88,7 +88,7 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderHistory(restaurantId));
     }
 
-    @GetMapping("/leasedReturnedCount")
+    @GetMapping("/getLeasedReturnedCount")
     public ResponseEntity<?> getLeasedAndReturnedContainersCount(
             @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
             @RequestParam @NotNull(message = "please provide product id") Integer productId) {
