@@ -39,7 +39,7 @@ public class NotificationController {
         // input validation is handled inside services and exceptions are mapped by GlobalExceptionHandler
         String token = tokenService.generateToken(request.getEmail());
         // allow MailException or other exceptions to propagate to GlobalExceptionHandler
-        emailService.sendTokenEmail(request.getEmail(), token);
+        emailService.sendTokenEmail(request.getEmail(), token, request.getType());
         return ResponseEntity.ok(Map.of("message","token sent to email (expires in 2 minutes)","status","success"));
     }
 
