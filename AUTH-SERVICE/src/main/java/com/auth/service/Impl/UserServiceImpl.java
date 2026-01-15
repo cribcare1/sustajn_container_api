@@ -4,6 +4,7 @@ import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
 import com.auth.exception.ResourceNotFoundException;
+import com.auth.feignClient.InventoryFeignClient;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.*;
@@ -50,6 +51,7 @@ public class UserServiceImpl implements UserService {
     private final NotificationFeignClientService notificationFeignClientService;
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
+    private final InventoryFeignClient inventoryFeignClient;
 
     @Value("${image.storage.root-path}")
     private String userProfilePath;
@@ -358,6 +360,86 @@ public class UserServiceImpl implements UserService {
     }
 
 
+//    @Override
+//    public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
+//
+//        try {
+//            List<Object[]> profileResultRows = userRepository.getCustomerProfileDetailsByUserId(userId);
+//
+//            if (CollectionUtils.isEmpty(profileResultRows)) {
+//                return new ApiResponse<>(AuthConstant.ERROR, "Customer not found", null);
+//            }
+//
+//            Object[] baseProfileRow = profileResultRows.get(0);
+//
+//            CustomerProfileResponse response = new CustomerProfileResponse();
+//
+//            // 🧍 User Basic Info
+//            response.setId((Long) baseProfileRow[0]);
+//            response.setFullName((String) baseProfileRow[1]);
+//            response.setMobileNumber((String) baseProfileRow[2]);
+//            response.setCustomerId((String) baseProfileRow[3]);
+//            response.setEmailId((String) baseProfileRow[4]);
+//            response.setProfileImageUrl((String) baseProfileRow[5]);
+//
+//            // 🏦 Bank Details
+//            if (baseProfileRow[6] != null) {
+//                response.setBankDetailsResponse(new BankDetailsResponse(
+//                        (Long) baseProfileRow[6],        // bank id
+//                        userId,
+//                        (String) baseProfileRow[7],      // bank name
+//                        (String) baseProfileRow[8],      // account number
+//                        (String) baseProfileRow[9],      // iban number
+//                        (String) baseProfileRow[10]      // tax number
+//                ));
+//            }
+//
+//            // 💳 Card Details
+//            if (baseProfileRow[11] != null) {
+//                response.setCardDetailsResponse(new CardDetailsResponse(
+//                        (Long) baseProfileRow[11],       // card id
+//                        (String) baseProfileRow[12],     // card holder
+//                        (String) baseProfileRow[13],     // card number
+//                        (String) baseProfileRow[14]      // expiry date
+//                ));
+//            }
+//
+//            // 🧾 Payment Gateway
+//            if (baseProfileRow[15] != null) {
+//                response.setPaymentGetWayResponse(new PaymentGetWayResponse(
+//                        (Long) baseProfileRow[15],       // gateway id
+//                        (String) baseProfileRow[16],     // gateway code
+//                        (String) baseProfileRow[17]      // gateway name
+//                ));
+//            }
+//
+//            // 🏠 Addresses
+//            List<AddressResponse> addressList = new ArrayList<>();
+//            for (Object[] row : profileResultRows) {
+//                if (row[18] != null) {
+//                    addressList.add(new AddressResponse(
+//                            (Long) row[18],               // address id
+//                            (String) row[19],             // type
+//                            (String) row[20],             // flat/door/house
+//                            (String) row[21],             // area/street/city/block
+//                            (String) row[22]              // postal code
+//                    ));
+//                }
+//            }
+//
+//            response.setAddressResponses(addressList);
+//
+//            return new ApiResponse<>(AuthConstant.SUCCESS,
+//                    "Customer profile fetched successfully", response);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return new ApiResponse<>(AuthConstant.ERROR,
+//                    "Failed to fetch customer profile", null);
+//        }
+//    }
+
+
     @Override
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
 
@@ -372,60 +454,93 @@ public class UserServiceImpl implements UserService {
 
             CustomerProfileResponse response = new CustomerProfileResponse();
 
-            // 🧍 User Basic Info
+            // 🧍 Basic User Info
             response.setId((Long) baseProfileRow[0]);
             response.setFullName((String) baseProfileRow[1]);
             response.setMobileNumber((String) baseProfileRow[2]);
             response.setCustomerId((String) baseProfileRow[3]);
             response.setEmailId((String) baseProfileRow[4]);
             response.setProfileImageUrl((String) baseProfileRow[5]);
+            response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
 
             // 🏦 Bank Details
-            if (baseProfileRow[6] != null) {
+            if (baseProfileRow[7] != null) {
                 response.setBankDetailsResponse(new BankDetailsResponse(
-                        (Long) baseProfileRow[6],        // bank id
+                        (Long) baseProfileRow[7],
                         userId,
-                        (String) baseProfileRow[7],      // bank name
-                        (String) baseProfileRow[8],      // account number
-                        (String) baseProfileRow[9],      // iban number
-                        (String) baseProfileRow[10]      // tax number
+                        (String) baseProfileRow[8],
+                        (String) baseProfileRow[9],
+                        (String) baseProfileRow[10],
+                        (String) baseProfileRow[11]
                 ));
             }
 
             // 💳 Card Details
-            if (baseProfileRow[11] != null) {
+            if (baseProfileRow[12] != null) {
                 response.setCardDetailsResponse(new CardDetailsResponse(
-                        (Long) baseProfileRow[11],       // card id
-                        (String) baseProfileRow[12],     // card holder
-                        (String) baseProfileRow[13],     // card number
-                        (String) baseProfileRow[14]      // expiry date
+                        (Long) baseProfileRow[12],
+                        (String) baseProfileRow[13],
+                        (String) baseProfileRow[14],
+                        (String) baseProfileRow[15]
                 ));
             }
 
             // 🧾 Payment Gateway
-            if (baseProfileRow[15] != null) {
+            if (baseProfileRow[16] != null) {
                 response.setPaymentGetWayResponse(new PaymentGetWayResponse(
-                        (Long) baseProfileRow[15],       // gateway id
-                        (String) baseProfileRow[16],     // gateway code
-                        (String) baseProfileRow[17]      // gateway name
+                        (Long) baseProfileRow[16],
+                        (String) baseProfileRow[17],
+                        (String) baseProfileRow[18]
                 ));
             }
 
             // 🏠 Addresses
             List<AddressResponse> addressList = new ArrayList<>();
             for (Object[] row : profileResultRows) {
-                if (row[18] != null) {
+                if (row[19] != null) {
                     addressList.add(new AddressResponse(
-                            (Long) row[18],               // address id
-                            (String) row[19],             // type
-                            (String) row[20],             // flat/door/house
-                            (String) row[21],             // area/street/city/block
-                            (String) row[22]              // postal code
+                            (Long) row[19],
+                            (String) row[20],
+                            (String) row[21],
+                            (String) row[22],
+                            (String) row[23]
                     ));
                 }
             }
-
             response.setAddressResponses(addressList);
+
+            // 🧾 ================= SUBSCRIPTION =================
+            if (response.getSubscriptionPlanId() != null) {
+
+                Map<String, Object> planResp =
+                        inventoryFeignClient.getSubscriptionPlanById(response.getSubscriptionPlanId());
+
+                if ("success".equals(planResp.get("status"))) {
+
+                    Map<String, Object> data = (Map<String, Object>) planResp.get("data");
+
+                    SubscriptionResponse subscription = new SubscriptionResponse(
+                            (Integer) data.get("planId"),
+                            (String) data.get("planName"),
+                            (String) data.get("planType"),
+                            (String) data.get("description"),
+                            (String) data.get("partnerType"),
+                            new BigDecimal(data.get("feeType").toString()),
+                            new BigDecimal(data.get("depositType").toString()),
+                            new BigDecimal(data.get("commissionPercentage").toString()),
+                            (Integer) data.get("minContainers"),
+                            (Integer) data.get("maxContainers"),
+                            (Integer) data.get("totalContainers"),
+                            (Boolean) data.get("includesDelivery"),
+                            (Boolean) data.get("includesMarketing"),
+                            (Boolean) data.get("includesAnalytics"),
+                            (String) data.get("billingCycle"),
+                            (String) data.get("planStatus")
+                    );
+
+                    response.setSubscriptionResponse(subscription);
+                }
+            }
 
             return new ApiResponse<>(AuthConstant.SUCCESS,
                     "Customer profile fetched successfully", response);
@@ -436,6 +551,7 @@ public class UserServiceImpl implements UserService {
                     "Failed to fetch customer profile", null);
         }
     }
+
 
     private static @NonNull List<AddressResponse> getAddressResponses(List<Object[]> profileResultRows) {
         List<AddressResponse> addresses = new ArrayList<>();
