@@ -21,4 +21,13 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
     );
 
     List<ReturnOrder> findByRestaurantId(Long restaurantId);
+
+    @Query("""
+        SELECT COALESCE(SUM(r.returnedQuantity), 0)
+        FROM ReturnOrder r
+        WHERE r.restaurantId = :restaurantId
+          AND r.productId = :productId
+    """)
+    Integer getTotalReturnedContainers(@Param("restaurantId") Long restaurantId,
+                                       @Param("productId") Integer productId);
 }

@@ -468,6 +468,33 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    @Override
+    public ApiResponse<LeasedReturnedContainerCountResponse> getLeasedAndReturnedContainersCount(Long restaurantId, Integer productId) {
+        try {
+            Integer leasedCount =
+                    borrowOrderRepository.getTotalLeasedContainers(restaurantId, productId);
+
+            Integer returnedCount =
+                    returnOrderRepository.getTotalReturnedContainers(restaurantId, productId);
+
+            LeasedReturnedContainerCountResponse response =
+                    new LeasedReturnedContainerCountResponse(
+                            leasedCount != null ? leasedCount : 0,
+                            returnedCount != null ? returnedCount : 0
+                    );
+
+            return new ApiResponse<>(
+                    "Leased & Returned container counts fetched successfully",
+                    OrderServiceConstant.STATUS_SUCCESS,
+                    response
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();return new ApiResponse<>("Failed to fetch leased and returned container counts",
+                    OrderServiceConstant.STATUS_ERROR, null);
+        }
+    }
+
 
     private Map<String, Object> handleReturnError(Exception ex) {
 
