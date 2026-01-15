@@ -37,6 +37,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -102,7 +103,7 @@ public class UserServiceImpl implements UserService {
         user.setUserName(user.getEmail());
         user.setPasswordHash(passwordEncoder.encode(user.getPasswordHash()));
         user.setCreatedAt(LocalDateTime.now());
-        user.setAccountStatus(AccountStatus.active);
+        user.setAccountStatus(AccountStatus.ACTIVE);
         user.setUserType(UserType.ADMIN);
 
         User savedUser = userRepository.save(user);
@@ -693,25 +694,89 @@ public class UserServiceImpl implements UserService {
     public Map<String, Object> registerRestaurant(
             RestaurantRegistrationRequest request
     ) {
-        Map<String, Object> response = new HashMap<>();
-
         try {
+
             if (request.getEmail() == null || request.getEmail().isBlank()) {
                 return error("Email is required");
             }
 
-            if (userRepository.existsByEmail(request.getEmail())) {
-                return error("Email is already registered");
-            }
-
-            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-                return error("Phone number already registered");
+            if (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()) {
+                return error("Phone number is required");
             }
 
             if (request.getPassword() == null || request.getPassword().length() < 6) {
                 return error("Password must be at least 6 characters");
             }
 
+            // 🔹 FETCH USER ONCE
+            User existingUser = userRepository
+                    .findByEmail(request.getEmail())
+                    .orElse(null);
+
+            // 🔹 EMAIL ALREADY EXISTS
+            if (existingUser != null) {
+
+                // ⛔ PENDING
+                if (existingUser.getAccountStatus() == AccountStatus.PENDING) {
+                    return error("Your registration is already pending for approval");
+                }
+
+                // 🔁 REJECTED → UPDATE SAME USER
+                if (existingUser.getAccountStatus() == AccountStatus.REJECTED) {
+
+                    // Phone number uniqueness (exclude same user)
+                    if (userRepository.existsByPhoneNumberAndIdNot(
+                            request.getPhoneNumber(),
+                            existingUser.getId())) {
+                        return error("Phone number already registered");
+                    }
+
+                    // 🔄 UPDATE USER
+                    existingUser.setFullName(request.getFullName());
+                    existingUser.setPhoneNumber(request.getPhoneNumber());
+                    existingUser.setPasswordHash(
+                            passwordEncoder.encode(request.getPassword())
+                    );
+                    existingUser.setLatitude(
+                            request.getLatitude() != null
+                                    ? BigDecimal.valueOf(request.getLatitude())
+                                    : null
+                    );
+                    existingUser.setLongitude(
+                            request.getLongitude() != null
+                                    ? BigDecimal.valueOf(request.getLongitude())
+                                    : null
+                    );
+                    existingUser.setAccountStatus(AccountStatus.PENDING);
+                    existingUser.setEmailVerified(false);
+                    existingUser.setPhoneVerified(false);
+
+                    User savedUser = userRepository.save(existingUser);
+
+                    // 🔥 DELETE OLD DATA
+                    basicRepo.deleteByRestaurantId(savedUser.getId());
+                    addressRepository.deleteByUserId(savedUser.getId());
+                    bankRepo.deleteByUserId(savedUser.getId());
+                    socialRepo.deleteByRestaurantId(savedUser.getId());
+
+                    // 🔁 RE-SAVE DETAILS (same logic as create)
+                    saveAllRestaurantDetails(savedUser, request);
+
+                    return Map.of(
+                            "status", "success",
+                            "message", "Registration updated successfully and sent for approval"
+                    );
+                }
+
+                // ⛔ ACTIVE / APPROVED
+                return error("Email is already registered");
+            }
+
+            // ================= NEW REGISTRATION FLOW =================
+
+            if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+                return error("Phone number already registered");
+            }
 
             User user = User.builder()
                     .userType(UserType.RESTAURANT)
@@ -721,104 +786,111 @@ public class UserServiceImpl implements UserService {
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .subscriptionPlanId(request.getSubscriptionPlanId())
-                    .latitude(request.getLatitude() != null ? BigDecimal.valueOf(request.getLatitude()) : null)
-                    .longitude(request.getLongitude() != null ? BigDecimal.valueOf(request.getLongitude()) : null)
-                    .accountStatus(AccountStatus.active)
+                    .latitude(request.getLatitude() != null
+                            ? BigDecimal.valueOf(request.getLatitude())
+                            : null)
+                    .longitude(request.getLongitude() != null
+                            ? BigDecimal.valueOf(request.getLongitude())
+                            : null)
+                    .accountStatus(AccountStatus.PENDING)
                     .emailVerified(false)
                     .phoneVerified(false)
                     .build();
 
             User savedUser = userRepository.save(user);
 
-            BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
-                    .restaurantId(savedUser.getId())
-                    .speciality(request.getBasicDetails().getSpeciality())
-                    .websiteDetails(request.getBasicDetails().getWebsiteDetails())
-                    .cuisine(request.getBasicDetails().getCuisine())
-                    .build();
+            saveAllRestaurantDetails(savedUser, request);
 
-            basicRepo.save(basic);
+            LoginResponse loginResponse =
+                    generateTokenWithLoginDetails(savedUser);
 
-
-            // ---------------- CREATE ADDRESS DETAILS ----------------
-            if (request.getAddress() != null) {
-                RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
-
-                // You can create an AddressDetails entity and save it if needed
-                Address addressDetails = Address.builder()
-                        .userId(savedUser.getId())
-                        .addressType(addressReq.getAddressType())
-                        .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
-                        .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
-                        .poBoxOrPostalCode(addressReq.getPoBoxOrPostalCode())
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-                addressRepository.save(addressDetails);
-            }
-
-
-            // ---------------- BANK DETAILS ----------------
-            if (request.getBankDetails() != null) {
-                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
-                        request.getBankDetails();
-
-                BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .bankName(bankReq.getBankName())
-                        .accountNumber(bankReq.getAccountNumber())
-                        .iBanNumber(bankReq.getIBanNumber())
-                        .taxNumber(bankReq.getTaxNumber())
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-
-                bankRepo.save(bankDetails);
-            }
-
-            if (request.getCardDetails() != null) {
-                RestaurantRegistrationRequest.CardDetailsRequest cardReq =
-                        request.getCardDetails();
-                BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .cardHolderName(cardReq.getCardHolderName())
-                        .cardNumber(cardReq.getCardNumber())
-                        .expiryDate(cardReq.getExpiryDate())
-                        .cvv(passwordEncoder.encode(cardReq.getCvv()))
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-                bankRepo.save(bankDetails);
-            }
-
-            if (request.getPaymentGetWay() != null) {
-                RestaurantRegistrationRequest.PaymentGetWayRequest payReq =
-                        request.getPaymentGetWay();
-                BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .paymentGatewayId(payReq.getPaymentGatewayId())
-                        .paymentGatewayName(payReq.getPaymentGatewayName())
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-                bankRepo.save(bankDetails);
-            }
-
-
-            // ---------------- SOCIAL MEDIA LINKS ----------------
-            for (RestaurantRegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
-                SocialMediaDetails media = SocialMediaDetails.builder()
-                        .restaurantId(savedUser.getId())
-                        .socialMediaType(sm.getSocialMediaType())
-                        .link(sm.getLink())
-                        .build();
-                socialRepo.save(media);
-            }
-
-
-            // ---------------- RESPONSE DTO ----------------
-            LoginResponse loginResponse = generateTokenWithLoginDetails(user);
-
-            return Map.of("message", "Restaurant registered successfully", "data", loginResponse, "status", "success");
+            return Map.of(
+                    "status", "success",
+                    "message", "Restaurant registered successfully",
+                    "data", loginResponse
+            );
 
         } catch (Exception e) {
             return error("Something went wrong: " + e.getMessage());
+        }
+    }
+
+    private void saveAllRestaurantDetails(
+            User savedUser,
+            RestaurantRegistrationRequest request
+    ) {
+
+        BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
+                .restaurantId(savedUser.getId())
+                .speciality(request.getBasicDetails().getSpeciality())
+                .websiteDetails(request.getBasicDetails().getWebsiteDetails())
+                .cuisine(request.getBasicDetails().getCuisine())
+                .build();
+        basicRepo.save(basic);
+
+        if (request.getAddress() != null) {
+            var addressReq = request.getAddress();
+            Address address = Address.builder()
+                    .userId(savedUser.getId())
+                    .addressType(addressReq.getAddressType())
+                    .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
+                    .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
+                    .poBoxOrPostalCode(addressReq.getPoBoxOrPostalCode())
+                    .status(AuthConstant.ACTIVE)
+                    .build();
+            addressRepository.save(address);
+        }
+
+        if (request.getBankDetails() != null) {
+            var bankReq = request.getBankDetails();
+            bankRepo.save(
+                    BankDetails.builder()
+                            .userId(savedUser.getId())
+                            .bankName(bankReq.getBankName())
+                            .accountNumber(bankReq.getAccountNumber())
+                            .iBanNumber(bankReq.getIBanNumber())
+                            .taxNumber(bankReq.getTaxNumber())
+                            .status(AuthConstant.ACTIVE)
+                            .build()
+            );
+        }
+
+        if (request.getCardDetails() != null) {
+            var cardReq = request.getCardDetails();
+            bankRepo.save(
+                    BankDetails.builder()
+                            .userId(savedUser.getId())
+                            .cardHolderName(cardReq.getCardHolderName())
+                            .cardNumber(cardReq.getCardNumber())
+                            .expiryDate(cardReq.getExpiryDate())
+                            .cvv(passwordEncoder.encode(cardReq.getCvv()))
+                            .status(AuthConstant.ACTIVE)
+                            .build()
+            );
+        }
+
+        if (request.getPaymentGetWay() != null) {
+            var payReq = request.getPaymentGetWay();
+            bankRepo.save(
+                    BankDetails.builder()
+                            .userId(savedUser.getId())
+                            .paymentGatewayId(payReq.getPaymentGatewayId())
+                            .paymentGatewayName(payReq.getPaymentGatewayName())
+                            .status(AuthConstant.ACTIVE)
+                            .build()
+            );
+        }
+
+        if (request.getSocialMediaList() != null) {
+            for (var sm : request.getSocialMediaList()) {
+                socialRepo.save(
+                        SocialMediaDetails.builder()
+                                .restaurantId(savedUser.getId())
+                                .socialMediaType(sm.getSocialMediaType())
+                                .link(sm.getLink())
+                                .build()
+                );
+            }
         }
     }
 
@@ -893,7 +965,7 @@ public class UserServiceImpl implements UserService {
                     .longitude(request.getLongitude() != null
                             ? BigDecimal.valueOf(request.getLongitude())
                             : null)
-                    .accountStatus(AccountStatus.active)
+                    .accountStatus(AccountStatus.ACTIVE)
                     .emailVerified(false)
                     .phoneVerified(false)
                     .build();
@@ -986,7 +1058,7 @@ public class UserServiceImpl implements UserService {
         try {
             Page<User> restaurants = userRepository.findByUserTypeAndAccountStatus(
                     UserType.RESTAURANT,
-                    AccountStatus.active,
+                    AccountStatus.ACTIVE,
                     pageable
             );
 
@@ -1025,7 +1097,7 @@ public class UserServiceImpl implements UserService {
         try {
             Page<User> restaurants = userRepository.findByUserTypeAndAccountStatus(
                     UserType.USER,
-                    AccountStatus.active,
+                    AccountStatus.ACTIVE,
                     pageable
             );
 
@@ -1062,7 +1134,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds) {
-        return userRepository.findRestaurantsByIds(restaurantIds, UserType.RESTAURANT, AccountStatus.active);
+        return userRepository.findRestaurantsByIds(restaurantIds, UserType.RESTAURANT, AccountStatus.ACTIVE);
     }
 
 
@@ -1269,4 +1341,107 @@ public class UserServiceImpl implements UserService {
         }
 
     }
+
+
+    @Override
+    public ApiResponse<List<RestaurantRegisterResponse>> getPendingRestaurants() {
+
+        List<User> users =
+                userRepository.findByAccountStatus(AccountStatus.PENDING);
+
+        if (users.isEmpty()) {
+            return new ApiResponse<>(
+                    "success",
+                    "No pending restaurant registrations found",
+                    List.of()
+            );
+        }
+
+        List<RestaurantRegisterResponse> responseList =
+                users.stream()
+                        .map(this::mapToResponse)
+                        .toList();
+
+        return new ApiResponse<>(
+                "success",
+                "Pending restaurant registrations fetched successfully",
+                responseList
+        );
+    }
+
+    private RestaurantRegisterResponse mapToResponse(User user) {
+
+        List<Address> addresses = addressRepository
+                .findByUserIdAndStatusOrderByCreatedAtDesc(
+                        user.getId(),
+                        "active"
+                );
+
+        String address = addresses.isEmpty()
+                ? null
+                : addresses.stream()
+                .map(a -> Stream.of(
+                                        a.getFlatDoorHouseDetails(),
+                                        a.getAreaStreetCityBlockDetails(),
+                                        a.getPoBoxOrPostalCode()
+                                )
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.joining(", "))
+                )
+                .collect(Collectors.joining(" | "));
+
+
+
+        return RestaurantRegisterResponse.builder()
+                .restaurantId(user.getId())
+                .name(user.getFullName())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .profileImageUrl(user.getProfilePictureUrl())
+                .address(address)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public ApiResponse<Void> approveOrRejectUser(AdminUserActionRequest request) {
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("User not found with ID: " + request.getUserId())
+                );
+
+        if (user.getAccountStatus() != AccountStatus.PENDING) {
+            return ApiResponse.<Void>builder()
+                    .status(AuthConstant.ERROR)
+                    .message("Only pending users can be approved or rejected")
+                    .build();
+        }
+        try {
+            if (request.getApproveStatus().equalsIgnoreCase("APPROVE")) {
+                user.setAccountStatus(AccountStatus.ACTIVE);
+            } else if (request.getApproveStatus().equalsIgnoreCase("REJECT")) {
+                user.setAccountStatus(AccountStatus.REJECTED);
+            } else {
+                return ApiResponse.<Void>builder()
+                        .status(AuthConstant.ERROR)
+                        .message("Invalid action. Use APPROVE or REJECT.")
+                        .build();
+            }
+
+            userRepository.save(user);
+
+            return ApiResponse.<Void>builder()
+                    .status(AuthConstant.SUCCESS)
+                    .message("User " + request.getApproveStatus().toLowerCase() + "d successfully")
+                    .build();
+
+        } catch (Exception e) {
+            return ApiResponse.<Void>builder()
+                    .status(AuthConstant.ERROR)
+                    .message("Error processing user action: " + e.getMessage())
+                    .build();
+        }
+    }
+
 }

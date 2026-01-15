@@ -1,5 +1,6 @@
 package com.auth.controller;
 
+import com.auth.exception.ResourceNotFoundException;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.Address;
 import com.auth.model.BankDetails;
@@ -87,12 +88,14 @@ public class AuthController {
 
         try {
             log.info("inside login method");
-            Optional<User> userOpt = userRepository.findByUserName(loginRequest.getUserName());
-            log.info("UserOpt: {}", userOpt);
+
+            Optional<User> userOpt =
+                    userRepository.findByUserName(loginRequest.getUserName());
+
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                         Map.of(
-                                "status", "ERROR",
+                                "status", "error",
                                 "message", "Username not found"
                         )
                 );
@@ -100,8 +103,11 @@ public class AuthController {
 
             User user = userOpt.get();
 
-            // 2️⃣ Check password manually
-            if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
+            // ✅ Password check
+            if (!passwordEncoder.matches(
+                    loginRequest.getPassword(),
+                    user.getPasswordHash())) {
+
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                         Map.of(
                                 "status", "error",
@@ -110,25 +116,17 @@ public class AuthController {
                 );
             }
 
-            // 3️⃣ Authenticate with Spring Security
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            loginRequest.getUserName(),
-                            loginRequest.getPassword()
-                    )
-            );
+            // ✅ Spring Security authentication
+            Authentication authentication =
+                    authenticationManager.authenticate(
+                            new UsernamePasswordAuthenticationToken(
+                                    loginRequest.getUserName(),
+                                    loginRequest.getPassword()
+                            )
+                    );
 
-            if (!authentication.isAuthenticated()) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        Map.of(
-                                "status", "error",
-                                "message", "Authentication failed"
-                        )
-                );
-            }
-
-            // 4️⃣ Generate token
-            LoginResponse response = userService.generateToken(loginRequest.getUserName());
+            LoginResponse response =
+                    userService.generateToken(loginRequest.getUserName());
 
             return ResponseEntity.ok(
                     Map.of(
@@ -138,15 +136,37 @@ public class AuthController {
                     )
             );
 
-        } catch (Exception ex) {
-            return ResponseEntity.status(HttpStatus.OK).body(
+        }
+        //  HANDLE ACCOUNT STATUS ERRORS
+        catch (ResourceNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                     Map.of(
                             "status", "error",
-                            "message", "Something went wrong"
+                            "message", ex.getMessage()
+                    )
+            );
+        }
+        // HANDLE SPRING SECURITY ERRORS
+        catch (org.springframework.security.core.AuthenticationException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    Map.of(
+                            "status", "error",
+                            "message", ex.getMessage()
+                    )
+            );
+        }
+        //  LAST RESORT
+        catch (Exception ex) {
+            log.error("Login error", ex);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                    Map.of(
+                            "status", "error",
+                            "message", "Unexpected error occurred"
                     )
             );
         }
     }
+
 
 
     @PostMapping("/change-password")
@@ -338,6 +358,25 @@ public class AuthController {
     public ResponseEntity<?> uploadImage(@RequestPart MultipartFile image,@PathVariable Long userId) {
       ApiResponse apiResponse=  userService.uploadImage(image,userId);
         return ResponseEntity.ok(apiResponse);
+    }
+
+
+    @GetMapping("/getPendingRestaurants")
+    public ResponseEntity<ApiResponse<List<RestaurantRegisterResponse>>>
+    getPendingRestaurants() {
+
+        return ResponseEntity.ok(
+                userService.getPendingRestaurants()
+        );
+    }
+
+    @PostMapping("/approveOrRejectUserByAdmin")
+    public ResponseEntity<ApiResponse<Void>> approveOrRejectUser(
+            @RequestBody AdminUserActionRequest request) {
+
+        return ResponseEntity.ok(
+                userService.approveOrRejectUser(request)
+        );
     }
 
 }
