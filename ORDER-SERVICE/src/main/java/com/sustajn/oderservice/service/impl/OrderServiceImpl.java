@@ -20,6 +20,7 @@ import com.sustajn.oderservice.util.ApiResponseUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -471,17 +472,20 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public ApiResponse<LeasedReturnedContainerCountResponse> getLeasedAndReturnedContainersCount(Long restaurantId, Integer productId) {
         try {
-            Integer leasedCount =
-                    borrowOrderRepository.getTotalLeasedContainers(restaurantId, productId);
+            List<Object[]> rows =
+                    borrowOrderRepository.getLeasedAndReturnedCounts(restaurantId, productId);
 
-            Integer returnedCount =
-                    returnOrderRepository.getTotalReturnedContainers(restaurantId, productId);
+            int leasedCount = 0;
+            int returnedCount = 0;
+
+            if (!CollectionUtils.isEmpty(rows)) {
+                Object[] row = rows.get(0);
+                leasedCount = ((Number) row[0]).intValue();
+                returnedCount = ((Number) row[1]).intValue();
+            }
 
             LeasedReturnedContainerCountResponse response =
-                    new LeasedReturnedContainerCountResponse(
-                            leasedCount != null ? leasedCount : 0,
-                            returnedCount != null ? returnedCount : 0
-                    );
+                    new LeasedReturnedContainerCountResponse(leasedCount, returnedCount);
 
             return new ApiResponse<>(
                     "Leased & Returned container counts fetched successfully",

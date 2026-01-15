@@ -80,11 +80,14 @@ GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
     List<BorrowOrder> findByRestaurantId(Long restaurantId);
 
     @Query("""
-        SELECT COALESCE(SUM(b.quantity), 0)
-        FROM BorrowOrder b
-        WHERE b.restaurantId = :restaurantId
-          AND b.productId = :productId
-    """)
-    Integer getTotalLeasedContainers(@Param("restaurantId") Long restaurantId,
-                                     @Param("productId") Integer productId);
+    SELECT 
+        COALESCE(SUM(b.quantity), 0),
+        COALESCE(SUM(b.returnedQuantity), 0)
+    FROM BorrowOrder b
+    WHERE b.restaurantId = :restaurantId
+      AND b.productId = :productId
+""")
+    List<Object[]> getLeasedAndReturnedCounts(@Param("restaurantId") Long restaurantId,
+                                              @Param("productId") Integer productId);
+
 }
