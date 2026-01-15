@@ -37,7 +37,7 @@ public class NotificationController {
     @PostMapping("/send-email")
     public ResponseEntity<?> sendEmailNotification(@RequestBody EmailRequest request) {
         // The service will check request.getNotificationType() and send the correct email
-        emailService.sendEmail(request);
+        emailService.sendTokenEmail(request);
 
         return ResponseEntity.ok(Map.of(
                 "status", "success",
@@ -50,7 +50,7 @@ public class NotificationController {
         // input validation is handled inside services and exceptions are mapped by GlobalExceptionHandler
         String token = tokenService.generateToken(request.getEmail());
         // allow MailException or other exceptions to propagate to GlobalExceptionHandler
-        emailService.sendTokenEmail(request.getEmail(), token);
+        emailService.sendTokenEmail(request.getEmail(), token, "RESET");
         return ResponseEntity.ok(Map.of("message","token sent to email (expires in 2 minutes)","status","success"));
     }
 
