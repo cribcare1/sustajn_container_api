@@ -41,5 +41,12 @@ public class AdminOrder extends BaseEntity {
 
     @OneToMany(mappedBy = "order", fetch = FetchType.LAZY)
     private List<AdminOrderItem> items;
+
+    @PrePersist
+    public void generateOrderId() {
+        if (orderId == null && id != null) {
+            this.orderId = "ORD-" + id;
+        }
+    }
 }
 

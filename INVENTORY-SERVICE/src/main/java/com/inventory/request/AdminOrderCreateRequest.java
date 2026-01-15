@@ -17,8 +17,11 @@ public class AdminOrderCreateRequest {
 
     private List<ItemRequest> items;
 
-    @Getter @Setter
-    @NoArgsConstructor @AllArgsConstructor @Builder
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class ItemRequest {
         private Integer containerTypeId;
         private Integer requestedQty;

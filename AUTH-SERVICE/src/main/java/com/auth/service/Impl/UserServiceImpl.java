@@ -603,7 +603,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage) {
+    public ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
         try {
             UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
             if (request == null) {
@@ -638,9 +638,11 @@ public class UserServiceImpl implements UserService {
                     user.setProfilePictureUrl(profileImageUrl);
                 }
 
-                userRepository.save(user);
+                User updatedUser = userRepository.save(user);
 
-                return new ApiResponse<>("User profile updated successfully", AuthConstant.SUCCESS, user);
+                ApiResponse<CustomerProfileResponse> customerProfileResponse = getCustomerProfileDetails(updatedUser.getId());
+
+                return new ApiResponse<>("User profile updated successfully", AuthConstant.SUCCESS, customerProfileResponse.getData());
             }
 
             return new ApiResponse<>("User not found", AuthConstant.ERROR, null);
