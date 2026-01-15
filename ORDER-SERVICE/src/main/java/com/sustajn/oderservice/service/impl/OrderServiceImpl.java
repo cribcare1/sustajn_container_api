@@ -472,14 +472,14 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public ApiResponse<LeasedReturnedContainerCountResponse> getLeasedAndReturnedContainersCount(Long restaurantId, Integer productId) {
         try {
-            List<Object[]> rows =
+            List<Object[]> borrowReturnCountDetails =
                     borrowOrderRepository.getLeasedAndReturnedCounts(restaurantId, productId);
 
             int leasedCount = 0;
             int returnedCount = 0;
 
-            if (!CollectionUtils.isEmpty(rows)) {
-                Object[] row = rows.get(0);
+            if (!CollectionUtils.isEmpty(borrowReturnCountDetails)) {
+                Object[] row = borrowReturnCountDetails.get(0);
                 leasedCount = ((Number) row[0]).intValue();
                 returnedCount = ((Number) row[1]).intValue();
             }
