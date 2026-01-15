@@ -7,10 +7,12 @@ import com.inventory.dto.RestaurantContainerDetails;
 import com.inventory.entity.AdminOrder;
 import com.inventory.entity.AdminOrderItem;
 import com.inventory.entity.RestaurantContainerInventory;
+import com.inventory.entity.RestaurantOrderSequence;
 import com.inventory.exception.BusinessException;
 import com.inventory.repository.AdminOrderItemRepository;
 import com.inventory.repository.AdminOrderRepository;
 import com.inventory.repository.RestaurantContainerInventoryRepository;
+import com.inventory.repository.RestaurantOrderSequenceRepository;
 import com.inventory.request.AdminOrderApproveRequest;
 import com.inventory.request.AdminOrderCreateRequest;
 import com.inventory.response.ApiResponse;
@@ -31,7 +33,8 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
 
     private final AdminOrderRepository adminOrderRepository;
     private final AdminOrderItemRepository adminOrderItemRepository;
-    private  final RestaurantContainerInventoryRepository inventoryRepository;
+    private final RestaurantContainerInventoryRepository inventoryRepository;
+    private final RestaurantOrderSequenceRepository orderSequenceRepository;
 
     @Override
     @Transactional
@@ -58,7 +61,7 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
             // ----- Create Order -----
             AdminOrder order = new AdminOrder();
             order.setRestaurantId(request.getRestaurantId());
-            order.setOrderId(request.getOrderId());
+            order.setOrderId(generateOrderId(request.getRestaurantId()));
             order.setOrderDate(LocalDateTime.now());
             order.setRestaurantRemark(request.getRestaurantRemark());
             order.setType(transactionType);
@@ -96,6 +99,27 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
         }
 
         return response;
+    }
+
+
+
+    private String generateOrderId(Long restaurantId) {
+
+        RestaurantOrderSequence seq =
+                orderSequenceRepository.findByRestaurantId(restaurantId)
+                        .orElseGet(() -> {
+                            RestaurantOrderSequence s = new RestaurantOrderSequence();
+                            s.setRestaurantId(restaurantId);
+                            s.setLastSequence(0L);
+                            return s;
+                        });
+
+        Long nextSeq = seq.getLastSequence() + 1;
+        seq.setLastSequence(nextSeq);
+
+        orderSequenceRepository.save(seq);
+
+        return "ORD-" + restaurantId + nextSeq;
     }
 
     @Transactional
