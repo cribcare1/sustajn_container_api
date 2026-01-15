@@ -329,7 +329,7 @@ public class AuthController {
 
     //Update profile details
     @PostMapping("/updateProfileDetails")
-    public ResponseEntity<ApiResponse<User>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
         return ResponseEntity.ok(userService.updateUserProfile(userData, profileImage));
     }
 
