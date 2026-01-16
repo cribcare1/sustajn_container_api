@@ -767,14 +767,15 @@ public class UserServiceImpl implements UserService {
 
             User savedUser = userRepository.save(user);
 
-            BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
-                    .restaurantId(savedUser.getId())
-                    .speciality(request.getBasicDetails().getSpeciality())
-                    .websiteDetails(request.getBasicDetails().getWebsiteDetails())
-                    .cuisine(request.getBasicDetails().getCuisine())
-                    .build();
-
-            basicRepo.save(basic);
+            if (request.getBasicDetails() != null) {
+                BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
+                        .restaurantId(savedUser.getId())
+                        .speciality(request.getBasicDetails().getSpeciality())
+                        .websiteDetails(request.getBasicDetails().getWebsiteDetails())
+                        .cuisine(request.getBasicDetails().getCuisine())
+                        .build();
+                basicRepo.save(basic);
+            }
 
 
             // ---------------- CREATE ADDRESS DETAILS ----------------
@@ -839,22 +840,26 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- SOCIAL MEDIA LINKS ----------------
-            for (RestaurantRegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
-                SocialMediaDetails media = SocialMediaDetails.builder()
-                        .restaurantId(savedUser.getId())
-                        .socialMediaType(sm.getSocialMediaType())
-                        .link(sm.getLink())
-                        .build();
-                socialRepo.save(media);
+            if (request.getSocialMediaList() != null) {
+                for (RestaurantRegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
+                    SocialMediaDetails media = SocialMediaDetails.builder()
+                            .restaurantId(savedUser.getId())
+                            .socialMediaType(sm.getSocialMediaType())
+                            .link(sm.getLink())
+                            .build();
+                    socialRepo.save(media);
+                }
             }
 
 
+
             // ---------------- RESPONSE DTO ----------------
-            LoginResponse loginResponse = generateTokenWithLoginDetails(user);
+            LoginResponse loginResponse = generateTokenWithLoginDetails(savedUser);
 
             return Map.of("message", "Restaurant registered successfully", "data", loginResponse, "status", "success");
 
         } catch (Exception e) {
+            e.printStackTrace();
             return error("Something went wrong: " + e.getMessage());
         }
     }
@@ -906,13 +911,6 @@ public class UserServiceImpl implements UserService {
 //                throw new IllegalArgumentException("Bank details are required");
 //            }
 
-
-            LocalDate dob = null;
-            if (request.getDateOfBirth() != null) {
-                dob = LocalDate.parse(request.getDateOfBirth());
-            }
-
-
             // ---------------- CREATE USER ----------------
             User user = User.builder()
                     .userType(UserType.USER)
@@ -923,7 +921,7 @@ public class UserServiceImpl implements UserService {
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .subscriptionPlanId(request.getSubscriptionPlanId())
-                    .dateOfBirth(dob)
+                    .dateOfBirth(request.getDateOfBirth())
                     .latitude(request.getLatitude() != null
                             ? BigDecimal.valueOf(request.getLatitude())
                             : null)
