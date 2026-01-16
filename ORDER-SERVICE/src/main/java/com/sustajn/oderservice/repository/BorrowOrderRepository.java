@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.repository;
 
+import com.sustajn.oderservice.dto.LeasedReturnedResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
