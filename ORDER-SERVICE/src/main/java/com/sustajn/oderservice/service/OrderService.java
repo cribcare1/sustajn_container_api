@@ -1,5 +1,9 @@
 package com.sustajn.oderservice.service;
 
+import com.sustajn.oderservice.dto.ApiResponse;
+import com.sustajn.oderservice.dto.LeasedResponse;
+import com.sustajn.oderservice.dto.LeasedReturnedContainerCountResponse;
+import com.sustajn.oderservice.dto.OrderHistoryResponse;
 import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.ReturnRequest;
@@ -22,6 +26,7 @@ public interface OrderService {
     public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status);
 
     ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId);
+    ApiResponse<LeasedReturnedContainerCountResponse> getLeasedAndReturnedContainersCount(Long restaurantId, Integer productId);
 
     ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(Long restaurantId,Integer productId, String type);
 
