@@ -481,7 +481,7 @@ public class OrderServiceImpl implements OrderService {
                         OrderServiceConstant.STATUS_ERROR, null);
             }
 
-            Map<String, List<LeasedReturnedResponse>> grouped =
+            Map<String, List<LeasedReturnedResponse>> leasedReturnedGroupedResponse =
                     leasedReturnedResponses.stream()
                             .collect(Collectors.groupingBy(
                                     LeasedReturnedResponse::getMonthYear,
@@ -490,7 +490,7 @@ public class OrderServiceImpl implements OrderService {
                             ));
 
             List<LeasedReturnedMonthYearResponse> response =
-                    grouped.entrySet().stream().map(entry -> {
+                    leasedReturnedGroupedResponse.entrySet().stream().map(entry -> {
 
                         List<DateLeasedReturnCountResponse> dateResponses =
                                 entry.getValue().stream()
