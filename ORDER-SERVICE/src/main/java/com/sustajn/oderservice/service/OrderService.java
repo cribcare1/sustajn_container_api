@@ -2,11 +2,13 @@ package com.sustajn.oderservice.service;
 
 import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.LeasedResponse;
+import com.sustajn.oderservice.dto.LeasedReturnedMonthYearResponse;
 import com.sustajn.oderservice.dto.OrderHistoryResponse;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.ReturnRequest;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -23,4 +25,6 @@ public interface OrderService {
     public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status);
 
     ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId);
+
+    ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(Long restaurantId,Integer productId, String type);
 }

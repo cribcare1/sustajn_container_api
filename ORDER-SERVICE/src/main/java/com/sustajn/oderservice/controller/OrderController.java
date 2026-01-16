@@ -88,4 +88,13 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderHistory(restaurantId));
     }
 
+    @GetMapping("/getLeasedReturnedMonthYearDetails")
+    public ResponseEntity<?> getLeasedReturnedMonthYearDetails(
+            @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
+            @RequestParam @NotNull(message = "please provide product id") Integer productId,
+            @RequestParam @NotNull(message = "please provide type leased/returned") String type
+    ) {
+        return ResponseEntity.ok(orderService.getLeasedReturnedMonthYearDetails(restaurantId, productId, type));
+    }
+
 }

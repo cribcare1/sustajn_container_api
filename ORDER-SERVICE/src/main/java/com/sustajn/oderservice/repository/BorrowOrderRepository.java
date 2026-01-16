@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.repository;
 
+import com.sustajn.oderservice.dto.LeasedReturnedResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -78,4 +79,31 @@ GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
 
 
     List<BorrowOrder> findByRestaurantId(Long restaurantId);
+
+
+    @Query("""
+    SELECT new com.sustajn.oderservice.dto.LeasedReturnedResponse(
+        CONCAT(
+            TRIM(FUNCTION('TO_CHAR', DATE(b.borrowedAt), 'Month')),
+            '-',
+            FUNCTION('TO_CHAR', DATE(b.borrowedAt), 'YYYY')
+        ),
+        CAST(FUNCTION('TO_CHAR', DATE(b.borrowedAt), 'DD.MM.YYYY') AS string),
+        SUM(b.quantity)
+    )
+    FROM BorrowOrder b
+    WHERE b.restaurantId = :restaurantId
+      AND b.productId = :productId
+    GROUP BY DATE(b.borrowedAt)
+    ORDER BY DATE(b.borrowedAt)
+""")
+    List<LeasedReturnedResponse> getLeasedMonthYearDetails(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Integer productId
+    );
+
+
+
+
+
 }

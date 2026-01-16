@@ -468,6 +468,58 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    @Override
+    public ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(Long restaurantId, Integer productId, String type) {
+        try {
+            List<LeasedReturnedResponse> leasedReturnedResponses;
+            if (type.equalsIgnoreCase(OrderServiceConstant.LEASED)) {
+                leasedReturnedResponses = borrowOrderRepository.getLeasedMonthYearDetails(restaurantId, productId);
+            } else if (type.equalsIgnoreCase(OrderServiceConstant.RETURNED)) {
+                leasedReturnedResponses = returnOrderRepository.getReturnedMonthYearDetails(restaurantId, productId);
+            } else {
+                return new ApiResponse<>("Invalid type",
+                        OrderServiceConstant.STATUS_ERROR, null);
+            }
+
+            Map<String, List<LeasedReturnedResponse>> grouped =
+                    leasedReturnedResponses.stream()
+                            .collect(Collectors.groupingBy(
+                                    LeasedReturnedResponse::getMonthYear,
+                                    LinkedHashMap::new,
+                                    Collectors.toList()
+                            ));
+
+            List<LeasedReturnedMonthYearResponse> response =
+                    grouped.entrySet().stream().map(entry -> {
+
+                        List<DateLeasedReturnCountResponse> dateResponses =
+                                entry.getValue().stream()
+                                        .map(f -> new DateLeasedReturnCountResponse(
+                                                f.getDate(),
+                                                f.getCount().intValue()
+                                        ))
+                                        .toList();
+
+                        int total = dateResponses.stream()
+                                .mapToInt(DateLeasedReturnCountResponse::getLeasedReturnedCount)
+                                .sum();
+
+                        return new LeasedReturnedMonthYearResponse(
+                                entry.getKey(),
+                                total,
+                                dateResponses
+                        );
+                    }).toList();
+
+            return new ApiResponse<>("Leased month-year details fetched successfully",
+                    OrderServiceConstant.STATUS_SUCCESS, response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>("Failed to fetch leased/returned month-year details",
+                    OrderServiceConstant.STATUS_ERROR, null);
+        }
+    }
+
 
     private Map<String, Object> handleReturnError(Exception ex) {
 
