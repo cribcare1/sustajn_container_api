@@ -536,7 +536,7 @@ public class OrderServiceImpl implements OrderService {
             );
             LocalDateTime endTime = startTime.plusDays(1).minusSeconds(1);
 
-            List<LeasedReturnedCountWithTimeGraphProjection> projectionList = List.of();
+            List<LeasedReturnedCountWithTimeGraphProjection> projectionList;
 
             if (type.equalsIgnoreCase(OrderServiceConstant.LEASED)) {
                 projectionList = borrowOrderRepository.getLeasedCountWithTimeGraph(
