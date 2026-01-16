@@ -21,4 +21,5 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
     );
 
     List<ReturnOrder> findByRestaurantId(Long restaurantId);
+
 }

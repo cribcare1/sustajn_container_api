@@ -88,4 +88,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderHistory(restaurantId));
     }
 
+    @GetMapping("/getLeasedReturnedCount")
+    public ResponseEntity<?> getLeasedAndReturnedContainersCount(
+            @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
+            @RequestParam @NotNull(message = "please provide product id") Integer productId) {
+        return ResponseEntity.ok(orderService.getLeasedAndReturnedContainersCount(restaurantId, productId));
+    }
+
 }

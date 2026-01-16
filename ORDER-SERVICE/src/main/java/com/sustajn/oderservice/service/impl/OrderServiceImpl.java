@@ -20,6 +20,7 @@ import com.sustajn.oderservice.util.ApiResponseUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -464,6 +465,36 @@ public class OrderServiceImpl implements OrderService {
         } catch (Exception e) {
             e.printStackTrace();
             return new ApiResponse<>("Failed to fetch order history",
+                    OrderServiceConstant.STATUS_ERROR, null);
+        }
+    }
+
+    @Override
+    public ApiResponse<LeasedReturnedContainerCountResponse> getLeasedAndReturnedContainersCount(Long restaurantId, Integer productId) {
+        try {
+            List<Object[]> borrowReturnCountDetails =
+                    borrowOrderRepository.getLeasedAndReturnedCounts(restaurantId, productId);
+
+            int leasedCount = 0;
+            int returnedCount = 0;
+
+            if (!CollectionUtils.isEmpty(borrowReturnCountDetails)) {
+                Object[] row = borrowReturnCountDetails.get(0);
+                leasedCount = ((Number) row[0]).intValue();
+                returnedCount = ((Number) row[1]).intValue();
+            }
+
+            LeasedReturnedContainerCountResponse response =
+                    new LeasedReturnedContainerCountResponse(leasedCount, returnedCount);
+
+            return new ApiResponse<>(
+                    "Leased & Returned container counts fetched successfully",
+                    OrderServiceConstant.STATUS_SUCCESS,
+                    response
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();return new ApiResponse<>("Failed to fetch leased and returned container counts",
                     OrderServiceConstant.STATUS_ERROR, null);
         }
     }
