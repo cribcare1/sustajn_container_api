@@ -8,6 +8,7 @@ import com.sustajn.oderservice.entity.ReturnOrder;
 import com.sustajn.oderservice.exception.ResourceNotFoundException;
 import com.sustajn.oderservice.feign.service.AuthClient;
 import com.sustajn.oderservice.feign.service.InventoryFeignClient;
+import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.OrderRepository;
 import com.sustajn.oderservice.repository.ReturnOrderRepository;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -519,6 +521,56 @@ public class OrderServiceImpl implements OrderService {
                     OrderServiceConstant.STATUS_ERROR, null);
         }
     }
+
+    @Override
+    public ApiResponse<List<LeasedReturnedCountWithTimeGraphResponse>>
+    getLeasedReturnedCountWithTimeGraph(
+            Long restaurantId,
+            Integer productId,
+            String date,
+            String type) {
+
+        try {
+            LocalDateTime startTime = LocalDateTime.parse(
+                    LocalDate.parse(date, DateTimeFormatter.ofPattern("dd.MM.yyyy")).atStartOfDay().toString()
+            );
+            LocalDateTime endTime = startTime.plusDays(1).minusSeconds(1);
+
+            List<LeasedReturnedCountWithTimeGraphProjection> projectionList = List.of();
+
+            if (type.equalsIgnoreCase(OrderServiceConstant.LEASED)) {
+                projectionList = borrowOrderRepository.getLeasedCountWithTimeGraph(
+                        restaurantId, productId, startTime, endTime
+                );
+            } else if (type.equalsIgnoreCase(OrderServiceConstant.RETURNED)) {
+                projectionList = returnOrderRepository.getReturnedCountWithTimeGraph(
+                        restaurantId, productId, startTime, endTime
+                );
+            } else {
+                return new ApiResponse<>("Invalid type", OrderServiceConstant.STATUS_ERROR, null);
+            }
+
+            // Map projection to DTO
+            List<LeasedReturnedCountWithTimeGraphResponse> response = projectionList.stream()
+                    .map(p -> new LeasedReturnedCountWithTimeGraphResponse(
+                            p.getLeasedReturnedCount(),
+                            p.getTime()
+                    ))
+                    .toList();
+
+            return new ApiResponse<>("Leased/returned count with time graph fetched successfully",
+                    OrderServiceConstant.STATUS_SUCCESS, response);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>(
+                    "Failed to fetch leased/returned count with time graph",
+                    OrderServiceConstant.STATUS_ERROR,
+                    null
+            );
+        }
+    }
+
 
 
     private Map<String, Object> handleReturnError(Exception ex) {

@@ -97,4 +97,14 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getLeasedReturnedMonthYearDetails(restaurantId, productId, type));
     }
 
+    @GetMapping("/getLeasedReturnedCountWithTimeGraph")
+    public ResponseEntity<?> getLeasedReturnedCountWithTimeGraph(
+            @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
+            @RequestParam @NotNull(message = "please provide product id") Integer productId,
+            @RequestParam @NotNull(message = "please provide type leased/returned") String type,
+            @RequestParam @NotNull(message = "please provide date") String date
+    ) {
+        return ResponseEntity.ok(orderService.getLeasedReturnedCountWithTimeGraph(restaurantId, productId, date, type));
+    }
+
 }

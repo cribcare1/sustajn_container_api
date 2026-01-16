@@ -1,11 +1,14 @@
 package com.sustajn.oderservice.repository;
 
+import com.sustajn.oderservice.dto.LeasedReturnedCountWithTimeGraphResponse;
 import com.sustajn.oderservice.dto.LeasedReturnedResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
+import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
@@ -103,7 +106,27 @@ GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
     );
 
 
-
-
+    @Query(
+            value = """
+            SELECT
+                gs.hour || '-' || (gs.hour + 1) AS time,
+                COALESCE(SUM(b.quantity)::int, 0) AS leasedReturnedCount
+            FROM generate_series(0,23) AS gs(hour)
+            LEFT JOIN borrow_orders b
+                ON EXTRACT(HOUR FROM b.borrowed_at) = gs.hour
+               AND b.restaurant_id = :restaurantId
+               AND b.product_id = :productId
+               AND b.borrowed_at BETWEEN :startTime AND :endTime
+            GROUP BY gs.hour
+            ORDER BY gs.hour
+            """,
+            nativeQuery = true
+    )
+    List<LeasedReturnedCountWithTimeGraphProjection> getLeasedCountWithTimeGraph(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Integer productId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
 
 }
