@@ -1,6 +1,7 @@
 package com.auth.response;
 
 import lombok.*;
+import java.util.List;
 
 @Getter
 @Setter
@@ -16,5 +17,8 @@ public class CustomerDetailsBasic {
     private Integer borrowedCount;
     private Integer returnedCount;
     private Integer pendingCount;
+
+    private SubscriptionResponse subscriptionPlan;
+    private List<AddressResponse> addresses;
 }
 

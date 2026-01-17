@@ -63,6 +63,7 @@ SELECT
     u.customerId,
     u.email,
     u.profilePictureUrl,
+    u.subscriptionPlanId,
 
     b1.id, b1.bankName, b1.accountNumber, b1.iBanNumber, b1.taxNumber,
 

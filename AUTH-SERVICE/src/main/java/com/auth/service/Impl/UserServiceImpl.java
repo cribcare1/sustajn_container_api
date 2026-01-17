@@ -4,6 +4,7 @@ import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
 import com.auth.exception.ResourceNotFoundException;
+import com.auth.feignClient.InventoryFeignClient;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.*;
@@ -51,6 +52,7 @@ public class UserServiceImpl implements UserService {
     private final NotificationFeignClientService notificationFeignClientService;
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
+    private final InventoryFeignClient inventoryFeignClient;
 
     @Value("${image.storage.root-path}")
     private String userProfilePath;
@@ -358,7 +360,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
     @Override
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
 
@@ -373,60 +374,93 @@ public class UserServiceImpl implements UserService {
 
             CustomerProfileResponse response = new CustomerProfileResponse();
 
-            // 🧍 User Basic Info
+            // 🧍 Basic User Info
             response.setId((Long) baseProfileRow[0]);
             response.setFullName((String) baseProfileRow[1]);
             response.setMobileNumber((String) baseProfileRow[2]);
             response.setCustomerId((String) baseProfileRow[3]);
             response.setEmailId((String) baseProfileRow[4]);
             response.setProfileImageUrl((String) baseProfileRow[5]);
+            response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
 
             // 🏦 Bank Details
-            if (baseProfileRow[6] != null) {
+            if (baseProfileRow[7] != null) {
                 response.setBankDetailsResponse(new BankDetailsResponse(
-                        (Long) baseProfileRow[6],        // bank id
+                        (Long) baseProfileRow[7],
                         userId,
-                        (String) baseProfileRow[7],      // bank name
-                        (String) baseProfileRow[8],      // account number
-                        (String) baseProfileRow[9],      // iban number
-                        (String) baseProfileRow[10]      // tax number
+                        (String) baseProfileRow[8],
+                        (String) baseProfileRow[9],
+                        (String) baseProfileRow[10],
+                        (String) baseProfileRow[11]
                 ));
             }
 
             // 💳 Card Details
-            if (baseProfileRow[11] != null) {
+            if (baseProfileRow[12] != null) {
                 response.setCardDetailsResponse(new CardDetailsResponse(
-                        (Long) baseProfileRow[11],       // card id
-                        (String) baseProfileRow[12],     // card holder
-                        (String) baseProfileRow[13],     // card number
-                        (String) baseProfileRow[14]      // expiry date
+                        (Long) baseProfileRow[12],
+                        (String) baseProfileRow[13],
+                        (String) baseProfileRow[14],
+                        (String) baseProfileRow[15]
                 ));
             }
 
             // 🧾 Payment Gateway
-            if (baseProfileRow[15] != null) {
+            if (baseProfileRow[16] != null) {
                 response.setPaymentGetWayResponse(new PaymentGetWayResponse(
-                        (Long) baseProfileRow[15],       // gateway id
-                        (String) baseProfileRow[16],     // gateway code
-                        (String) baseProfileRow[17]      // gateway name
+                        (Long) baseProfileRow[16],
+                        (String) baseProfileRow[17],
+                        (String) baseProfileRow[18]
                 ));
             }
 
             // 🏠 Addresses
             List<AddressResponse> addressList = new ArrayList<>();
             for (Object[] row : profileResultRows) {
-                if (row[18] != null) {
+                if (row[19] != null) {
                     addressList.add(new AddressResponse(
-                            (Long) row[18],               // address id
-                            (String) row[19],             // type
-                            (String) row[20],             // flat/door/house
-                            (String) row[21],             // area/street/city/block
-                            (String) row[22]              // postal code
+                            (Long) row[19],
+                            (String) row[20],
+                            (String) row[21],
+                            (String) row[22],
+                            (String) row[23]
                     ));
                 }
             }
-
             response.setAddressResponses(addressList);
+
+            // 🧾 ================= SUBSCRIPTION =================
+            if (response.getSubscriptionPlanId() != null) {
+
+                Map<String, Object> planResp =
+                        inventoryFeignClient.getSubscriptionPlanById(response.getSubscriptionPlanId());
+
+                if ("success".equals(planResp.get("status"))) {
+
+                    Map<String, Object> data = (Map<String, Object>) planResp.get("data");
+
+                    SubscriptionResponse subscription = new SubscriptionResponse(
+                            (Integer) data.get("planId"),
+                            (String) data.get("planName"),
+                            (String) data.get("planType"),
+                            (String) data.get("description"),
+                            (String) data.get("partnerType"),
+                            new BigDecimal(data.get("feeType").toString()),
+                            new BigDecimal(data.get("depositType").toString()),
+                            new BigDecimal(data.get("commissionPercentage").toString()),
+                            (Integer) data.get("minContainers"),
+                            (Integer) data.get("maxContainers"),
+                            (Integer) data.get("totalContainers"),
+                            (Boolean) data.get("includesDelivery"),
+                            (Boolean) data.get("includesMarketing"),
+                            (Boolean) data.get("includesAnalytics"),
+                            (String) data.get("billingCycle"),
+                            (String) data.get("planStatus")
+                    );
+
+                    response.setSubscriptionResponse(subscription);
+                }
+            }
 
             return new ApiResponse<>(AuthConstant.SUCCESS,
                     "Customer profile fetched successfully", response);
@@ -437,6 +471,7 @@ public class UserServiceImpl implements UserService {
                     "Failed to fetch customer profile", null);
         }
     }
+
 
     private static @NonNull List<AddressResponse> getAddressResponses(List<Object[]> profileResultRows) {
         List<AddressResponse> addresses = new ArrayList<>();
@@ -604,7 +639,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage) {
+    public ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
         try {
             UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
             if (request == null) {
@@ -639,9 +674,11 @@ public class UserServiceImpl implements UserService {
                     user.setProfilePictureUrl(profileImageUrl);
                 }
 
-                userRepository.save(user);
+                User updatedUser = userRepository.save(user);
 
-                return new ApiResponse<>("User profile updated successfully", AuthConstant.SUCCESS, user);
+                ApiResponse<CustomerProfileResponse> customerProfileResponse = getCustomerProfileDetails(updatedUser.getId());
+
+                return new ApiResponse<>("User profile updated successfully", AuthConstant.SUCCESS, customerProfileResponse.getData());
             }
 
             return new ApiResponse<>("User not found", AuthConstant.ERROR, null);
@@ -803,6 +840,32 @@ public class UserServiceImpl implements UserService {
 
             LoginResponse loginResponse =
                     generateTokenWithLoginDetails(savedUser);
+            if (request.getBasicDetails() != null) {
+                BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
+                        .restaurantId(savedUser.getId())
+                        .speciality(request.getBasicDetails().getSpeciality())
+                        .websiteDetails(request.getBasicDetails().getWebsiteDetails())
+                        .cuisine(request.getBasicDetails().getCuisine())
+                        .build();
+                basicRepo.save(basic);
+            }
+
+
+            // ---------------- CREATE ADDRESS DETAILS ----------------
+            if (request.getAddress() != null) {
+                RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
+
+                // You can create an AddressDetails entity and save it if needed
+                Address addressDetails = Address.builder()
+                        .userId(savedUser.getId())
+                        .addressType(addressReq.getAddressType())
+                        .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
+                        .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
+                        .poBoxOrPostalCode(addressReq.getPoBoxOrPostalCode())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+                addressRepository.save(addressDetails);
+            }
 
             return Map.of(
                     "status", "success",
@@ -891,6 +954,28 @@ public class UserServiceImpl implements UserService {
                                 .build()
                 );
             }
+            // ---------------- SOCIAL MEDIA LINKS ----------------
+            if (request.getSocialMediaList() != null) {
+                for (RestaurantRegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
+                    SocialMediaDetails media = SocialMediaDetails.builder()
+                            .restaurantId(savedUser.getId())
+                            .socialMediaType(sm.getSocialMediaType())
+                            .link(sm.getLink())
+                            .build();
+                    socialRepo.save(media);
+                }
+            }
+
+
+
+            // ---------------- RESPONSE DTO ----------------
+            LoginResponse loginResponse = generateTokenWithLoginDetails(savedUser);
+
+            return Map.of("message", "Restaurant registered successfully", "data", loginResponse, "status", "success");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return error("Something went wrong: " + e.getMessage());
         }
     }
 
@@ -937,16 +1022,6 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalArgumentException("Password must be at least 6 characters");
             }
 
-//            if (request.getBankDetails() == null) {
-//                throw new IllegalArgumentException("Bank details are required");
-//            }
-
-
-            LocalDate dob = null;
-            if (request.getDateOfBirth() != null) {
-                dob = LocalDate.parse(request.getDateOfBirth());
-            }
-
 
             // ---------------- CREATE USER ----------------
             User user = User.builder()
@@ -958,7 +1033,7 @@ public class UserServiceImpl implements UserService {
                     .phoneNumber(request.getPhoneNumber())
                     .passwordHash(passwordEncoder.encode(request.getPassword()))
                     .subscriptionPlanId(request.getSubscriptionPlanId())
-                    .dateOfBirth(dob)
+                    .dateOfBirth(request.getDateOfBirth())
                     .latitude(request.getLatitude() != null
                             ? BigDecimal.valueOf(request.getLatitude())
                             : null)
@@ -1095,43 +1170,62 @@ public class UserServiceImpl implements UserService {
     public Map<String, Object> getActiveCustomersMap(Pageable pageable) {
         Map<String, Object> response = new HashMap<>();
         try {
-            Page<User> restaurants = userRepository.findByUserTypeAndAccountStatus(
+            // 1. Fetch Active Users
+            Page<User> customersPage = userRepository.findByUserTypeAndAccountStatus(
                     UserType.USER,
                     AccountStatus.ACTIVE,
                     pageable
             );
 
-            // Map Users to RestaurantBasicDetailsResponse
-            List<CustomerDetailsBasic> data = restaurants.stream()
-                    .map(user -> new CustomerDetailsBasic(
-                            user.getId(),
-                            user.getEmail(),              // email
-                            user.getPhoneNumber(),        // mobile
-                            user.getFullName(),           // fullName
-                            user.getProfilePictureUrl(),  // profileImage
-                            0,                            // borrowedCount
-                            0,                            // returnedCount
-                            0                             // pendingCount
-                    ))
+            // 2. Map Users to DTO with REAL DATA
+            List<CustomerDetailsBasic> data = customersPage.stream()
+                    .map(user -> {
+
+                        // A. Fetch Real Addresses
+                        // Note: Ensure findByUserIdAndStatus exists in your AddressRepository
+                        List<Address> addressEntities = addressRepository.findByUserIdAndStatus(user.getId(), AuthConstant.ACTIVE);
+                        List<AddressResponse> addressList = addressEntities.stream()
+                                .map(this::mapToAddressResponse) // Use helper method
+                                .collect(Collectors.toList());
+
+                        // B. Fetch Real Subscription Plan
+                        SubscriptionResponse subResponse = null;
+                        if (user.getSubscriptionPlanId() != null) {
+                            subResponse = fetchSubscription(user.getSubscriptionPlanId()); // Use helper method
+                        }
+
+                        // C. Build Response
+                        return new CustomerDetailsBasic(
+                                user.getId(),
+                                user.getEmail(),
+                                user.getPhoneNumber(),
+                                user.getFullName(),
+                                user.getProfilePictureUrl(),
+                                0, // borrowedCount (placeholder)
+                                0, // returnedCount (placeholder)
+                                0, // pendingCount (placeholder)
+                                subResponse, // ✅ Real Subscription Data
+                                addressList  // ✅ Real Address Data
+                        );
+                    })
                     .collect(Collectors.toList());
 
-
-            // Prepare response map
+            // 3. Prepare response map
             response.put("status", "success");
             response.put("customersData", data);
-            response.put("page", restaurants.getNumber());
-            response.put("size", restaurants.getSize());
-            response.put("totalElements", restaurants.getTotalElements());
-            response.put("totalPages", restaurants.getTotalPages());
+            response.put("page", customersPage.getNumber());
+            response.put("size", customersPage.getSize());
+            response.put("totalElements", customersPage.getTotalElements());
+            response.put("totalPages", customersPage.getTotalPages());
 
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "Failed to fetch active customers");
             response.put("details", e.getMessage());
+            e.printStackTrace();
         }
         return response;
     }
-
     @Override
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds) {
         return userRepository.findRestaurantsByIds(restaurantIds, UserType.RESTAURANT, AccountStatus.ACTIVE);
@@ -1444,4 +1538,49 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    // Helper to convert Address Entity -> AddressResponse DTO
+    private AddressResponse mapToAddressResponse(Address address) {
+        return new AddressResponse(
+                address.getId(),
+                address.getAddressType(),
+                address.getFlatDoorHouseDetails(),
+                address.getAreaStreetCityBlockDetails(),
+                address.getPoBoxOrPostalCode()
+        );
+    }
+
+    // Helper to fetch and parse Subscription Plan from Inventory Service
+    private SubscriptionResponse fetchSubscription(Integer planId) {
+        try {
+            // Call Inventory Service via Feign Client
+            Map<String, Object> planResp = inventoryFeignClient.getSubscriptionPlanById(planId);
+
+            if (planResp != null && "success".equals(planResp.get("status"))) {
+                Map<String, Object> data = (Map<String, Object>) planResp.get("data");
+
+                // Parse the Map to DTO safely
+                return new SubscriptionResponse(
+                        (Integer) data.get("planId"),
+                        (String) data.get("planName"),
+                        (String) data.get("planType"),
+                        (String) data.get("description"),
+                        (String) data.get("partnerType"),
+                        data.get("feeType") != null ? new BigDecimal(data.get("feeType").toString()) : BigDecimal.ZERO,
+                        data.get("depositType") != null ? new BigDecimal(data.get("depositType").toString()) : BigDecimal.ZERO,
+                        data.get("commissionPercentage") != null ? new BigDecimal(data.get("commissionPercentage").toString()) : BigDecimal.ZERO,
+                        (Integer) data.get("minContainers"),
+                        (Integer) data.get("maxContainers"),
+                        (Integer) data.get("totalContainers"),
+                        (Boolean) data.get("includesDelivery"),
+                        (Boolean) data.get("includesMarketing"),
+                        (Boolean) data.get("includesAnalytics"),
+                        (String) data.get("billingCycle"),
+                        (String) data.get("planStatus")
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching subscription for planId " + planId + ": " + e.getMessage());
+        }
+        return null; // Return null if not found or error
+    }
 }

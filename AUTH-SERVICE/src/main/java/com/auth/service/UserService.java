@@ -67,7 +67,7 @@ public interface UserService {
 
     ApiResponse<BankDetails> deleteBankDetails(Long id);
 
-    ApiResponse<User> updateUserProfile(String userData, MultipartFile profileImage);
+    ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage);
     ApiResponse<?> uploadImage(MultipartFile file, Long userId);
 
     public ApiResponse<List<RestaurantRegisterResponse>> getPendingRestaurants();

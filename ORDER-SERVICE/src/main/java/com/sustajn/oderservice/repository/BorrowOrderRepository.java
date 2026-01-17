@@ -1,10 +1,13 @@
 package com.sustajn.oderservice.repository;
 
+import com.sustajn.oderservice.dto.LeasedReturnedResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
+import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
@@ -78,4 +81,63 @@ GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
 
 
     List<BorrowOrder> findByRestaurantId(Long restaurantId);
+
+    @Query("""
+    SELECT 
+        COALESCE(SUM(b.quantity), 0),
+        COALESCE(SUM(b.returnedQuantity), 0)
+    FROM BorrowOrder b
+    WHERE b.restaurantId = :restaurantId
+      AND b.productId = :productId
+""")
+    List<Object[]> getLeasedAndReturnedCounts(@Param("restaurantId") Long restaurantId,
+                                              @Param("productId") Integer productId);
+
+
+
+    @Query("""
+    SELECT new com.sustajn.oderservice.dto.LeasedReturnedResponse(
+        CONCAT(
+            TRIM(FUNCTION('TO_CHAR', DATE(b.borrowedAt), 'Month')),
+            '-',
+            FUNCTION('TO_CHAR', DATE(b.borrowedAt), 'YYYY')
+        ),
+        CAST(FUNCTION('TO_CHAR', DATE(b.borrowedAt), 'DD.MM.YYYY') AS string),
+        SUM(b.quantity)
+    )
+    FROM BorrowOrder b
+    WHERE b.restaurantId = :restaurantId
+      AND b.productId = :productId
+    GROUP BY DATE(b.borrowedAt)
+    ORDER BY DATE(b.borrowedAt)
+""")
+    List<LeasedReturnedResponse> getLeasedMonthYearDetails(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Integer productId
+    );
+
+
+    @Query(
+            value = """
+            SELECT
+                gs.hour || '-' || (gs.hour + 1) AS time,
+                COALESCE(SUM(b.quantity)::int, 0) AS leasedReturnedCount
+            FROM generate_series(0,23) AS gs(hour)
+            LEFT JOIN borrow_orders b
+                ON EXTRACT(HOUR FROM b.borrowed_at) = gs.hour
+               AND b.restaurant_id = :restaurantId
+               AND b.product_id = :productId
+               AND b.borrowed_at BETWEEN :startTime AND :endTime
+            GROUP BY gs.hour
+            ORDER BY gs.hour
+            """,
+            nativeQuery = true
+    )
+    List<LeasedReturnedCountWithTimeGraphProjection> getLeasedCountWithTimeGraph(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Integer productId,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime
+    );
+
 }

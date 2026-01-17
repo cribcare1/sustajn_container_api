@@ -17,7 +17,6 @@ import com.inventory.response.ApiResponse;
 import com.inventory.response.RestaurantOrderedResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,7 +30,7 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
 
     private final AdminOrderRepository adminOrderRepository;
     private final AdminOrderItemRepository adminOrderItemRepository;
-    private  final RestaurantContainerInventoryRepository inventoryRepository;
+    private final RestaurantContainerInventoryRepository inventoryRepository;
 
     @Override
     @Transactional
@@ -58,7 +57,6 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
             // ----- Create Order -----
             AdminOrder order = new AdminOrder();
             order.setRestaurantId(request.getRestaurantId());
-            order.setOrderId(request.getOrderId());
             order.setOrderDate(LocalDateTime.now());
             order.setRestaurantRemark(request.getRestaurantRemark());
             order.setType(transactionType);
