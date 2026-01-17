@@ -1055,43 +1055,62 @@ public class UserServiceImpl implements UserService {
     public Map<String, Object> getActiveCustomersMap(Pageable pageable) {
         Map<String, Object> response = new HashMap<>();
         try {
-            Page<User> restaurants = userRepository.findByUserTypeAndAccountStatus(
+            // 1. Fetch Active Users
+            Page<User> customersPage = userRepository.findByUserTypeAndAccountStatus(
                     UserType.USER,
                     AccountStatus.active,
                     pageable
             );
 
-            // Map Users to RestaurantBasicDetailsResponse
-            List<CustomerDetailsBasic> data = restaurants.stream()
-                    .map(user -> new CustomerDetailsBasic(
-                            user.getId(),
-                            user.getEmail(),              // email
-                            user.getPhoneNumber(),        // mobile
-                            user.getFullName(),           // fullName
-                            user.getProfilePictureUrl(),  // profileImage
-                            0,                            // borrowedCount
-                            0,                            // returnedCount
-                            0                             // pendingCount
-                    ))
+            // 2. Map Users to DTO with REAL DATA
+            List<CustomerDetailsBasic> data = customersPage.stream()
+                    .map(user -> {
+
+                        // A. Fetch Real Addresses
+                        // Note: Ensure findByUserIdAndStatus exists in your AddressRepository
+                        List<Address> addressEntities = addressRepository.findByUserIdAndStatus(user.getId(), AuthConstant.ACTIVE);
+                        List<AddressResponse> addressList = addressEntities.stream()
+                                .map(this::mapToAddressResponse) // Use helper method
+                                .collect(Collectors.toList());
+
+                        // B. Fetch Real Subscription Plan
+                        SubscriptionResponse subResponse = null;
+                        if (user.getSubscriptionPlanId() != null) {
+                            subResponse = fetchSubscription(user.getSubscriptionPlanId()); // Use helper method
+                        }
+
+                        // C. Build Response
+                        return new CustomerDetailsBasic(
+                                user.getId(),
+                                user.getEmail(),
+                                user.getPhoneNumber(),
+                                user.getFullName(),
+                                user.getProfilePictureUrl(),
+                                0, // borrowedCount (placeholder)
+                                0, // returnedCount (placeholder)
+                                0, // pendingCount (placeholder)
+                                subResponse, // ✅ Real Subscription Data
+                                addressList  // ✅ Real Address Data
+                        );
+                    })
                     .collect(Collectors.toList());
 
-
-            // Prepare response map
+            // 3. Prepare response map
             response.put("status", "success");
             response.put("customersData", data);
-            response.put("page", restaurants.getNumber());
-            response.put("size", restaurants.getSize());
-            response.put("totalElements", restaurants.getTotalElements());
-            response.put("totalPages", restaurants.getTotalPages());
+            response.put("page", customersPage.getNumber());
+            response.put("size", customersPage.getSize());
+            response.put("totalElements", customersPage.getTotalElements());
+            response.put("totalPages", customersPage.getTotalPages());
 
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "Failed to fetch active customers");
             response.put("details", e.getMessage());
+            e.printStackTrace();
         }
         return response;
     }
-
     @Override
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds) {
         return userRepository.findRestaurantsByIds(restaurantIds, UserType.RESTAURANT, AccountStatus.active);
@@ -1300,5 +1319,50 @@ public class UserServiceImpl implements UserService {
             return new ApiResponse<>("Error updating profile image", AuthConstant.ERROR, null);
         }
 
+    }
+    // Helper to convert Address Entity -> AddressResponse DTO
+    private AddressResponse mapToAddressResponse(Address address) {
+        return new AddressResponse(
+                address.getId(),
+                address.getAddressType(),
+                address.getFlatDoorHouseDetails(),
+                address.getAreaStreetCityBlockDetails(),
+                address.getPoBoxOrPostalCode()
+        );
+    }
+
+    // Helper to fetch and parse Subscription Plan from Inventory Service
+    private SubscriptionResponse fetchSubscription(Integer planId) {
+        try {
+            // Call Inventory Service via Feign Client
+            Map<String, Object> planResp = inventoryFeignClient.getSubscriptionPlanById(planId);
+
+            if (planResp != null && "success".equals(planResp.get("status"))) {
+                Map<String, Object> data = (Map<String, Object>) planResp.get("data");
+
+                // Parse the Map to DTO safely
+                return new SubscriptionResponse(
+                        (Integer) data.get("planId"),
+                        (String) data.get("planName"),
+                        (String) data.get("planType"),
+                        (String) data.get("description"),
+                        (String) data.get("partnerType"),
+                        data.get("feeType") != null ? new BigDecimal(data.get("feeType").toString()) : BigDecimal.ZERO,
+                        data.get("depositType") != null ? new BigDecimal(data.get("depositType").toString()) : BigDecimal.ZERO,
+                        data.get("commissionPercentage") != null ? new BigDecimal(data.get("commissionPercentage").toString()) : BigDecimal.ZERO,
+                        (Integer) data.get("minContainers"),
+                        (Integer) data.get("maxContainers"),
+                        (Integer) data.get("totalContainers"),
+                        (Boolean) data.get("includesDelivery"),
+                        (Boolean) data.get("includesMarketing"),
+                        (Boolean) data.get("includesAnalytics"),
+                        (String) data.get("billingCycle"),
+                        (String) data.get("planStatus")
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching subscription for planId " + planId + ": " + e.getMessage());
+        }
+        return null; // Return null if not found or error
     }
 }
