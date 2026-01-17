@@ -1,7 +1,9 @@
 package com.auth.enumDetails;
 
 public enum AccountStatus {
-    active,
-    inactive,
-    suspended
+    ACTIVE,
+    INACTIVE,
+    SUSPENDED,
+    PENDING,
+    REJECTED
 }

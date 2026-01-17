@@ -22,11 +22,37 @@ public class MyUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userName));
 
         switch (user.getAccountStatus()) {
-            case suspended -> throw new ResourceNotFoundException("User account is suspended. Contact support.");
-            case inactive -> throw new ResourceNotFoundException("User account is inactive. Please activate first.");
-            case active -> {} // allowed to proceed
-            default -> throw new ResourceNotFoundException("Invalid account status!");
+
+            case SUSPENDED ->
+                    throw new ResourceNotFoundException(
+                            "Your account has been suspended. Please contact support for assistance."
+                    );
+
+            case INACTIVE ->
+                    throw new ResourceNotFoundException(
+                            "Your account is inactive. Please complete the activation process."
+                    );
+
+            case PENDING ->
+                    throw new ResourceNotFoundException(
+                            "Your account is under review. Please wait for approval."
+                    );
+
+            case REJECTED ->
+                    throw new ResourceNotFoundException(
+                            "Your registration was rejected. Please update your details and reapply."
+                    );
+
+            case ACTIVE -> {
+                // ✅ allowed to proceed
+            }
+
+            default ->
+                    throw new ResourceNotFoundException(
+                            "Your account status is invalid. Please contact support."
+                    );
         }
+
 
         return new MyUserDetails(user);
     }

@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SocialMediaDetailsRepository extends JpaRepository<SocialMediaDetails,Long> {
+    void deleteByRestaurantId(Long id);
 }

@@ -48,7 +48,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
             "LOWER(REPLACE(r.fullName, ' ', '')) LIKE LOWER(CONCAT('%', REPLACE(:keyword, ' ', ''), '%')) " +
             "OR LOWER(REPLACE(r.address, ' ', '')) LIKE LOWER(CONCAT('%', REPLACE(:keyword, ' ', ''), '%'))" +
             ")" +
-            "AND r.accountStatus = 'active'")
+            "AND r.accountStatus = 'ACTIVE'")
     List<User> searchRestaurantsByKeyword(@Param("keyword") String keyword);
 
     @Query("SELECT u.customerId FROM User u WHERE u.customerId = :baseId")
@@ -77,13 +77,13 @@ SELECT
 FROM User u
 
 LEFT JOIN BankDetails b1 
-    ON b1.userId = u.id AND b1.bankName IS NOT NULL AND b1.status = 'active'
+    ON b1.userId = u.id AND b1.bankName IS NOT NULL AND b1.status = 'ACTIVE'
 
 LEFT JOIN BankDetails c1 
-    ON c1.userId = u.id AND c1.cardNumber IS NOT NULL AND c1.status = 'active'
+    ON c1.userId = u.id AND c1.cardNumber IS NOT NULL AND c1.status = 'ACTIVE'
 
 LEFT JOIN BankDetails p1 
-    ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL AND p1.status = 'active'
+    ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL AND p1.status = 'ACTIVE'
 
 LEFT JOIN Address a ON a.userId = u.id
 
@@ -93,4 +93,8 @@ WHERE u.id = :userId
 
 
     Optional<User> findByPhoneNumber(String phoneNumber);
+
+    boolean existsByPhoneNumberAndIdNot(String phoneNumber, Long id);
+
+    List<User> findByAccountStatus(AccountStatus accountStatus);
 }

@@ -69,6 +69,10 @@ public interface UserService {
 
     ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage);
     ApiResponse<?> uploadImage(MultipartFile file, Long userId);
+
+    public ApiResponse<List<RestaurantRegisterResponse>> getPendingRestaurants();
+
+    public ApiResponse<Void> approveOrRejectUser(AdminUserActionRequest request);
 }
 
 
