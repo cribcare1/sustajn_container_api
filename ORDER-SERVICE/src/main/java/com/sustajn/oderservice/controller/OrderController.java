@@ -1,11 +1,13 @@
 package com.sustajn.oderservice.controller;
 
 import com.sustajn.oderservice.request.BorrowRequest;
+import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.service.OrderService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -93,6 +95,18 @@ public class OrderController {
             @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
             @RequestParam @NotNull(message = "please provide product id") Integer productId) {
         return ResponseEntity.ok(orderService.getLeasedAndReturnedContainersCount(restaurantId, productId));
+    }
+
+    @GetMapping("/getLeasedReturnedMonthYearDetails")
+    public ResponseEntity<?> getLeasedReturnedMonthYearDetails(@RequestBody @Validated LeasedReturnedGraphInput leasedReturnedGraphInput
+    ) {
+        return ResponseEntity.ok(orderService.getLeasedReturnedMonthYearDetails(leasedReturnedGraphInput));
+    }
+
+    @GetMapping("/getLeasedReturnedCountWithTimeGraph")
+    public ResponseEntity<?> getLeasedReturnedCountWithTimeGraph(@RequestBody @Validated LeasedReturnedGraphInput leasedReturnedGraphInput
+    ) {
+        return ResponseEntity.ok(orderService.getLeasedReturnedCountWithTimeGraph(leasedReturnedGraphInput));
     }
 
 }

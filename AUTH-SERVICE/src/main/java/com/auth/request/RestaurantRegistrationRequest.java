@@ -18,8 +18,8 @@ public class RestaurantRegistrationRequest {
     private String email;
     private String phoneNumber;
     private String password;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    private String dateOfBirth;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dateOfBirth;
     private AddressRequest address;
     private Double latitude;
     private Double longitude;
@@ -106,7 +106,7 @@ public class RestaurantRegistrationRequest {
         private String flatDoorHouseDetails;
         private String areaStreetCityBlockDetails;
         private String poBoxOrPostalCode;
-        private String status;
+//        private String status;
     }
 }
 
