@@ -1,11 +1,13 @@
 package com.sustajn.oderservice.controller;
 
 import com.sustajn.oderservice.request.BorrowRequest;
+import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.service.OrderService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -96,22 +98,15 @@ public class OrderController {
     }
 
     @GetMapping("/getLeasedReturnedMonthYearDetails")
-    public ResponseEntity<?> getLeasedReturnedMonthYearDetails(
-            @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
-            @RequestParam @NotNull(message = "please provide product id") Integer productId,
-            @RequestParam @NotNull(message = "please provide type leased/returned") String type
+    public ResponseEntity<?> getLeasedReturnedMonthYearDetails(@RequestBody @Validated LeasedReturnedGraphInput leasedReturnedGraphInput
     ) {
-        return ResponseEntity.ok(orderService.getLeasedReturnedMonthYearDetails(restaurantId, productId, type));
+        return ResponseEntity.ok(orderService.getLeasedReturnedMonthYearDetails(leasedReturnedGraphInput));
     }
 
     @GetMapping("/getLeasedReturnedCountWithTimeGraph")
-    public ResponseEntity<?> getLeasedReturnedCountWithTimeGraph(
-            @RequestParam @NotNull(message = "please provide restaurant id") Long restaurantId,
-            @RequestParam @NotNull(message = "please provide product id") Integer productId,
-            @RequestParam @NotNull(message = "please provide type leased/returned") String type,
-            @RequestParam @NotNull(message = "please provide date") String date
+    public ResponseEntity<?> getLeasedReturnedCountWithTimeGraph(@RequestBody @Validated LeasedReturnedGraphInput leasedReturnedGraphInput
     ) {
-        return ResponseEntity.ok(orderService.getLeasedReturnedCountWithTimeGraph(restaurantId, productId, date, type));
+        return ResponseEntity.ok(orderService.getLeasedReturnedCountWithTimeGraph(leasedReturnedGraphInput));
     }
 
 }

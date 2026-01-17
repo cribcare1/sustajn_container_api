@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.service.impl;
 
+import com.sustajn.oderservice.constant.OrderEnumType;
 import com.sustajn.oderservice.constant.OrderServiceConstant;
 import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
@@ -12,10 +13,7 @@ import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjec
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.OrderRepository;
 import com.sustajn.oderservice.repository.ReturnOrderRepository;
-import com.sustajn.oderservice.request.BorrowItemRequest;
-import com.sustajn.oderservice.request.BorrowRequest;
-import com.sustajn.oderservice.request.ReturnItemRequest;
-import com.sustajn.oderservice.request.ReturnRequest;
+import com.sustajn.oderservice.request.*;
 import com.sustajn.oderservice.service.OrderService;
 import com.sustajn.oderservice.util.ApiResponseUtil;
 import jakarta.transaction.Transactional;
@@ -503,16 +501,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(Long restaurantId, Integer productId, String type) {
+    public ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(LeasedReturnedGraphInput leasedReturnedGraphInput) {
         try {
             List<LeasedReturnedResponse> leasedReturnedResponses;
-            if (OrderServiceConstant.LEASED.equalsIgnoreCase(type)) {
-                leasedReturnedResponses = borrowOrderRepository.getLeasedMonthYearDetails(restaurantId, productId);
-            } else if (OrderServiceConstant.RETURNED.equalsIgnoreCase(type)) {
-                leasedReturnedResponses = returnOrderRepository.getReturnedMonthYearDetails(restaurantId, productId);
+            if (OrderEnumType.LEASED.equals(leasedReturnedGraphInput.getType())) {
+                leasedReturnedResponses = borrowOrderRepository.getLeasedMonthYearDetails(leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId());
+            } else if (OrderEnumType.RETURNED.equals(leasedReturnedGraphInput.getType())) {
+                leasedReturnedResponses = returnOrderRepository.getReturnedMonthYearDetails(leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId());
             } else {
-                return new ApiResponse<>("Invalid type",
-                        OrderServiceConstant.STATUS_ERROR, null);
+                return new ApiResponse<>(OrderServiceConstant.STATUS_ERROR,"Invalid type", null);
             }
 
             Map<String, List<LeasedReturnedResponse>> leasedReturnedGroupedResponse =
@@ -545,41 +542,33 @@ public class OrderServiceImpl implements OrderService {
                         );
                     }).toList();
 
-            return new ApiResponse<>("Leased month-year details fetched successfully",
-                    OrderServiceConstant.STATUS_SUCCESS, response);
+            return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS,"Leased month-year details fetched successfully", response);
         } catch (Exception e) {
-            e.printStackTrace();
-            return new ApiResponse<>("Failed to fetch leased/returned month-year details",
-                    OrderServiceConstant.STATUS_ERROR, null);
+            log.error("Failed to fetch leased/returned month-year details for restaurantId={}, productId={}, date={}, type={}", leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(),
+                     leasedReturnedGraphInput.getType(), e);
+            return new ApiResponse<>(OrderServiceConstant.STATUS_ERROR, "Failed to fetch leased/returned month-year details", null);
         }
     }
 
     @Override
-    public ApiResponse<List<LeasedReturnedCountWithTimeGraphResponse>>
-    getLeasedReturnedCountWithTimeGraph(
-            Long restaurantId,
-            Integer productId,
-            String date,
-            String type) {
+    public ApiResponse<List<LeasedReturnedCountWithTimeGraphResponse>> getLeasedReturnedCountWithTimeGraph(LeasedReturnedGraphInput leasedReturnedGraphInput) {
 
         try {
-            LocalDateTime startTime = LocalDateTime.parse(
-                    LocalDate.parse(date, DateTimeFormatter.ofPattern("dd.MM.yyyy")).atStartOfDay().toString()
-            );
+            LocalDateTime startTime = LocalDate.parse(leasedReturnedGraphInput.getDate(), DateTimeFormatter.ofPattern("dd.MM.yyyy")).atStartOfDay();
             LocalDateTime endTime = startTime.plusDays(1).minusSeconds(1);
 
             List<LeasedReturnedCountWithTimeGraphProjection> projectionList;
 
-            if (type.equalsIgnoreCase(OrderServiceConstant.LEASED)) {
+            if (OrderEnumType.LEASED.equals(leasedReturnedGraphInput.getType())) {
                 projectionList = borrowOrderRepository.getLeasedCountWithTimeGraph(
-                        restaurantId, productId, startTime, endTime
+                        leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(), startTime, endTime
                 );
-            } else if (type.equalsIgnoreCase(OrderServiceConstant.RETURNED)) {
+            } else if (OrderEnumType.RETURNED.equals(leasedReturnedGraphInput.getType())) {
                 projectionList = returnOrderRepository.getReturnedCountWithTimeGraph(
-                        restaurantId, productId, startTime, endTime
+                        leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(), startTime, endTime
                 );
             } else {
-                return new ApiResponse<>("Invalid type", OrderServiceConstant.STATUS_ERROR, null);
+                return new ApiResponse<>( OrderServiceConstant.STATUS_ERROR, "Invalid type", null);
             }
 
             // Map projection to DTO
@@ -590,14 +579,15 @@ public class OrderServiceImpl implements OrderService {
                     ))
                     .toList();
 
-            return new ApiResponse<>("Leased/returned count with time graph fetched successfully",
-                    OrderServiceConstant.STATUS_SUCCESS, response);
+            return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS,"Leased/returned count with time graph fetched successfully",
+                     response);
 
         } catch (Exception e) {
-            log.error(e.getMessage(), e);
+            log.error("Failed to fetch leased/returned count with time graph for restaurantId={}, productId={}, date={}, type={}", leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(),
+                    leasedReturnedGraphInput.getDate(), leasedReturnedGraphInput.getType(), e);
             return new ApiResponse<>(
-                    "Failed to fetch leased/returned count with time graph",
                     OrderServiceConstant.STATUS_ERROR,
+                    "Failed to fetch leased/returned count with time graph",
                     null
             );
         }
