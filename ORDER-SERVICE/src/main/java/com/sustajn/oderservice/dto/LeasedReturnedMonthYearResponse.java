@@ -15,5 +15,5 @@ public class LeasedReturnedMonthYearResponse {
 
     private String monthYear; // Format: "November-2025"
     private Integer totalLeasedOrReturnCount;
-    private List<DateLeasedReturnCountResponse> dateLeasedReturnCounts;
+    private List<DateWiseReturnCountResponse> dateLeasedReturnCounts;
 }

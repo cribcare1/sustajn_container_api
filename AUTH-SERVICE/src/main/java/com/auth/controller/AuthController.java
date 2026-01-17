@@ -173,10 +173,8 @@ public class AuthController {
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> registerUserWithBankDetails(
-            @RequestBody(required = false) RestaurantRegistrationRequest request
+            @RequestBody RestaurantRegistrationRequest request
     )  {
-        System.out.println(request.getClass().getName());
-
         return ResponseEntity.ok(
                 userService.registerUserWithBankDetails(request)
         );

@@ -907,9 +907,6 @@ public class UserServiceImpl implements UserService {
                 throw new IllegalArgumentException("Password must be at least 6 characters");
             }
 
-//            if (request.getBankDetails() == null) {
-//                throw new IllegalArgumentException("Bank details are required");
-//            }
 
             // ---------------- CREATE USER ----------------
             User user = User.builder()

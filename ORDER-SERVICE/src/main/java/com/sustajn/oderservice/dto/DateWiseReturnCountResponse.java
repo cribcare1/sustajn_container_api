@@ -9,7 +9,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class DateLeasedReturnCountResponse{
+public class DateWiseReturnCountResponse {
 
     private String date; //Format: "dd.MM.yyyy"
     private Integer leasedReturnedCount;

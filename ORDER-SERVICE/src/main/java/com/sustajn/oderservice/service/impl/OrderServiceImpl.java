@@ -20,13 +20,13 @@ import com.sustajn.oderservice.service.OrderService;
 import com.sustajn.oderservice.util.ApiResponseUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -34,6 +34,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -505,9 +506,9 @@ public class OrderServiceImpl implements OrderService {
     public ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(Long restaurantId, Integer productId, String type) {
         try {
             List<LeasedReturnedResponse> leasedReturnedResponses;
-            if (type.equalsIgnoreCase(OrderServiceConstant.LEASED)) {
+            if (OrderServiceConstant.LEASED.equalsIgnoreCase(type)) {
                 leasedReturnedResponses = borrowOrderRepository.getLeasedMonthYearDetails(restaurantId, productId);
-            } else if (type.equalsIgnoreCase(OrderServiceConstant.RETURNED)) {
+            } else if (OrderServiceConstant.RETURNED.equalsIgnoreCase(type)) {
                 leasedReturnedResponses = returnOrderRepository.getReturnedMonthYearDetails(restaurantId, productId);
             } else {
                 return new ApiResponse<>("Invalid type",
@@ -525,16 +526,16 @@ public class OrderServiceImpl implements OrderService {
             List<LeasedReturnedMonthYearResponse> response =
                     leasedReturnedGroupedResponse.entrySet().stream().map(entry -> {
 
-                        List<DateLeasedReturnCountResponse> dateResponses =
+                        List<DateWiseReturnCountResponse> dateResponses =
                                 entry.getValue().stream()
-                                        .map(f -> new DateLeasedReturnCountResponse(
+                                        .map(f -> new DateWiseReturnCountResponse(
                                                 f.getDate(),
                                                 f.getCount().intValue()
                                         ))
                                         .toList();
 
                         int total = dateResponses.stream()
-                                .mapToInt(DateLeasedReturnCountResponse::getLeasedReturnedCount)
+                                .mapToInt(DateWiseReturnCountResponse::getLeasedReturnedCount)
                                 .sum();
 
                         return new LeasedReturnedMonthYearResponse(
@@ -593,7 +594,7 @@ public class OrderServiceImpl implements OrderService {
                     OrderServiceConstant.STATUS_SUCCESS, response);
 
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error(e.getMessage(), e);
             return new ApiResponse<>(
                     "Failed to fetch leased/returned count with time graph",
                     OrderServiceConstant.STATUS_ERROR,
