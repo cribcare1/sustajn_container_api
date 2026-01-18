@@ -1,10 +1,9 @@
 package com.notification.controller;
 
-import com.notification.dto.DeviceTokenRequest;
-import com.notification.dto.ForgotRequest;
-import com.notification.dto.NotificationRequestNew;
-import com.notification.dto.VerifyRequest;
+import com.notification.dto.*;
+import com.notification.entity.AccountStatus;
 import com.notification.entity.DeviceToken;
+import com.notification.feignService.AuthServiceClient;
 import com.notification.service.DeviceTokenService;
 import com.notification.service.EmailService;
 import com.notification.service.PushNotificationService;
@@ -24,19 +23,42 @@ public class NotificationController {
     private final EmailService emailService;
     private final PushNotificationService notificationService;
     private final DeviceTokenService deviceTokenService;
+    private final AuthServiceClient authServiceClient;
 
-
-    @Autowired
-    public NotificationController(TokenService tokenService, EmailService emailService,PushNotificationService notificationService,DeviceTokenService deviceTokenService) {
+    public NotificationController(TokenService tokenService, EmailService emailService, PushNotificationService notificationService, DeviceTokenService deviceTokenService, AuthServiceClient authServiceClient) {
         this.tokenService = tokenService;
         this.emailService = emailService;
         this.notificationService=notificationService;
         this.deviceTokenService=deviceTokenService;
+        this.authServiceClient = authServiceClient;
     }
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotRequest request) {
+
         // input validation is handled inside services and exceptions are mapped by GlobalExceptionHandler
+        if(request.getType().equalsIgnoreCase("reset")) {
+            UserResponse response = authServiceClient.getUserByEmail(request.getEmail());
+            if (response == null) {
+                return ResponseEntity.ok(new ApiResponse("error", "User with given email does not exist"));
+            }
+            if (response.getAccountStatus() == AccountStatus.rejected) {
+                return ResponseEntity.ok(new ApiResponse("error", "Your account has been rejected. Please contact support."));
+            }
+        }
+
+        if(request.getType()!=null && request.getType().equalsIgnoreCase("signup")) {
+            UserResponse response = authServiceClient.getUserByEmail(request.getEmail());
+            if (response != null) {
+                if( response.getAccountStatus()== AccountStatus.rejected){
+                    return ResponseEntity.ok(new ApiResponse("error", "Your account has been rejected. Please contact support."));
+                }
+                return ResponseEntity.ok(new ApiResponse("error", "User with given email already exists"));
+            }
+        }
+
+
+
         String token = tokenService.generateToken(request.getEmail());
         // allow MailException or other exceptions to propagate to GlobalExceptionHandler
         emailService.sendTokenEmail(request.getEmail(), token, request.getType());
