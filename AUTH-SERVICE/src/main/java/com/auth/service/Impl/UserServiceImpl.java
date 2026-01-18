@@ -1365,4 +1365,10 @@ public class UserServiceImpl implements UserService {
         }
         return null; // Return null if not found or error
     }
+
+    @Override
+    public User getUserByEmail(String email){
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
 }

@@ -340,4 +340,9 @@ public class AuthController {
         return ResponseEntity.ok(apiResponse);
     }
 
+    @GetMapping("/getUserByEmail/{email}")
+    public ResponseEntity<User> getUserByEmail(@PathVariable String email){
+        User user=userService.getUserByEmail(email);
+        return ResponseEntity.ok(user);
+    }
 }

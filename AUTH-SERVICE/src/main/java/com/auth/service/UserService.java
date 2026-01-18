@@ -21,7 +21,7 @@ public interface UserService {
     public UserDto saveUser(User user);
     public Map<String,Object> changePassword(Long userId, String newPassword);
     public Map<String,Object> changePassword(String email, String newPassword);
-
+    public User getUserByEmail(String email);
     public Map<String,Object> registerRestaurant(
             RestaurantRegistrationRequest request
     );
