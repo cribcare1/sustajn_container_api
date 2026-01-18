@@ -289,7 +289,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public ApiResponse<BankDetails> updateBankDetails(BankCardPaymentGetWayDetailsRequest request) {
+    public ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request) {
         try {
 
             BankDetails bankDetails = null;
@@ -352,10 +352,13 @@ public class UserServiceImpl implements UserService {
                 bankDetails = bankRepo.save(payRow);
             }
 
-            return new ApiResponse<>("Details updated successfully", AuthConstant.SUCCESS, bankDetails);
+            CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(bankDetails.getUserId()).getData();
+
+
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Details updated successfully",  customerProfileResponse);
 
         } catch (Exception e) {
-            return new ApiResponse<>("Error on updating details", AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on updating details", null);
         }
     }
 
@@ -535,7 +538,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<Address> updateAddress(AddressRequest request) {
+    public ApiResponse<CustomerProfileResponse> updateAddress(AddressRequest request) {
 
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found", AuthConstant.ERROR));
@@ -546,9 +549,12 @@ public class UserServiceImpl implements UserService {
         Optional.ofNullable(request.getAreaStreetCityBlockDetails()).ifPresent(address::setAreaStreetCityBlockDetails);
         Optional.ofNullable(request.getPoBoxOrPostalCode()).ifPresent(address::setPoBoxOrPostalCode);
 
-        addressRepository.save(address);
+        Address updatedAddress = addressRepository.save(address);
 
-        return new ApiResponse<>("Address updated successfully", AuthConstant.SUCCESS);
+        CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(updatedAddress.getUserId()).getData();
+
+
+        return new ApiResponse<>(AuthConstant.SUCCESS,"Address updated successfully", customerProfileResponse);
     }
 
     @Override
@@ -559,7 +565,7 @@ public class UserServiceImpl implements UserService {
 
         address.setStatus(AuthConstant.IN_ACTIVE);
         addressRepository.save(address);
-        return new ApiResponse<>("Address deleted successfully", AuthConstant.SUCCESS);
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Address deleted successfully");
     }
 
     @Override
@@ -609,13 +615,12 @@ public class UserServiceImpl implements UserService {
             // ====== SAVE ======
             BankDetails saved = bankRepo.save(bankDetails);
 
-            return new ApiResponse<>("Bank details created successfully",
-                    AuthConstant.SUCCESS, saved);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details created successfully", saved);
 
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>("Error on creating bank details",
-                    AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on creating bank details",
+                     null);
         }
     }
 
@@ -627,13 +632,13 @@ public class UserServiceImpl implements UserService {
                 BankDetails bankDetails = bankDetailsOptional.get();
                 bankDetails.setStatus(AuthConstant.IN_ACTIVE);
                 bankRepo.save(bankDetails);
-                return new ApiResponse<>("Bank details deleted successfully", AuthConstant.SUCCESS, null);
+                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully",  null);
             }
-            return new ApiResponse<>("Bank details not found", AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Bank details not found",  null);
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>("Error on deleting bank details",
-                    AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on deleting bank details",
+                     null);
         }
     }
 
@@ -642,7 +647,7 @@ public class UserServiceImpl implements UserService {
         try {
             UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
             if (request == null) {
-                return new ApiResponse<>("Please provide valid request", AuthConstant.ERROR, null);
+                return new ApiResponse<>(AuthConstant.ERROR, "Please provide valid request",  null);
             }
 
             Optional<User> userOptional = userRepository.findById(request.getUserId());
@@ -659,8 +664,7 @@ public class UserServiceImpl implements UserService {
                     if (otherUserOptional.isPresent()
                             && !otherUserOptional.get().getId().equals(user.getId())) {
 
-                        return new ApiResponse<>("Phone number already in use by another user",
-                                AuthConstant.ERROR, null);
+                        return new ApiResponse<>(AuthConstant.ERROR,"Phone number already in use by another user", null);
                     }
 
                     user.setPhoneNumber(request.getPhoneNumber());
@@ -677,14 +681,13 @@ public class UserServiceImpl implements UserService {
 
                 ApiResponse<CustomerProfileResponse> customerProfileResponse = getCustomerProfileDetails(updatedUser.getId());
 
-                return new ApiResponse<>("User profile updated successfully", AuthConstant.SUCCESS, customerProfileResponse.getData());
+                return new ApiResponse<>(AuthConstant.SUCCESS, "User profile updated successfully",  customerProfileResponse.getData());
             }
 
-            return new ApiResponse<>("User not found", AuthConstant.ERROR, null);
+            return new ApiResponse<>( AuthConstant.ERROR, "User not found", null);
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>("Error on updating profile details",
-                    AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on updating profile details", null);
         }
     }
 
@@ -1214,38 +1217,23 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Map<String, Object> upgradeUserSubscription(SubscriptionRequest subscriptionRequest) {
+    public ApiResponse<CustomerProfileResponse> upgradeUserSubscription(SubscriptionRequest subscriptionRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
-            if (subscriptionRequest.getUserId() == null) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "User ID is required");
-                return response;
-            }
-            if (subscriptionRequest.getSubscriptionPlanId() == null) {
-                response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-                response.put(AuthConstant.MESSAGE, "Subscription Plan ID is required");
-                return response;
-            }
+
             Optional<User> userOpt = userRepository.findById(subscriptionRequest.getUserId());
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 user.setSubscriptionPlanId(subscriptionRequest.getSubscriptionPlanId());
-                userRepository.save(user);
-                response.put(AuthConstant.STATUS, AuthConstant.SUCCESS);
-                response.put(AuthConstant.MESSAGE, "User subscription updated successfully");
-                return response;
+                User saveUser = userRepository.save(user);
+                CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(saveUser.getId()).getData();
+                return new ApiResponse<>(AuthConstant.SUCCESS, "User subscription updated successfully", customerProfileResponse);
             }
-            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-            response.put(AuthConstant.MESSAGE, "User not found");
-            return response;
 
         } catch (Exception e) {
-            response.put(AuthConstant.STATUS, AuthConstant.ERROR);
-            response.put(AuthConstant.MESSAGE, "Failed to update user subscription");
-            response.put(AuthConstant.DETAILS, e.getMessage());
+            return new ApiResponse<>(AuthConstant.ERROR, "Failed to upgrade user subscription", null);
         }
-        return response;
+        return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
     }
 
 
@@ -1314,9 +1302,9 @@ public class UserServiceImpl implements UserService {
             System.err.println("Uploaded image URL: " + profileImageUrl);
             user.setProfilePictureUrl(profileImageUrl);
             userRepository.save(user);
-            return new ApiResponse<>("Profile image updated successfully", AuthConstant.SUCCESS, profileImageUrl);
+            return new ApiResponse<>(AuthConstant.SUCCESS ,"Profile image updated successfully", profileImageUrl);
         } catch (Exception e) {
-            return new ApiResponse<>("Error updating profile image", AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error updating profile image",  null);
         }
 
     }

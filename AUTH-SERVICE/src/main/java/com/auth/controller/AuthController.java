@@ -248,11 +248,10 @@ public class AuthController {
     }
 
     @PostMapping("/upgradeSubscription")
-    public ResponseEntity<?> upgradeUserSubscription(
-            @RequestBody SubscriptionRequest subscriptionRequest
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> upgradeUserSubscription(
+            @RequestBody @Validated({CreateGroup.class, UpdateGroup.class}) SubscriptionRequest subscriptionRequest
     ) {
-        Map<String, Object> response = userService.upgradeUserSubscription(subscriptionRequest);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(userService.upgradeUserSubscription(subscriptionRequest));
     }
 
     @PostMapping("/submitFeedback")
@@ -284,7 +283,7 @@ public class AuthController {
     }
 
     @PostMapping("/updateBankDetails")
-    public ResponseEntity<ApiResponse<BankDetails>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
             return ResponseEntity.ok(userService.updateBankDetails(request));
     }
     @PutMapping("/updateBusinessInfo/{restaurantId}")
@@ -311,7 +310,7 @@ public class AuthController {
 
     //update address
     @PostMapping("/updateAddress")
-    public ResponseEntity<ApiResponse<Address>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.updateAddress(request));
     }
 
