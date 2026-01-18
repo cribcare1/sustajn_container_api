@@ -355,10 +355,10 @@ public class UserServiceImpl implements UserService {
             CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(bankDetails.getUserId()).getData();
 
 
-            return new ApiResponse<>("Details updated successfully", AuthConstant.SUCCESS, customerProfileResponse);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Details updated successfully",  customerProfileResponse);
 
         } catch (Exception e) {
-            return new ApiResponse<>("Error on updating details", AuthConstant.ERROR, null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on updating details", null);
         }
     }
 
