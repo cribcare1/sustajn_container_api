@@ -47,19 +47,19 @@ public interface UserService {
 
 
     Map<String, Object> getUserById(Long userId);
-    Map<String, Object> upgradeUserSubscription(SubscriptionRequest subscriptionRequest);
+    ApiResponse<CustomerProfileResponse> upgradeUserSubscription(SubscriptionRequest subscriptionRequest);
 
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
 
-  ApiResponse<BankDetails> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
+  ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
 
    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
     ApiResponse<Address> saveNewAddress(AddressRequest request);
 
-    ApiResponse<Address> updateAddress(AddressRequest request);
+    ApiResponse<CustomerProfileResponse> updateAddress(AddressRequest request);
 
     ApiResponse<Address> deleteAddress(AddressRequest request);
 
