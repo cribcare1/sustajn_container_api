@@ -384,6 +384,7 @@ public class UserServiceImpl implements UserService {
             response.setEmailId((String) baseProfileRow[4]);
             response.setProfileImageUrl((String) baseProfileRow[5]);
             response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
+            response.setSecondaryNumber((String) baseProfileRow[24]);
 
             // 🏦 Bank Details
             if (baseProfileRow[7] != null) {

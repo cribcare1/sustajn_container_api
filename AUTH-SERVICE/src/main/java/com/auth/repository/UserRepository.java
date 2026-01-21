@@ -72,8 +72,8 @@ SELECT
     p1.id, p1.paymentGatewayId, p1.paymentGatewayName,
 
     a.id, a.addressType, a.flatDoorHouseDetails, 
-    a.areaStreetCityBlockDetails, a.poBoxOrPostalCode
-
+    a.areaStreetCityBlockDetails, a.poBoxOrPostalCode,
+    u.secondaryNumber
 FROM User u
 
 LEFT JOIN BankDetails b1 

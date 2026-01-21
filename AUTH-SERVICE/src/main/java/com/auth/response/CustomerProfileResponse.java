@@ -16,6 +16,7 @@ public class CustomerProfileResponse {
     private Long id;
     private String fullName;
     private String mobileNumber;
+    private String secondaryNumber;
     private String customerId;
     private String emailId;
     private String profileImageUrl;

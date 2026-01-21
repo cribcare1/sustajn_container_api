@@ -62,6 +62,9 @@ public class User {
     @Column(name = "phone_number", length = 25)
     private String phoneNumber;
 
+    @Column(name = "secondary_number", length = 25)
+    private String secondaryNumber;
+
     @Column(name = "password_hash", length = 250)
     @JsonIgnore
     private String passwordHash;
