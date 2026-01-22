@@ -273,12 +273,12 @@ public class AuthController {
     }
 
     @PostMapping("/createBankDetails")
-    public ResponseEntity<ApiResponse<BankDetails>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
         return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
     }
 
     @PostMapping("/deleteBankDetails/{id}")
-    public ResponseEntity<ApiResponse<BankDetails>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
         return ResponseEntity.ok(userService.deleteBankDetails(id));
     }
 
@@ -304,7 +304,7 @@ public class AuthController {
 
     // save new address
     @PostMapping("/saveAddress")
-    public ResponseEntity<ApiResponse<Address>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.saveNewAddress(request));
     }
 
@@ -316,7 +316,7 @@ public class AuthController {
 
     //Delete address
     @PostMapping("/deleteAddress")
-    public ResponseEntity<ApiResponse<Address>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.deleteAddress(request));
     }
 
