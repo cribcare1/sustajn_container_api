@@ -914,6 +914,9 @@ public class OrderServiceImpl implements OrderService {
                             .sum();
 
                     LocalDateTime dt = first.getReturnedAt();
+                    Long borrowOrderId = first.getBorrowOrderId();
+                    BorrowOrder borrowOrder = borrowOrderRepository.findById(borrowOrderId)
+                            .orElseThrow(() -> new ResourceNotFoundException("Borrow order not found with id: " + borrowOrderId));
                     String monthName = Month.of(dt.getMonthValue())
                             .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
 
@@ -924,8 +927,10 @@ public class OrderServiceImpl implements OrderService {
                             .restaurantAddress(restaurant != null ? restaurant.getAddress() : null)
                             .productCount(productList.size())
                             .totalContainerCount(totalReturned)
-                            .orderDate(dt.toLocalDate().toString())
-                            .orderTime(dt.toLocalTime().format(timeFormatter)) // ⭐ AM/PM format
+                            .orderDate(borrowOrder.getBorrowedAt().toLocalDate().toString())
+                            .orderTime(borrowOrder.getBorrowedAt().toLocalTime().format(timeFormatter)) // ⭐ AM/PM format
+                            .returnedDate(dt.toLocalDate().toString())
+                            .returnedTime(dt.toLocalTime().format(timeFormatter))
                             .productOrderListResponseList(productList)
                             .build();
 

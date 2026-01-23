@@ -57,15 +57,15 @@ public interface UserService {
 
    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
-    ApiResponse<Address> saveNewAddress(AddressRequest request);
+    ApiResponse<CustomerProfileResponse> saveNewAddress(AddressRequest request);
 
     ApiResponse<CustomerProfileResponse> updateAddress(AddressRequest request);
 
-    ApiResponse<Address> deleteAddress(AddressRequest request);
+    ApiResponse<CustomerProfileResponse> deleteAddress(AddressRequest request);
 
-    ApiResponse<BankDetails> createBankDetails(BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest);
+    ApiResponse<CustomerProfileResponse> createBankDetails(BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest);
 
-    ApiResponse<BankDetails> deleteBankDetails(Long id);
+    ApiResponse<CustomerProfileResponse> deleteBankDetails(Long id);
 
     ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage);
     ApiResponse<?> uploadImage(MultipartFile file, Long userId);
