@@ -13,4 +13,6 @@ public class UpdateProfileRequest {
     private Long userId;
     private String fullName;
     private String phoneNumber;
+    private String secondaryNumber;
+    private String dateOfBirth;
 }

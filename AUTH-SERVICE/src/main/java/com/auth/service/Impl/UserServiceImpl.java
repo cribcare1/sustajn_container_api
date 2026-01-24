@@ -31,11 +31,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -384,6 +387,11 @@ public class UserServiceImpl implements UserService {
             response.setEmailId((String) baseProfileRow[4]);
             response.setProfileImageUrl((String) baseProfileRow[5]);
             response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
+            response.setSecondaryNumber((String) baseProfileRow[24]);
+            response.setDateOfBirth(baseProfileRow.length > 25 && baseProfileRow[25] != null
+                    ? java.time.LocalDate.parse(baseProfileRow[25].toString())
+                    : null);
+
 
             // 🏦 Bank Details
             if (baseProfileRow[7] != null) {
@@ -682,6 +690,19 @@ public class UserServiceImpl implements UserService {
                     }
 
                     user.setPhoneNumber(request.getPhoneNumber());
+                }
+                if (request.getSecondaryNumber() != null) {
+                    user.setSecondaryNumber(request.getSecondaryNumber());
+                }
+
+                // 4. Update Date of Birth
+                if (StringUtils.hasText(request.getDateOfBirth())) {
+                    try {
+                        LocalDate dob = LocalDate.parse(request.getDateOfBirth(), DateTimeFormatter.ISO_LOCAL_DATE);
+                        user.setDateOfBirth(dob);
+                    } catch (DateTimeParseException e) {
+                        return new ApiResponse<>(AuthConstant.ERROR, "Invalid Date of Birth format. Use YYYY-MM-DD", null);
+                    }
                 }
 
                 // save profile image if present
