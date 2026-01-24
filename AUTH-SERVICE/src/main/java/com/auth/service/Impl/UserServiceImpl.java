@@ -388,16 +388,9 @@ public class UserServiceImpl implements UserService {
             response.setProfileImageUrl((String) baseProfileRow[5]);
             response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
             response.setSecondaryNumber((String) baseProfileRow[24]);
-            if (baseProfileRow.length > 25 && baseProfileRow[25] != null) {
-                Object dobObj = baseProfileRow[25];
-                if (dobObj instanceof java.sql.Date) {
-                    // Convert SQL Date to LocalDate
-                    response.setDateOfBirth(((java.sql.Date) dobObj).toLocalDate());
-                } else if (dobObj instanceof java.time.LocalDate) {
-                    // If it's already LocalDate, just cast it
-                    response.setDateOfBirth((java.time.LocalDate) dobObj);
-                }
-            }
+            response.setDateOfBirth(baseProfileRow.length > 25 && baseProfileRow[25] != null
+                    ? java.time.LocalDate.parse(baseProfileRow[25].toString())
+                    : null);
 
 
             // 🏦 Bank Details
