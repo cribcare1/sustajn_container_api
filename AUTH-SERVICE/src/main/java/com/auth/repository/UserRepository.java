@@ -73,7 +73,8 @@ SELECT
 
     a.id, a.addressType, a.flatDoorHouseDetails, 
     a.areaStreetCityBlockDetails, a.poBoxOrPostalCode,
-    u.secondaryNumber
+    u.secondaryNumber,
+    u.dateOfBirth
 FROM User u
 
 LEFT JOIN BankDetails b1 

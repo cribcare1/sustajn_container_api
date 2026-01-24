@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -17,6 +17,7 @@ public class CustomerProfileResponse {
     private String fullName;
     private String mobileNumber;
     private String secondaryNumber;
+    private LocalDate dateOfBirth;
     private String customerId;
     private String emailId;
     private String profileImageUrl;

@@ -31,11 +31,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -385,6 +388,17 @@ public class UserServiceImpl implements UserService {
             response.setProfileImageUrl((String) baseProfileRow[5]);
             response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
             response.setSecondaryNumber((String) baseProfileRow[24]);
+            if (baseProfileRow.length > 25 && baseProfileRow[25] != null) {
+                Object dobObj = baseProfileRow[25];
+                if (dobObj instanceof java.sql.Date) {
+                    // Convert SQL Date to LocalDate
+                    response.setDateOfBirth(((java.sql.Date) dobObj).toLocalDate());
+                } else if (dobObj instanceof java.time.LocalDate) {
+                    // If it's already LocalDate, just cast it
+                    response.setDateOfBirth((java.time.LocalDate) dobObj);
+                }
+            }
+
 
             // 🏦 Bank Details
             if (baseProfileRow[7] != null) {
@@ -675,12 +689,11 @@ public class UserServiceImpl implements UserService {
                 }
 
                 // 4. Update Date of Birth
-                if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
+                if (StringUtils.hasText(request.getDateOfBirth())) {
                     try {
-                        // Parses string "YYYY-MM-DD" to LocalDate
-                        LocalDate dob = LocalDate.parse(request.getDateOfBirth());
+                        LocalDate dob = LocalDate.parse(request.getDateOfBirth(), DateTimeFormatter.ISO_LOCAL_DATE);
                         user.setDateOfBirth(dob);
-                    } catch (Exception e) {
+                    } catch (DateTimeParseException e) {
                         return new ApiResponse<>(AuthConstant.ERROR, "Invalid Date of Birth format. Use YYYY-MM-DD", null);
                     }
                 }
