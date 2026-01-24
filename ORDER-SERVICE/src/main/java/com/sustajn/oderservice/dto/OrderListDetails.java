@@ -18,5 +18,7 @@ public class OrderListDetails {
     private Integer totalContainerCount;
     private String orderDate;
     private String orderTime;
+    private String returnedDate;
+    private String returnedTime;
     private List<ProductOrderListResponse> productOrderListResponseList;
 }

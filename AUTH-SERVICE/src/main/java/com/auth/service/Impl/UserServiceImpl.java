@@ -530,7 +530,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse<Address> saveNewAddress(AddressRequest request) {
+    public ApiResponse<CustomerProfileResponse> saveNewAddress(AddressRequest request) {
         // Save Address
         Address address = Address.builder()
                 .userId(request.getUserId())
@@ -541,8 +541,10 @@ public class UserServiceImpl implements UserService {
                 .status(AuthConstant.ACTIVE)
                 .build();
 
-        addressRepository.save(address);
-        return new ApiResponse<>("Address created successfully", AuthConstant.SUCCESS);
+        Address savedAddress = addressRepository.save(address);
+        CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(savedAddress.getUserId()).getData();
+
+        return new ApiResponse<>("Address created successfully", AuthConstant.SUCCESS, customerProfileResponse);
     }
 
     @Override
@@ -566,18 +568,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<Address> deleteAddress(AddressRequest request) {
+    public ApiResponse<CustomerProfileResponse> deleteAddress(AddressRequest request) {
 
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found", AuthConstant.ERROR));
 
         address.setStatus(AuthConstant.IN_ACTIVE);
-        addressRepository.save(address);
-        return new ApiResponse<>(AuthConstant.SUCCESS, "Address deleted successfully");
+        Address deletedAddress = addressRepository.save(address);
+
+        CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(deletedAddress.getUserId()).getData();
+
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Address deleted successfully", customerProfileResponse);
     }
 
     @Override
-    public ApiResponse<BankDetails> createBankDetails(
+    public ApiResponse<CustomerProfileResponse> createBankDetails(
             BankCardPaymentGetWayDetailsRequest request) {
 
         try {
@@ -601,6 +606,7 @@ public class UserServiceImpl implements UserService {
                         request.getCardDetailsRequest();
 
                 bankDetails.setCardHolderName(cardReq.getCardHolderName());
+                bankDetails.setUserId(cardReq.getUserId());
                 bankDetails.setCardNumber(cardReq.getCardNumber());
                 bankDetails.setExpiryDate(cardReq.getExpiryDate());
                 bankDetails.setCvv(cardReq.getCvv());
@@ -615,6 +621,8 @@ public class UserServiceImpl implements UserService {
 
                 bankDetails.setPaymentGatewayId(payReq.getPaymentGatewayId());
                 bankDetails.setPaymentGatewayName(payReq.getPaymentGatewayName());
+                bankDetails.setUserId(payReq.getUserId());
+
             }
 
             // ====== DEFAULT STATUS ======
@@ -623,7 +631,10 @@ public class UserServiceImpl implements UserService {
             // ====== SAVE ======
             BankDetails saved = bankRepo.save(bankDetails);
 
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details created successfully", saved);
+            CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(saved.getUserId()).getData();
+
+
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details created successfully", customerProfileResponse);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -633,14 +644,17 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<BankDetails> deleteBankDetails(Long id) {
+    public ApiResponse<CustomerProfileResponse> deleteBankDetails(Long id) {
         try {
             Optional<BankDetails> bankDetailsOptional = bankRepo.findById(id);
             if (bankDetailsOptional.isPresent()) {
                 BankDetails bankDetails = bankDetailsOptional.get();
                 bankDetails.setStatus(AuthConstant.IN_ACTIVE);
-                bankRepo.save(bankDetails);
-                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully",  null);
+                BankDetails deleteDetails = bankRepo.save(bankDetails);
+
+                CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(deleteDetails.getUserId()).getData();
+
+                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully",  customerProfileResponse);
             }
             return new ApiResponse<>(AuthConstant.ERROR, "Bank details not found",  null);
         } catch (Exception e) {
@@ -1248,6 +1262,7 @@ public class UserServiceImpl implements UserService {
                 user.setSubscriptionPlanId(subscriptionRequest.getSubscriptionPlanId());
                 User saveUser = userRepository.save(user);
                 CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(saveUser.getId()).getData();
+                System.err.println("customerProfileResponse = " + customerProfileResponse);
                 return new ApiResponse<>(AuthConstant.SUCCESS, "User subscription updated successfully", customerProfileResponse);
             }
 
