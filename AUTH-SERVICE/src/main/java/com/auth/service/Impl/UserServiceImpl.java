@@ -670,6 +670,20 @@ public class UserServiceImpl implements UserService {
 
                     user.setPhoneNumber(request.getPhoneNumber());
                 }
+                if (request.getSecondaryNumber() != null) {
+                    user.setSecondaryNumber(request.getSecondaryNumber());
+                }
+
+                // 4. Update Date of Birth
+                if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
+                    try {
+                        // Parses string "YYYY-MM-DD" to LocalDate
+                        LocalDate dob = LocalDate.parse(request.getDateOfBirth());
+                        user.setDateOfBirth(dob);
+                    } catch (Exception e) {
+                        return new ApiResponse<>(AuthConstant.ERROR, "Invalid Date of Birth format. Use YYYY-MM-DD", null);
+                    }
+                }
 
                 // save profile image if present
                 String profileImageUrl = null;
