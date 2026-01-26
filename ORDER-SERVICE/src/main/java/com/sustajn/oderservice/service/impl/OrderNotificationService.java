@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.service.impl;
 
+import com.sustajn.oderservice.constant.NotificationStatus;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Notification;
 import com.sustajn.oderservice.entity.Order;
@@ -79,9 +80,9 @@ public class OrderNotificationService {
                 continue;
             }
 
-            String type = isExtended
-                    ? "EXTENDED_LAST_3_DAYS"
-                    : "LAST_3_DAYS";
+            NotificationStatus type = isExtended
+                    ? NotificationStatus.EXTENDED_BEFORE_3_DAYS
+                    : NotificationStatus.BEFORE_3_DAYS;
 
             boolean alreadySentToday =
                     notificationRepository
@@ -104,7 +105,7 @@ public class OrderNotificationService {
     }
     private void saveOrderNotification(
             Long orderId,
-            String type,
+            NotificationStatus type,
             String message
     ) {
 

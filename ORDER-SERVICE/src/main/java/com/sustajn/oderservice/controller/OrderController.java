@@ -116,7 +116,7 @@ public class OrderController {
     /**
      * Extend all borrow orders of a given order by 5 days.
      */
-    @PutMapping("/{orderId}/extend")
+    @PostMapping("/{orderId}/extendOrder")
     public ResponseEntity<ApiResponse<Integer>> extendOrder(@PathVariable Long orderId) {
 
         // Returns number of items extended

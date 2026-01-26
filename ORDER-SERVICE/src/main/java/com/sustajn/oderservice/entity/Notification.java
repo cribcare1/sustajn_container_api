@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.entity;
 
+import com.sustajn.oderservice.constant.NotificationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,9 +26,12 @@ public class Notification extends BaseEntity{
     private Long borrowOrderId;
     private Long productId;
 
-    private String type;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationStatus type;
     // BEFORE_3_DAYS, OVERDUE, EXTENDED_BEFORE_3_DAYS
 
+    @Column(length = 3500)
     private String message;
 
     private LocalDateTime sentDate;

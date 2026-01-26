@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.repository;
 
+import com.sustajn.oderservice.constant.NotificationStatus;
 import com.sustajn.oderservice.entity.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,5 +14,5 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             LocalDateTime sentDate
     );
 
-    boolean existsByOrderIdAndTypeAndSentDate(Long orderId, String type, LocalDateTime todayStart);
+    boolean existsByOrderIdAndTypeAndSentDate(Long orderId, NotificationStatus type, LocalDateTime todayStart);
 }
