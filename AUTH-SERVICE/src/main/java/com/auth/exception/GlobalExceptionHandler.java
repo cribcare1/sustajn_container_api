@@ -36,6 +36,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler(GenericException.class)
+    public ResponseEntity<ApiResponse<?>> handleGenericException(GenericException exception) {
+        ApiResponse<Object> response = ApiResponse.builder()
+                .status(AuthConstant.ERROR)
+                .message(exception.getMessage())
+                .data(null)
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleException(Exception exception) {
         ApiResponse<Object> response = ApiResponse.builder()

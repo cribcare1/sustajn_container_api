@@ -1,8 +1,6 @@
 package com.auth.controller;
 
 import com.auth.feignClient.service.NotificationFeignClientService;
-import com.auth.model.Address;
-import com.auth.model.BankDetails;
 import com.auth.model.User;
 import com.auth.request.UserDto;
 import com.auth.repository.UserRepository;
@@ -13,8 +11,7 @@ import com.auth.request.BankCardPaymentGetWayDetailsRequest;
 import com.auth.service.UserService;
 import com.auth.validation.CreateGroup;
 import com.auth.validation.UpdateGroup;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -161,7 +158,7 @@ public class AuthController {
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> registerRestaurant(
-            @RequestBody RestaurantRegistrationRequest data)  {
+            @RequestBody @Valid RegistrationRequest data)  {
         return ResponseEntity.ok(
                 userService.registerRestaurant(data)
         );
@@ -173,7 +170,7 @@ public class AuthController {
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> registerUserWithBankDetails(
-            @RequestBody RestaurantRegistrationRequest request
+            @RequestBody @Valid RegistrationRequest request
     )  {
         return ResponseEntity.ok(
                 userService.registerUserWithBankDetails(request)

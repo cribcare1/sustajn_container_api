@@ -1,7 +1,5 @@
 package com.auth.service;
 
-import com.auth.model.Address;
-import com.auth.model.BankDetails;
 import com.auth.model.User;
 import com.auth.request.UserDto;
 import com.auth.request.*;
@@ -22,8 +20,8 @@ public interface UserService {
     public Map<String,Object> changePassword(Long userId, String newPassword);
     public Map<String,Object> changePassword(String email, String newPassword);
     public User getUserByEmail(String email);
-    public Map<String,Object> registerRestaurant(
-            RestaurantRegistrationRequest request
+    public ApiResponse<?> registerRestaurant(
+            RegistrationRequest request
     );
     ProfileResponse getRestaurantProfileById(Long restaurantId);
     ProfileResponse updateRestaurantProfileById(
@@ -35,8 +33,8 @@ public interface UserService {
 
 
 
-    public Map<String, Object> registerUserWithBankDetails(
-            RestaurantRegistrationRequest request
+    public ApiResponse<?> registerUserWithBankDetails(
+            RegistrationRequest request
     );
 
     public Map<String, Object> getActiveRestaurantsMap(Pageable pageable);
