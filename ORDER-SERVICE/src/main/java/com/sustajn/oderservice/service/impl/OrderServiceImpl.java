@@ -41,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
     private final ReturnOrderRepository returnOrderRepository;
     private final AuthClient authClient;
     private final InventoryFeignClient inventoryFeignClient;
+
     @Override
     @Transactional
     public Map<String, Object> borrowContainers(BorrowRequest request) {
@@ -78,6 +79,7 @@ public class OrderServiceImpl implements OrderService {
             return handleBorrowError(ex);
         }
     }
+
     private Map<String, Object> handleBorrowError(Exception ex) {
 
 
@@ -85,6 +87,7 @@ public class OrderServiceImpl implements OrderService {
                 ex.getMessage() != null ? ex.getMessage() : "Failed to borrow containers"
         );
     }
+
     private void validateBorrowRequest(BorrowRequest request) {
 
         if (request.getUserId() == null) {
@@ -249,7 +252,6 @@ public class OrderServiceImpl implements OrderService {
             }
 
 
-
             Map<Long, RestaurantRegisterResponse> restaurantMap = restaurants.stream()
                     .collect(Collectors.toMap(
                             RestaurantRegisterResponse::getRestaurantId,
@@ -260,29 +262,29 @@ public class OrderServiceImpl implements OrderService {
             // 5️⃣ Build Response List
             List<OrderDetailsResponse> results = borrowOrders.stream()
                     .map(b -> OrderDetailsResponse.builder()
-                            .restaurantId(
-                                    b.getRestaurantId() != null
-                                            ? b.getRestaurantId().intValue()
-                                            : null
-                            )
-                            .restaurantName(
-                                    restaurantMap.containsKey(b.getRestaurantId())
-                                            ? restaurantMap.get(b.getRestaurantId()).getName()
-                                            : null
-                            )
+                                    .restaurantId(
+                                            b.getRestaurantId() != null
+                                                    ? b.getRestaurantId().intValue()
+                                                    : null
+                                    )
+                                    .restaurantName(
+                                            restaurantMap.containsKey(b.getRestaurantId())
+                                                    ? restaurantMap.get(b.getRestaurantId()).getName()
+                                                    : null
+                                    )
 //                            .restaurantAddress(
 //                                    restaurantMap.containsKey(b.getRestaurantId())
 //                                            ? restaurantMap.get(b.getRestaurantId()).get()
 //                                            : null
 //                            )
-                            .productId(b.getProductId())
-                            .productName(
-                                    productMap.containsKey(b.getProductId())
-                                            ? productMap.get(b.getProductId()).getProductName()
-                                            : null
-                            )
-                            .quantity(b.getQuantity())
-                            .build()
+                                    .productId(b.getProductId())
+                                    .productName(
+                                            productMap.containsKey(b.getProductId())
+                                                    ? productMap.get(b.getProductId()).getProductName()
+                                                    : null
+                                    )
+                                    .quantity(b.getQuantity())
+                                    .build()
                     )
                     .collect(Collectors.toList());   // ✅ mutable
 
@@ -292,20 +294,17 @@ public class OrderServiceImpl implements OrderService {
             response.put("data", results);
 
             return response;
-        }
-        catch (IllegalArgumentException ex) {
+        } catch (IllegalArgumentException ex) {
             response.put("status", "error");
             response.put("message", "Invalid input provided");
             response.put("details", ex.getMessage());
             return response;
-        }
-        catch (RuntimeException ex) {
+        } catch (RuntimeException ex) {
             response.put("status", "error");
             response.put("message", ex.getMessage());
             response.put("details", ex.getCause() != null ? ex.getCause().getMessage() : null);
             return response;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             response.put("status", "error");
             response.put("message", "Unexpected error while fetching user order details");
             response.put("details", ex.getMessage());
@@ -450,7 +449,6 @@ public class OrderServiceImpl implements OrderService {
                         .collect(Collectors.toList());
 
 
-
                 receivedResponses.add(
                         new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty, productOrderListResponses)
                 );
@@ -495,7 +493,8 @@ public class OrderServiceImpl implements OrderService {
             );
 
         } catch (Exception e) {
-            e.printStackTrace();return new ApiResponse<>("Failed to fetch leased and returned container counts",
+            e.printStackTrace();
+            return new ApiResponse<>("Failed to fetch leased and returned container counts",
                     OrderServiceConstant.STATUS_ERROR, null);
         }
     }
@@ -509,7 +508,7 @@ public class OrderServiceImpl implements OrderService {
             } else if (OrderEnumType.RETURNED.equals(leasedReturnedGraphInput.getType())) {
                 leasedReturnedResponses = returnOrderRepository.getReturnedMonthYearDetails(leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId());
             } else {
-                return new ApiResponse<>(OrderServiceConstant.STATUS_ERROR,"Invalid type", null);
+                return new ApiResponse<>(OrderServiceConstant.STATUS_ERROR, "Invalid type", null);
             }
 
             Map<String, List<LeasedReturnedResponse>> leasedReturnedGroupedResponse =
@@ -542,10 +541,10 @@ public class OrderServiceImpl implements OrderService {
                         );
                     }).toList();
 
-            return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS,"Leased month-year details fetched successfully", response);
+            return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS, "Leased month-year details fetched successfully", response);
         } catch (Exception e) {
             log.error("Failed to fetch leased/returned month-year details for restaurantId={}, productId={}, date={}, type={}", leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(),
-                     leasedReturnedGraphInput.getType(), e);
+                    leasedReturnedGraphInput.getType(), e);
             return new ApiResponse<>(OrderServiceConstant.STATUS_ERROR, "Failed to fetch leased/returned month-year details", null);
         }
     }
@@ -568,7 +567,7 @@ public class OrderServiceImpl implements OrderService {
                         leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(), startTime, endTime
                 );
             } else {
-                return new ApiResponse<>( OrderServiceConstant.STATUS_ERROR, "Invalid type", null);
+                return new ApiResponse<>(OrderServiceConstant.STATUS_ERROR, "Invalid type", null);
             }
 
             // Map projection to DTO
@@ -579,8 +578,8 @@ public class OrderServiceImpl implements OrderService {
                     ))
                     .toList();
 
-            return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS,"Leased/returned count with time graph fetched successfully",
-                     response);
+            return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS, "Leased/returned count with time graph fetched successfully",
+                    response);
 
         } catch (Exception e) {
             log.error("Failed to fetch leased/returned count with time graph for restaurantId={}, productId={}, date={}, type={}", leasedReturnedGraphInput.getRestaurantId(), leasedReturnedGraphInput.getProductId(),
@@ -592,7 +591,6 @@ public class OrderServiceImpl implements OrderService {
             );
         }
     }
-
 
 
     private Map<String, Object> handleReturnError(Exception ex) {
@@ -670,7 +668,7 @@ public class OrderServiceImpl implements OrderService {
                                         p != null ? p.getCapacity() : null,
                                         b.getQuantity(),
                                         p != null ? p.getProductImageUrl() : null,
-                                        p!= null ? p.getProductUniqueId() : null
+                                        p != null ? p.getProductUniqueId() : null
                                 );
                             })
                             .toList();
@@ -688,7 +686,7 @@ public class OrderServiceImpl implements OrderService {
                             .orderId(first.getOrderId())
                             .restaurantId(first.getRestaurantId())
                             .restaurantName(restaurant != null ? restaurant.getName() : null)
-                            .restaurantAddress(restaurant!= null ? restaurant.getName() : null)
+                            .restaurantAddress(restaurant != null ? restaurant.getName() : null)
                             .productCount(productList.size())
                             .totalContainerCount(totalContainers)
                             .orderDate(dt.toLocalDate().toString())
@@ -713,6 +711,7 @@ public class OrderServiceImpl implements OrderService {
             return response;
         }
     }
+
     @Override
     public Map<String, Object> getOrderDetailsByOrderId(Long orderId) {
 
@@ -793,8 +792,7 @@ public class OrderServiceImpl implements OrderService {
             response.put("message", "Order details fetched successfully");
             response.put("data", details);
             return response;
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
 
             response.put("status", "error");
             response.put("message", "Failed to fetch order details");
@@ -805,7 +803,7 @@ public class OrderServiceImpl implements OrderService {
 
 
     @Override
-    public Map<String,Object> approveOrder(Long orderId) {
+    public Map<String, Object> approveOrder(Long orderId) {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
@@ -823,8 +821,8 @@ public class OrderServiceImpl implements OrderService {
         order.setOrderStatus("APPROVED");
         orderRepository.save(order);
 
-        Map<String,Object> response = new HashMap<>();
-        response.put("status","success");
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
         response.put("message", "Order status updated to APPROVED");
         return response;
     }
@@ -951,33 +949,22 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-
     @Override
-    public Map<String, Object> getBorrowedProductSummary(Long userId) {
-
-        Map<String, Object> response = new HashMap<>();
+    public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId) {
 
         try {
-
-            List<Object[]> rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
-
+            List<BorrowOrderResponse> rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
             if (rows == null || rows.isEmpty()) {
-                response.put("status", "success");
-                response.put("message", "No borrowed products found for user");
-                response.put("value", Collections.emptyList());
-                return response;
+                return new ApiResponse<>("success", "No borrowed products found for user", Collections.emptyList());
             }
-
-            // 🔹 Collect all unique product IDs
-            Set<Integer> productIds = rows.stream()
-                    .map(r -> ((Number) r[1]).intValue())
+            Set<Long> productIds = rows.stream()
+                    .map(BorrowOrderResponse::getProductId)   // use getter
                     .collect(Collectors.toSet());
 
-            // 🔹 Fetch product details in ONE call
             Map<Long, ProductResponse> productMap = new HashMap<>();
             try {
                 List<ProductResponse> products =
-                        inventoryFeignClient.getProductsByIds(new ArrayList<>(productIds));
+                        inventoryFeignClient.getProductsByIds(productIds.stream().map(Long::intValue).toList());
 
                 if (products != null) {
                     productMap = products.stream()
@@ -992,56 +979,29 @@ public class OrderServiceImpl implements OrderService {
                 productMap = Collections.emptyMap();
             }
 
-            List<ProductDetailsResponse> result = new ArrayList<>();
-
-            for (Object[] r : rows) {
-
-                Long orderId     = ((Number) r[0]).longValue();
-                Long productId   = ((Number) r[1]).longValue();
-                int borrowedQty  = ((Number) r[2]).intValue();
-                int returnedQty  = ((Number) r[3]).intValue();
-                int remainingQty = ((Number) r[4]).intValue();
-                Timestamp ts = (Timestamp) r[5];
-                LocalDateTime orderDate = ts != null ? ts.toLocalDateTime() : null;
-
-                // 🧮 Ensure non-negative
-                if (remainingQty < 0) remainingQty = 0;
-
-                // 🗓 Days Left (7-day rule)
-                long daysPassed = ChronoUnit.DAYS.between(
-                        orderDate.toLocalDate(), LocalDate.now()
-                );
+            Map<Long, ProductResponse> finalProductMap = productMap;
+            List<ProductDetailsResponse> result = rows.stream().map(r -> {
+                int remainingQty = Math.max(0, r.getRemainingQty());
+                long daysPassed = ChronoUnit.DAYS.between(r.getOrderDate(), LocalDate.now());
                 long daysLeft = Math.max(0, 7 - daysPassed);
+                ProductResponse p = finalProductMap.get(r.getProductId());
+                return new ProductDetailsResponse(r.getOrderId(),
+                        r.getProductId(),
+                        p != null ? p.getProductName() : null,
+                        remainingQty,
+                        p != null ? p.getProductImageUrl() : null,
+                        daysLeft,
+                        p != null ? p.getProductUniqueId() : null,
+                        p != null ? p.getCapacity() : null,
+                        r.getDueDate());
+            }).collect(Collectors.toList());
 
-                // 🎯 Get product from map
-                ProductResponse p = productMap.get(productId);
-
-                result.add(
-                        new ProductDetailsResponse(
-                                orderId,
-                                productId,
-                                p != null ? p.getProductName() : null,
-                                remainingQty,                                   // 👈 remaining qty
-                                p != null ? p.getProductImageUrl() : null,
-                                daysLeft,
-                                p != null ? p.getProductUniqueId() : null   ,
-                                p != null ? p.getCapacity() : null  // productCode
-                        )
-                );
-            }
-
-            response.put("status", "success");
-            response.put("message", "Borrowed product summary fetched successfully");
-            response.put("value", result);
-            return response;
+            return new ApiResponse<>("success", "Borrowed product summary fetched successfully", result);
 
         } catch (Exception ex) {
+            log.error("Error occurred while fetching borrowed order response {}", ex.getMessage());
+            return new ApiResponse<>("error", "Failed to fetch borrowed product summary", null);
 
-            response.put("status", "error");
-            response.put("message", "Failed to fetch borrowed product summary");
-            response.put("value", null);
-            response.put("error", ex.getMessage());
-            return response;
         }
     }
 

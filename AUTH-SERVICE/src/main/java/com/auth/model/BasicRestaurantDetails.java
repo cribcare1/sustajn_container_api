@@ -19,8 +19,7 @@ public class BasicRestaurantDetails {
 
     private Long restaurantId;
 
-    @Column
-    private String speciality;
+
 
     @Column(name = "business_type")
     private String businessType;

@@ -3,6 +3,7 @@ package com.auth.service.Impl;
 import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
 import com.auth.enumDetails.UserType;
+import com.auth.exception.GenericException;
 import com.auth.exception.ResourceNotFoundException;
 import com.auth.feignClient.InventoryFeignClient;
 import com.auth.feignClient.service.NotificationFeignClientService;
@@ -10,20 +11,13 @@ import com.auth.model.*;
 import com.auth.repository.*;
 import com.auth.request.*;
 import com.auth.response.*;
-import com.auth.response.CustomerDetailsBasic;
-import com.auth.response.LoginResponse;
-import com.auth.response.RestaurantBasicDetailsResponse;
-import com.auth.request.UpdateBusinessInfoRequest;
-import com.auth.response.RestaurantRegisterResponse;
-import com.auth.response.ProfileResponse;
-import com.auth.response.BankDetailsResponse;
-import com.auth.response.FeedbackResponse;
 import com.auth.service.UserService;
 import com.auth.util.AuthUtil;
 import com.auth.util.DistanceUtil;
 import com.auth.util.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -44,6 +38,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
@@ -55,9 +50,30 @@ public class UserServiceImpl implements UserService {
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
     private final InventoryFeignClient inventoryFeignClient;
-
+    private final ContactAndRegistrationDetailsRepository contactAndRegistrationDetailsRepository;
     @Value("${image.storage.root-path}")
     private String userProfilePath;
+
+    private static @NonNull List<AddressResponse> getAddressResponses(List<Object[]> profileResultRows) {
+        List<AddressResponse> addresses = new ArrayList<>();
+        Set<Long> processedAddressIds = new HashSet<>();
+
+        for (Object[] row : profileResultRows) {
+
+            if (row[14] != null && processedAddressIds.add((Long) row[14])) {
+
+                AddressResponse address = new AddressResponse();
+                address.setId((Long) row[14]);
+                address.setAddressType((String) row[15]);
+                address.setFlatDoorHouseDetails((String) row[16]);
+                address.setAreaStreetCityBlockDetails((String) row[17]);
+                address.setPoBoxOrPostalCode((String) row[18]);
+
+                addresses.add(address);
+            }
+        }
+        return addresses;
+    }
 
     @Override
     public LoginResponse generateToken(String username) {
@@ -79,7 +95,6 @@ public class UserServiceImpl implements UserService {
                 "Bearer"   // token type
         );
     }
-
 
     private LoginResponse generateTokenWithLoginDetails(User user) {
 
@@ -136,9 +151,9 @@ public class UserServiceImpl implements UserService {
                     .id(bankDetails.getId())
                     .userId(bankDetails.getUserId())
                     .bankName(bankDetails.getBankName())
-                    .accountNumber(bankDetails.getAccountNumber())
+                    .bicNumber(bankDetails.getBicNumber())
                     .iBanNumber(bankDetails.getIBanNumber())
-                    .taxNumber(bankDetails.getTaxNumber())
+                    .accountHolderName(bankDetails.getCardHolderName())
                     .build();
         }
         BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
@@ -162,6 +177,8 @@ public class UserServiceImpl implements UserService {
                 .businessInfo(businessInfoResponse)
                 .build();
     }
+
+    // ... existing imports ...
 
     @Override
     public ProfileResponse updateRestaurantProfileById(
@@ -192,9 +209,9 @@ public class UserServiceImpl implements UserService {
                     .id(bankDetails.getId())
                     .userId(bankDetails.getUserId())
                     .bankName(bankDetails.getBankName())
-                    .accountNumber(bankDetails.getAccountNumber())
+                    .accountHolderName(bankDetails.getAccountHolderName())
                     .iBanNumber(bankDetails.getIBanNumber())
-                    .taxNumber(bankDetails.getTaxNumber())
+                    .bicNumber(bankDetails.getBicNumber())
                     .build();
         }
         BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
@@ -219,8 +236,6 @@ public class UserServiceImpl implements UserService {
                 businessInfoResponse
         );
     }
-
-    // ... existing imports ...
 
     // 1. UPDATED SUBMIT METHOD
     @Override
@@ -289,7 +304,6 @@ public class UserServiceImpl implements UserService {
                 .build();
     }
 
-
     @Override
     @Transactional
     public ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request) {
@@ -308,9 +322,9 @@ public class UserServiceImpl implements UserService {
                 bankRow.setUserId(r.getUserId());
 
                 Optional.ofNullable(r.getBankName()).ifPresent(bankRow::setBankName);
-                Optional.ofNullable(r.getAccountNumber()).ifPresent(bankRow::setAccountNumber);
+                Optional.ofNullable(r.getAccountHolderName()).ifPresent(bankRow::setAccountHolderName);
                 Optional.ofNullable(r.getIBanNumber()).ifPresent(bankRow::setIBanNumber);
-                Optional.ofNullable(r.getTaxNumber()).ifPresent(bankRow::setTaxNumber);
+                Optional.ofNullable(r.getBicNumber()).ifPresent(bankRow::setBicNumber);
 
                 bankRow.setStatus("ACTIVE");
 
@@ -358,7 +372,7 @@ public class UserServiceImpl implements UserService {
             CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(bankDetails.getUserId()).getData();
 
 
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Details updated successfully",  customerProfileResponse);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Details updated successfully", customerProfileResponse);
 
         } catch (Exception e) {
             return new ApiResponse<>(AuthConstant.ERROR, "Error on updating details", null);
@@ -482,28 +496,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-
-    private static @NonNull List<AddressResponse> getAddressResponses(List<Object[]> profileResultRows) {
-        List<AddressResponse> addresses = new ArrayList<>();
-        Set<Long> processedAddressIds = new HashSet<>();
-
-        for (Object[] row : profileResultRows) {
-
-            if (row[14] != null && processedAddressIds.add((Long) row[14])) {
-
-                AddressResponse address = new AddressResponse();
-                address.setId((Long) row[14]);
-                address.setAddressType((String) row[15]);
-                address.setFlatDoorHouseDetails((String) row[16]);
-                address.setAreaStreetCityBlockDetails((String) row[17]);
-                address.setPoBoxOrPostalCode((String) row[18]);
-
-                addresses.add(address);
-            }
-        }
-        return addresses;
-    }
-
     @Override
     public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request) {
         // Use basicRepo (which you already have injected)
@@ -564,7 +556,7 @@ public class UserServiceImpl implements UserService {
         CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(updatedAddress.getUserId()).getData();
 
 
-        return new ApiResponse<>(AuthConstant.SUCCESS,"Address updated successfully", customerProfileResponse);
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Address updated successfully", customerProfileResponse);
     }
 
     @Override
@@ -595,8 +587,8 @@ public class UserServiceImpl implements UserService {
 
                 bankDetails.setUserId(bankReq.getUserId());
                 bankDetails.setBankName(bankReq.getBankName());
-                bankDetails.setTaxNumber(bankReq.getTaxNumber());
-                bankDetails.setAccountNumber(bankReq.getAccountNumber());
+                bankDetails.setBicNumber(bankReq.getBicNumber());
+                bankDetails.setAccountHolderName(bankReq.getAccountHolderName());
                 bankDetails.setIBanNumber(bankReq.getIBanNumber());
             }
 
@@ -639,7 +631,7 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             e.printStackTrace();
             return new ApiResponse<>(AuthConstant.ERROR, "Error on creating bank details",
-                     null);
+                    null);
         }
     }
 
@@ -654,13 +646,13 @@ public class UserServiceImpl implements UserService {
 
                 CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(deleteDetails.getUserId()).getData();
 
-                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully",  customerProfileResponse);
+                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully", customerProfileResponse);
             }
-            return new ApiResponse<>(AuthConstant.ERROR, "Bank details not found",  null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Bank details not found", null);
         } catch (Exception e) {
             e.printStackTrace();
             return new ApiResponse<>(AuthConstant.ERROR, "Error on deleting bank details",
-                     null);
+                    null);
         }
     }
 
@@ -669,7 +661,7 @@ public class UserServiceImpl implements UserService {
         try {
             UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
             if (request == null) {
-                return new ApiResponse<>(AuthConstant.ERROR, "Please provide valid request",  null);
+                return new ApiResponse<>(AuthConstant.ERROR, "Please provide valid request", null);
             }
 
             Optional<User> userOptional = userRepository.findById(request.getUserId());
@@ -686,7 +678,7 @@ public class UserServiceImpl implements UserService {
                     if (otherUserOptional.isPresent()
                             && !otherUserOptional.get().getId().equals(user.getId())) {
 
-                        return new ApiResponse<>(AuthConstant.ERROR,"Phone number already in use by another user", null);
+                        return new ApiResponse<>(AuthConstant.ERROR, "Phone number already in use by another user", null);
                     }
 
                     user.setPhoneNumber(request.getPhoneNumber());
@@ -716,10 +708,10 @@ public class UserServiceImpl implements UserService {
 
                 ApiResponse<CustomerProfileResponse> customerProfileResponse = getCustomerProfileDetails(updatedUser.getId());
 
-                return new ApiResponse<>(AuthConstant.SUCCESS, "User profile updated successfully",  customerProfileResponse.getData());
+                return new ApiResponse<>(AuthConstant.SUCCESS, "User profile updated successfully", customerProfileResponse.getData());
             }
 
-            return new ApiResponse<>( AuthConstant.ERROR, "User not found", null);
+            return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
         } catch (Exception e) {
             e.printStackTrace();
             return new ApiResponse<>(AuthConstant.ERROR, "Error on updating profile details", null);
@@ -765,26 +757,23 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public Map<String, Object> registerRestaurant(
-            RestaurantRegistrationRequest request
+    public ApiResponse<?> registerRestaurant(
+            RegistrationRequest request
     ) {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            if (request.getEmail() == null || request.getEmail().isBlank()) {
-                return error("Email is required");
-            }
 
             if (userRepository.existsByEmail(request.getEmail())) {
-                return error("Email is already registered");
+                throw new GenericException("Email is already registered");
             }
 
             if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-                return error("Phone number already registered");
+                throw new GenericException("Phone number already registered");
             }
 
             if (request.getPassword() == null || request.getPassword().length() < 6) {
-                return error("Password must be at least 6 characters");
+                throw new GenericException("Password must be at least 6 characters");
             }
 
 
@@ -808,7 +797,7 @@ public class UserServiceImpl implements UserService {
             if (request.getBasicDetails() != null) {
                 BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
                         .restaurantId(savedUser.getId())
-                        .speciality(request.getBasicDetails().getSpeciality())
+                        .businessType(request.getBasicDetails().getBusinessType())
                         .websiteDetails(request.getBasicDetails().getWebsiteDetails())
                         .cuisine(request.getBasicDetails().getCuisine())
                         .build();
@@ -818,7 +807,7 @@ public class UserServiceImpl implements UserService {
 
             // ---------------- CREATE ADDRESS DETAILS ----------------
             if (request.getAddress() != null) {
-                RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
+                RegistrationRequest.AddressRequest addressReq = request.getAddress();
 
                 // You can create an AddressDetails entity and save it if needed
                 Address addressDetails = Address.builder()
@@ -835,15 +824,15 @@ public class UserServiceImpl implements UserService {
 
             // ---------------- BANK DETAILS ----------------
             if (request.getBankDetails() != null) {
-                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
+                RegistrationRequest.BankDetailsRequest bankReq =
                         request.getBankDetails();
 
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
                         .bankName(bankReq.getBankName())
-                        .accountNumber(bankReq.getAccountNumber())
+                        .accountHolderName(bankReq.getAccountHolderName())
                         .iBanNumber(bankReq.getIBanNumber())
-                        .taxNumber(bankReq.getTaxNumber())
+                        .bicNumber(bankReq.getBicNumber())
                         .status(AuthConstant.ACTIVE)
                         .build();
 
@@ -851,7 +840,7 @@ public class UserServiceImpl implements UserService {
             }
 
             if (request.getCardDetails() != null) {
-                RestaurantRegistrationRequest.CardDetailsRequest cardReq =
+                RegistrationRequest.CardDetailsRequest cardReq =
                         request.getCardDetails();
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
@@ -865,7 +854,7 @@ public class UserServiceImpl implements UserService {
             }
 
             if (request.getPaymentGetWay() != null) {
-                RestaurantRegistrationRequest.PaymentGetWayRequest payReq =
+                RegistrationRequest.PaymentGetWayRequest payReq =
                         request.getPaymentGetWay();
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
@@ -875,11 +864,24 @@ public class UserServiceImpl implements UserService {
                         .build();
                 bankRepo.save(bankDetails);
             }
-
+            if (request.getContactAndRegistrationDetails() != null) {
+                RegistrationRequest.ContactAndRegistrationDetailsRequest contactReq =
+                        request.getContactAndRegistrationDetails();
+                ContactRegistrationDetails contactDetails = ContactRegistrationDetails.builder()
+                        .userId(savedUser.getId())
+                        .contactPersonName(contactReq.getContactPersonName())
+                        .contactNumber(contactReq.getContactNumber())
+                        .registrationNumber(contactReq.getRegistrationNumber())
+                        .vatNumber(contactReq.getVatNumber())
+                        .contactEmail(contactReq.getContactEmail())
+                        .treadLicenseNumber(contactReq.getTreadLicenseNumber())
+                        .build();
+                contactAndRegistrationDetailsRepository.save(contactDetails);
+            }
 
             // ---------------- SOCIAL MEDIA LINKS ----------------
             if (request.getSocialMediaList() != null) {
-                for (RestaurantRegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
+                for (RegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
                     SocialMediaDetails media = SocialMediaDetails.builder()
                             .restaurantId(savedUser.getId())
                             .socialMediaType(sm.getSocialMediaType())
@@ -890,59 +892,41 @@ public class UserServiceImpl implements UserService {
             }
 
 
-
             // ---------------- RESPONSE DTO ----------------
             LoginResponse loginResponse = generateTokenWithLoginDetails(savedUser);
-
-            return Map.of("message", "Restaurant registered successfully", "data", loginResponse, "status", "success");
-
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Restaurant registered successfully", loginResponse);
         } catch (Exception e) {
-            e.printStackTrace();
-            return error("Something went wrong: " + e.getMessage());
+            log.error("Error registering restaurant:{} ", e.getMessage());
+            throw new GenericException("Something went wrong: " + e.getMessage());
         }
-    }
-
-
-    private Map<String, Object> error(String message) {
-        Map<String, Object> map = new HashMap<>();
-        map.put("status", "error");
-        map.put("message", message);
-        map.put("data", null);
-        return map;
     }
 
 
     @Transactional
     @Override
-    public Map<String, Object> registerUserWithBankDetails(
-            RestaurantRegistrationRequest request
+    public ApiResponse<?> registerUserWithBankDetails(
+            RegistrationRequest request
     ) {
 
         try {
 
             // ---------------- VALIDATIONS ----------------
             if (request == null) {
-                throw new IllegalArgumentException("Request body is missing");
+                throw new GenericException("Request body is missing");
             }
 
-            if (request.getEmail() == null || request.getEmail().isBlank()) {
-                throw new IllegalArgumentException("Email is required");
-            }
 
             if (userRepository.existsByEmail(request.getEmail())) {
-                throw new IllegalStateException("Email already registered");
+                throw new GenericException("Email already registered");
             }
 
-            if (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()) {
-                throw new IllegalArgumentException("Phone number is required");
-            }
 
             if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-                throw new IllegalStateException("Phone number already registered");
+                throw new GenericException("Phone number already registered");
             }
 
             if (request.getPassword() == null || request.getPassword().length() < 6) {
-                throw new IllegalArgumentException("Password must be at least 6 characters");
+                throw new GenericException("Password must be at least 6 characters");
             }
 
 
@@ -973,7 +957,7 @@ public class UserServiceImpl implements UserService {
 
             // ---------------- CREATE ADDRESS DETAILS ----------------
             if (request.getAddress() != null) {
-                RestaurantRegistrationRequest.AddressRequest addressReq = request.getAddress();
+                RegistrationRequest.AddressRequest addressReq = request.getAddress();
 
                 // You can create an AddressDetails entity and save it if needed
                 Address addressDetails = Address.builder()
@@ -989,15 +973,15 @@ public class UserServiceImpl implements UserService {
 
             // ---------------- CREATE BANK DETAILS ----------------
             if (request.getBankDetails() != null) {
-                RestaurantRegistrationRequest.BankDetailsRequest bankReq =
+                RegistrationRequest.BankDetailsRequest bankReq =
                         request.getBankDetails();
 
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
                         .bankName(bankReq.getBankName())
-                        .accountNumber(bankReq.getAccountNumber())
+                        .bicNumber(bankReq.getBicNumber())
                         .iBanNumber(bankReq.getIBanNumber())
-                        .taxNumber(bankReq.getTaxNumber())
+                        .accountHolderName(bankReq.getAccountHolderName())
                         .status(AuthConstant.ACTIVE)
                         .build();
 
@@ -1005,7 +989,7 @@ public class UserServiceImpl implements UserService {
             }
 
             if (request.getCardDetails() != null) {
-                RestaurantRegistrationRequest.CardDetailsRequest cardReq =
+                RegistrationRequest.CardDetailsRequest cardReq =
                         request.getCardDetails();
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
@@ -1019,7 +1003,7 @@ public class UserServiceImpl implements UserService {
             }
 
             if (request.getPaymentGetWay() != null) {
-                RestaurantRegistrationRequest.PaymentGetWayRequest payReq =
+                RegistrationRequest.PaymentGetWayRequest payReq =
                         request.getPaymentGetWay();
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
@@ -1032,21 +1016,25 @@ public class UserServiceImpl implements UserService {
 
             LoginResponse loginResponse = generateTokenWithLoginDetails(savedUser);
 
-            // ---------------- SUCCESS RESPONSE ----------------
-            Map<String, Object> success = new HashMap<>();
-            success.put("status", "success");
-            success.put("message", "User registered successfully with bank details");
-            success.put("data", loginResponse);
+//            // ---------------- SUCCESS RESPONSE ----------------
 
-            return success;
+
+            return new ApiResponse<>(
+                    AuthConstant.SUCCESS,
+                    "User registered successfully with bank details",
+                    loginResponse
+            );
+
 
         } catch (IllegalArgumentException | IllegalStateException ex) {
             // Known validation / business errors
-            return error(ex.getMessage());
+            log.error("Registration error With IllegalStateException: {}", ex.getMessage());
+            throw new GenericException(ex.getMessage());
 
         } catch (Exception ex) {
             // Log full error internally
-            return error(ex.getMessage());
+            log.error("Unexpected error during registration:  {} ", ex.getMessage());
+            throw new GenericException(ex.getMessage());
         }
     }
 
@@ -1149,6 +1137,7 @@ public class UserServiceImpl implements UserService {
         }
         return response;
     }
+
     @Override
     public List<RestaurantRegisterResponse> getAllActiveRestaurantsByListOfIds(List<Long> restaurantIds) {
         return userRepository.findRestaurantsByIds(restaurantIds, UserType.RESTAURANT, AccountStatus.active);
@@ -1316,9 +1305,9 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found", AuthConstant.ERROR));
         try {
-            if(user.getProfilePictureUrl()!=null){
+            if (user.getProfilePictureUrl() != null) {
                 String existingImageName = user.getProfilePictureUrl();
-                notificationFeignClientService.deleteContainer("profile",existingImageName);
+                notificationFeignClientService.deleteContainer("profile", existingImageName);
             }
 
             String profileImageUrl = null;
@@ -1330,20 +1319,21 @@ public class UserServiceImpl implements UserService {
                     throw new IllegalArgumentException("Only image files are allowed");
                 }
 
-                    profileImageUrl = notificationFeignClientService.uploadImage("profile",profileImage);
-                    System.err.println("profileImageUrl = " + profileImageUrl);
-                }
+                profileImageUrl = notificationFeignClientService.uploadImage("profile", profileImage);
+                System.err.println("profileImageUrl = " + profileImageUrl);
+            }
 
 
             System.err.println("Uploaded image URL: " + profileImageUrl);
             user.setProfilePictureUrl(profileImageUrl);
             userRepository.save(user);
-            return new ApiResponse<>(AuthConstant.SUCCESS ,"Profile image updated successfully", profileImageUrl);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Profile image updated successfully", profileImageUrl);
         } catch (Exception e) {
-            return new ApiResponse<>(AuthConstant.ERROR, "Error updating profile image",  null);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error updating profile image", null);
         }
 
     }
+
     // Helper to convert Address Entity -> AddressResponse DTO
     private AddressResponse mapToAddressResponse(Address address) {
         return new AddressResponse(
@@ -1391,7 +1381,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User getUserByEmail(String email){
+    public User getUserByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
     }
 

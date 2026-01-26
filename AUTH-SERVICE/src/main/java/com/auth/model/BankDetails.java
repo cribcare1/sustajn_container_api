@@ -22,12 +22,13 @@ public class BankDetails {
 
     @Column(name = "bank_name", length = 1000)
     private String bankName;
-    private String accountNumber;
+    @Column(name = "account_holder_name", length = 1000)
+    private String accountHolderName;
 
     private String iBanNumber;
 
-    @Column(name = "tax_number", length = 200)
-    private String taxNumber;
+    @Column(name = "bic_number", length = 200)
+    private String bicNumber;
 
     @Column(name = "card_holder_name", length = 100)
     private String cardHolderName;
