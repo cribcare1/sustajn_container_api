@@ -24,8 +24,8 @@ public class BankCardPaymentGetWayDetailsRequest {
         @NotNull(message = "Please provide user id", groups = CreateGroup.class)
         private Long userId;
         private String bankName;
-        private String taxNumber;
-        private String accountNumber;
+        private String bicNumber;
+        private String accountHolderName;
         public String iBanNumber;
     }
 

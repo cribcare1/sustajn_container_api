@@ -58,8 +58,8 @@ public class RestaurantRegistrationRequest {
     @Builder
     public static class BankDetailsRequest {
         private String bankName;
-        private String taxNumber;
-        private String accountNumber;
+        private String bicNumber;
+        private String accountHolderName;
         public String iBanNumber;
     }
 

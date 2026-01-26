@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @AllArgsConstructor
@@ -18,4 +20,5 @@ public class ProductDetailsResponse {
     private Long daysLeft;
     private String productUniqueId;
     private Integer containerQuantity;
+    private LocalDate dueDate;
 }

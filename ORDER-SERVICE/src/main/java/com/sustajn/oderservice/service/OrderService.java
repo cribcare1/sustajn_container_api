@@ -19,7 +19,7 @@ public interface OrderService {
     public Map<String, Object> returnContainers(ReturnRequest request);
 
 
-    public Map<String, Object> getBorrowedProductSummary(Long userId);
+    public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId);
     public Map<String, Object> getMonthWiseReturnOrders(Long userId, int year);
     public Map<String,Object> approveOrder(Long orderId);
     public Map<String, Object> getOrderDetailsByOrderId(Long orderId);
