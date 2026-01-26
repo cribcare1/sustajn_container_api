@@ -1,9 +1,11 @@
 package com.sustajn.oderservice.controller;
 
+import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.service.OrderService;
+import com.sustajn.oderservice.service.impl.OrderNotificationService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -109,4 +111,20 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getLeasedReturnedCountWithTimeGraph(leasedReturnedGraphInput));
     }
 
+    private final OrderNotificationService borrowOrderService;
+
+    /**
+     * Extend all borrow orders of a given order by 5 days.
+     */
+    @PutMapping("/{orderId}/extend")
+    public ResponseEntity<ApiResponse<Integer>> extendOrder(@PathVariable Long orderId) {
+
+        // Returns number of items extended
+         borrowOrderService.extendBorrowOrder(orderId);
+        return ResponseEntity.ok(
+                new ApiResponse<>("success",
+                        "Order extended by 5 days successfully",
+                        null)
+        );
+    }
 }
