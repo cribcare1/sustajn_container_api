@@ -1,7 +1,7 @@
 package com.auth.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import jakarta.persistence.Column;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import java.time.LocalDate;
 import java.util.List;
@@ -11,11 +11,13 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RestaurantRegistrationRequest {
+public class RegistrationRequest {
 
     // ========== USER REGISTRATION PART ==========
     private String fullName;
+    @NotNull(message = "Email cannot be null")
     private String email;
+    @NotNull(message = "Phone number cannot be null")
     private String phoneNumber;
     private String password;
     @JsonFormat(pattern = "yyyy-MM-dd")
@@ -32,7 +34,7 @@ public class RestaurantRegistrationRequest {
     private BankDetailsRequest bankDetails;
     private CardDetailsRequest cardDetails;
     private PaymentGetWayRequest paymentGetWay;
-
+    private ContactAndRegistrationDetailsRequest contactAndRegistrationDetails;
     // ========== SOCIAL MEDIA DETAILS ==========
     private List<SocialMediaRequest> socialMediaList;
 
@@ -46,7 +48,7 @@ public class RestaurantRegistrationRequest {
     @AllArgsConstructor
     @Builder
     public static class BasicDetails {
-        private String speciality;
+        private String businessType;
         private String websiteDetails;
         private String cuisine;
     }
@@ -93,6 +95,20 @@ public class RestaurantRegistrationRequest {
     public static class SocialMediaRequest {
         private String socialMediaType;
         private String link;
+    }
+
+    @Getter
+    @Setter
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class ContactAndRegistrationDetailsRequest {
+        private String contactPersonName;
+        private String contactEmail;
+        private String treadLicenseNumber;
+        private String vatNumber;
+        private String contactNumber;
+        private String registrationNumber;
     }
 
 
