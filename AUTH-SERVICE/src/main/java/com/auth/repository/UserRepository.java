@@ -65,7 +65,7 @@ SELECT
     u.profilePictureUrl,
     u.subscriptionPlanId,
 
-    b1.id, b1.bankName, b1.accountNumber, b1.iBanNumber, b1.taxNumber,
+    b1.id, b1.bankName, b1.accountHolderName, b1.iBanNumber, b1.bicNumber,
 
     c1.id, c1.cardHolderName, c1.cardNumber, c1.expiryDate,
 

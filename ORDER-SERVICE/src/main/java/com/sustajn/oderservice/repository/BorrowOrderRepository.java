@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.repository;
 
+import com.sustajn.oderservice.dto.BorrowOrderResponse;
 import com.sustajn.oderservice.dto.LeasedReturnedResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
@@ -70,14 +71,15 @@ SELECT
     b.quantity AS borrowedQty,
     COALESCE(SUM(r.returned_quantity), 0) AS returnedQty,
     (b.quantity - COALESCE(SUM(r.returned_quantity), 0)) AS remainingQty,
+    b.due_date AS dueDate,
     o.order_date
 FROM borrow_orders b
 JOIN orders o ON b.order_id = o.id
 LEFT JOIN return_orders r ON r.borrow_order_id = b.id
 WHERE b.user_id = :userId
-GROUP BY b.order_id, b.product_id, b.quantity, o.order_date
+GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
 """, nativeQuery = true)
-    List<Object[]> getProductBorrowReturnSummary(@Param("userId") Long userId);
+    List<BorrowOrderResponse> getProductBorrowReturnSummary(@Param("userId") Long userId);
 
 
     List<BorrowOrder> findByRestaurantId(Long restaurantId);

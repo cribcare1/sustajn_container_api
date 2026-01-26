@@ -136,9 +136,9 @@ public class UserServiceImpl implements UserService {
                     .id(bankDetails.getId())
                     .userId(bankDetails.getUserId())
                     .bankName(bankDetails.getBankName())
-                    .accountNumber(bankDetails.getAccountNumber())
+                    .bicNumber(bankDetails.getBicNumber())
                     .iBanNumber(bankDetails.getIBanNumber())
-                    .taxNumber(bankDetails.getTaxNumber())
+                    .accountHolderName(bankDetails.getCardHolderName())
                     .build();
         }
         BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
@@ -192,9 +192,9 @@ public class UserServiceImpl implements UserService {
                     .id(bankDetails.getId())
                     .userId(bankDetails.getUserId())
                     .bankName(bankDetails.getBankName())
-                    .accountNumber(bankDetails.getAccountNumber())
+                    .accountHolderName(bankDetails.getAccountHolderName())
                     .iBanNumber(bankDetails.getIBanNumber())
-                    .taxNumber(bankDetails.getTaxNumber())
+                    .bicNumber(bankDetails.getBicNumber())
                     .build();
         }
         BasicRestaurantDetails business = basicRepo.findByRestaurantId(user.getId()).orElse(null);
@@ -308,9 +308,9 @@ public class UserServiceImpl implements UserService {
                 bankRow.setUserId(r.getUserId());
 
                 Optional.ofNullable(r.getBankName()).ifPresent(bankRow::setBankName);
-                Optional.ofNullable(r.getAccountNumber()).ifPresent(bankRow::setAccountNumber);
+                Optional.ofNullable(r.getAccountHolderName()).ifPresent(bankRow::setAccountHolderName);
                 Optional.ofNullable(r.getIBanNumber()).ifPresent(bankRow::setIBanNumber);
-                Optional.ofNullable(r.getTaxNumber()).ifPresent(bankRow::setTaxNumber);
+                Optional.ofNullable(r.getBicNumber()).ifPresent(bankRow::setBicNumber);
 
                 bankRow.setStatus("ACTIVE");
 
@@ -595,8 +595,8 @@ public class UserServiceImpl implements UserService {
 
                 bankDetails.setUserId(bankReq.getUserId());
                 bankDetails.setBankName(bankReq.getBankName());
-                bankDetails.setTaxNumber(bankReq.getTaxNumber());
-                bankDetails.setAccountNumber(bankReq.getAccountNumber());
+                bankDetails.setBicNumber(bankReq.getBicNumber());
+                bankDetails.setAccountHolderName(bankReq.getAccountHolderName());
                 bankDetails.setIBanNumber(bankReq.getIBanNumber());
             }
 
@@ -841,9 +841,9 @@ public class UserServiceImpl implements UserService {
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
                         .bankName(bankReq.getBankName())
-                        .accountNumber(bankReq.getAccountNumber())
+                        .accountHolderName(bankReq.getAccountHolderName())
                         .iBanNumber(bankReq.getIBanNumber())
-                        .taxNumber(bankReq.getTaxNumber())
+                        .bicNumber(bankReq.getBicNumber())
                         .status(AuthConstant.ACTIVE)
                         .build();
 
@@ -995,9 +995,9 @@ public class UserServiceImpl implements UserService {
                 BankDetails bankDetails = BankDetails.builder()
                         .userId(savedUser.getId())
                         .bankName(bankReq.getBankName())
-                        .accountNumber(bankReq.getAccountNumber())
+                        .bicNumber(bankReq.getBicNumber())
                         .iBanNumber(bankReq.getIBanNumber())
-                        .taxNumber(bankReq.getTaxNumber())
+                        .accountHolderName(bankReq.getAccountHolderName())
                         .status(AuthConstant.ACTIVE)
                         .build();
 

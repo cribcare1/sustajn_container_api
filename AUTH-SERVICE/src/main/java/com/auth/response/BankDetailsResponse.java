@@ -17,7 +17,7 @@ public class BankDetailsResponse {
     private Long id;
     private Long userId;
     private String bankName;
-    private String accountNumber;
+    private String accountHolderName;
     private String iBanNumber;
-    private String taxNumber;
+    private String bicNumber;
 }
