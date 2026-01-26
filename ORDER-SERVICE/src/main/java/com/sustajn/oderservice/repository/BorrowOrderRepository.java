@@ -142,4 +142,12 @@ GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
             @Param("endTime") LocalDateTime endTime
     );
 
+    // Only active (not fully returned)
+    @Query("""
+        SELECT b FROM BorrowOrder b
+        WHERE b.quantity > b.returnedQuantity
+        """)
+    List<BorrowOrder> findActiveBorrowOrders();
+
+    List<BorrowOrder> findByOrderId(Long orderId);
 }

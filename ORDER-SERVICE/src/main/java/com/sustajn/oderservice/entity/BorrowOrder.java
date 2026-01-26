@@ -54,5 +54,7 @@ public class BorrowOrder extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime dueDate;
 
-    // getters & setters
+    private Boolean isExtended = false;      // default false
+    private LocalDateTime extendedAt;        // when extension applied
+    private LocalDateTime effectiveDueDate;  // actual due date (after extension)
 }
