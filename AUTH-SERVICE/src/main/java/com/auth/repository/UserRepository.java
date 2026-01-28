@@ -55,6 +55,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
     List<String> findCustomerIdStartingWith(String baseId);
 
 
+
     @Query("""
 SELECT 
     u.id,
@@ -74,7 +75,10 @@ SELECT
     a.id, a.addressType, a.flatDoorHouseDetails, 
     a.areaStreetCityBlockDetails, a.poBoxOrPostalCode,
     u.secondaryNumber,
-    u.dateOfBirth
+    u.dateOfBirth,
+    
+    ca.id, ca.contactPersonName, ca.contactEmail, ca.treadLicenseNumber, ca.vatNumber, ca.contactNumber, ca.registrationNumber
+    
 FROM User u
 
 LEFT JOIN BankDetails b1 
@@ -85,6 +89,8 @@ LEFT JOIN BankDetails c1
 
 LEFT JOIN BankDetails p1 
     ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL AND p1.status = 'active'
+    
+LEFT JOIN ContactRegistrationDetails ca ON ca.userId = u.id
 
 LEFT JOIN Address a ON a.userId = u.id
 

@@ -24,5 +24,6 @@ public class CustomerProfileResponse {
     private PaymentGetWayResponse paymentGetWayResponse;
     private List<AddressResponse> addressResponses;
     private SubscriptionResponse subscriptionResponse;
+    private ContactAndRegistrationDetailsResponse contactAndRegistrationDetailsResponse;
 
 }
