@@ -100,4 +100,39 @@ WHERE u.id = :userId
 
 
     Optional<User> findByPhoneNumber(String phoneNumber);
+
+    @Query("SELECT u.id, u.fullName, u.profilePictureUrl, a.areaStreetCityBlockDetails, a.poBoxOrPostalCode  " +
+            "FROM User u " +
+            "JOIN Address a on a.userId = u.id " +
+            "WHERE u.userType = :userType " +
+            "AND u.accountStatus = :accountStatus")
+    List<Object[]> findAllActiveRestaurants(UserType userType, AccountStatus accountStatus);
+
+    @Query("""
+    SELECT 
+        u.id,
+        u.fullName,
+        u.phoneNumber,
+        u.secondaryNumber,
+        u.subscriptionPlanId,
+        null,
+        
+        brd.id,
+        brd.businessType,
+        brd.websiteDetails,
+        brd.cuisine,
+        
+        crd.id,
+        crd.contactPersonName,
+        crd.contactEmail,
+        crd.treadLicenseNumber,
+        crd.vatNumber,
+        crd.contactNumber,
+        crd.registrationNumber
+    FROM User u
+    LEFT JOIN BasicRestaurantDetails brd ON brd.restaurantId = u.id
+    LEFT JOIN ContactRegistrationDetails crd ON crd.userId = u.id
+    WHERE u.id = :restaurantId
+""")
+    List<Object[]> findRestaurantDetailsById(Long restaurantId);
 }
