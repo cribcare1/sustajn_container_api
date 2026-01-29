@@ -453,6 +453,22 @@ public class UserServiceImpl implements UserService {
             }
             response.setAddressResponses(addressList);
 
+
+            //=============== CONTACT AND REGISTRATION DETAILS ===============
+            if (baseProfileRow[26] != null) {
+                response.setContactAndRegistrationDetailsResponse(new ContactAndRegistrationDetailsResponse(
+                        (Long) baseProfileRow[26],     // id
+                        (String) baseProfileRow[27],   // contactPersonName
+                        (String) baseProfileRow[28],   // contactEmail
+                        (String) baseProfileRow[29],   // treadLicenseNumber
+                        (String) baseProfileRow[30],   // vatNumber
+                        (String) baseProfileRow[31],   // contactNumber
+                        (String) baseProfileRow[32]    // registrationNumber
+                    )
+                );
+
+            }
+
             // 🧾 ================= SUBSCRIPTION =================
             if (response.getSubscriptionPlanId() != null) {
 
