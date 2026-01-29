@@ -51,6 +51,7 @@ public class UserServiceImpl implements UserService {
     private final AddressRepository addressRepository;
     private final InventoryFeignClient inventoryFeignClient;
     private final ContactAndRegistrationDetailsRepository contactAndRegistrationDetailsRepository;
+    private final SocialMediaDetailsRepository socialMediaDetailsRepository;
     @Value("${image.storage.root-path}")
     private String userProfilePath;
 
@@ -1349,6 +1350,84 @@ public class UserServiceImpl implements UserService {
         }
 
     }
+
+    @Override
+    public ApiResponse<List<RestaurantListResponse>> getAllActiveRestaurants() {
+
+        List<Object[]> response = userRepository.findAllActiveRestaurants(UserType.RESTAURANT, AccountStatus.active);
+        if (CollectionUtils.isEmpty(response)){
+            return new ApiResponse<>(AuthConstant.ERROR, "No active restaurants found", null);
+        }
+        List<RestaurantListResponse> restaurantListResponses = new ArrayList<>();
+        for (Object[] obj : response) {
+            RestaurantListResponse restaurant = new RestaurantListResponse();
+            restaurant.setId(((Number) obj[0]).longValue());
+            restaurant.setName((String) obj[1]);
+            restaurant.setProfileImageUrl((String) obj[2]);
+            restaurant.setAddress(obj[3]+", "+ obj[4]);
+            restaurantListResponses.add(restaurant);
+        }
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Active restaurants fetched successfully", restaurantListResponses);
+    }
+
+    @Override
+    public ApiResponse<RestaurantDetailsResponse> getRestaurantDetailsById(Long restaurantId) {
+
+        List<Object[]> result = userRepository.findRestaurantDetailsById(restaurantId);
+
+        if (result.isEmpty()) {
+            return new ApiResponse<>(AuthConstant.ERROR, "Restaurant details not found", null);
+        }
+
+        Object[] row = result.get(0);
+
+        RestaurantDetailsResponse response = new RestaurantDetailsResponse();
+
+        response.setId((Long) row[0]);
+        response.setFullName((String) row[1]);
+        response.setMobileNumber((String) row[2]);
+        response.setSecondaryNumber((String) row[3]);
+        response.setPlanId((Integer) row[4]);
+        response.setSubscriptionType((String) row[5]);
+
+        // ---- Basic Restaurant Details ----
+        BasicRestaurantDetails brd = new BasicRestaurantDetails();
+        brd.setId((Long) row[6]);
+        brd.setBusinessType((String) row[7]);
+        brd.setWebsiteDetails((String) row[8]);
+        brd.setCuisine((String) row[9]);
+        response.setBasicRestaurantDetails(brd);
+
+        // ---- Contact & Registration ----
+        ContactAndRegistrationDetailsResponse crd = new ContactAndRegistrationDetailsResponse();
+        crd.setId((Long) row[10]);
+        crd.setContactPersonName((String) row[11]);
+        crd.setContactEmail((String) row[12]);
+        crd.setTreadLicenseNumber((String) row[13]);
+        crd.setVatNumber((String) row[14]);
+        crd.setContactNumber((String) row[15]);
+        crd.setRegistrationNumber((String) row[16]);
+        response.setContactAndRegistrationDetailsResponse(crd);
+
+        // ---- Social Media ----
+        List<SocialMediaDetails> socialMedia =
+                socialMediaDetailsRepository.findByRestaurantId(restaurantId);
+        response.setSocialMediaDetailsList(socialMedia);
+
+        // ---- Subscription from Inventory Service ----
+        if (response.getPlanId() != null) {
+
+            Map<String, Object> planResp =
+                    inventoryFeignClient.getSubscriptionPlanById(response.getPlanId());
+
+            if ("success".equals(planResp.get("status"))) {
+                Map<String, Object> data = (Map<String, Object>) planResp.get("data");
+                response.setSubscriptionType((String) data.get("planType"));
+            }
+        }
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Restaurant details fetched successfully", response);
+    }
+
 
     // Helper to convert Address Entity -> AddressResponse DTO
     private AddressResponse mapToAddressResponse(Address address) {

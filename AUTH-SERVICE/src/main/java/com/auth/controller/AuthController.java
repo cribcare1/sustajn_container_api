@@ -341,4 +341,15 @@ public class AuthController {
         User user=userService.getUserByEmail(email);
         return ResponseEntity.ok(user);
     }
+
+    // Get All Active Restaurants list
+    @GetMapping("/getAllActiveRestaurants")
+    public ResponseEntity<?> getAllActiveRestaurants() {
+        return ResponseEntity.ok(userService.getAllActiveRestaurants());
+    }
+
+    @GetMapping("/getRestaurantDetailsById/{restaurantId}")
+    public ResponseEntity<?> getRestaurantDetailsById(@PathVariable Long restaurantId) {
+        return ResponseEntity.ok(userService.getRestaurantDetailsById(restaurantId));
+    }
 }
