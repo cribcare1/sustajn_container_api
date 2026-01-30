@@ -326,9 +326,6 @@ public class UserServiceImpl implements UserService {
                 Optional.ofNullable(r.getAccountHolderName()).ifPresent(bankRow::setAccountHolderName);
                 Optional.ofNullable(r.getIBanNumber()).ifPresent(bankRow::setIBanNumber);
                 Optional.ofNullable(r.getBicNumber()).ifPresent(bankRow::setBicNumber);
-
-                bankRow.setStatus("ACTIVE");
-
                 bankDetails = bankRepo.save(bankRow);
             }
 
