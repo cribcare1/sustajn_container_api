@@ -5,10 +5,7 @@ import com.inventory.service.AdminRestaurantOrderService;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/inventory/restaurantOrders")
@@ -20,6 +17,20 @@ public class AdminRestaurantOrderController {
     @GetMapping("/orderHistory/{restaurantId}")
     public ResponseEntity<ApiResponse> getOrderHistory(@PathVariable Long restaurantId){
         ApiResponse response = adminRestaurantOrderService.getRestaurantOrderDetails(restaurantId);
+        return ResponseEntity.ok(response);
+    }
+
+    // get all issued products to restaurant
+    @GetMapping("/issuedProducts/{restaurantId}")
+    public ResponseEntity<ApiResponse> getAllIssuedProductsToRestaurant(@PathVariable Long restaurantId) {
+        ApiResponse response = adminRestaurantOrderService.getAllIssuedProductsToRestaurant(restaurantId);
+        return ResponseEntity.ok(response);
+    }
+
+    // get month wise issued products to restaurant
+    @GetMapping("/monthWiseIssuedProducts")
+    public ResponseEntity<ApiResponse> getMonthWiseIssuedProductsToRestaurant(@RequestParam Long restaurantId, @RequestParam Integer productId) {
+        ApiResponse response = adminRestaurantOrderService.getMonthWiseIssuedProductsToRestaurant(restaurantId, productId);
         return ResponseEntity.ok(response);
     }
 
