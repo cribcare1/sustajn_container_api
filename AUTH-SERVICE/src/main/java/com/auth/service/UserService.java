@@ -66,7 +66,14 @@ public interface UserService {
     ApiResponse<CustomerProfileResponse> deleteBankDetails(Long id);
 
     ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage);
+
     ApiResponse<?> uploadImage(MultipartFile file, Long userId);
+
+    ApiResponse<List<RestaurantListResponse>> getAllActiveRestaurants();
+
+    ApiResponse<RestaurantDetailsResponse> getRestaurantDetailsById(Long restaurantId);
+
+    ApiResponse<?> referPartner(ReferPartnerRequest request);
 }
 
 
