@@ -11,6 +11,6 @@ import java.util.Optional;
 @Repository
 public interface ReferPartnerRepository extends JpaRepository<ReferPartner,Long> {
 
-    @Query("SELECT rp FROM ReferPartner rp WHERE rp.contactEmail = :partnerEmail AND rp.contactPhone = :partnerPhone")
+    @Query("SELECT rp FROM ReferPartner rp WHERE rp.contactEmail = :partnerEmail AND rp.contactPhone = :partnerPhone AND rp.status = 'active'")
     Optional<ReferPartner> findByEmailAndPhone(String partnerEmail, String partnerPhone);
 }

@@ -17,11 +17,17 @@ public class ReferPartner{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    @Column(name = "business_name", length = 200)
     private String businessName;
+    @Column(name = "contact_person_name", length = 100)
     private String contactPersonName;
+    @Column(name = "contact_email", length = 150)
     private String contactEmail;
+    @Column(name = "contact_phone", length = 50)
     private String contactPhone;
+    @Column(name = "referred_by_user_id")
     private Long referredByUserId;
+    @Column(name = "status", length = 150)
     private String status;
 
     @Column(name = "created_at")
