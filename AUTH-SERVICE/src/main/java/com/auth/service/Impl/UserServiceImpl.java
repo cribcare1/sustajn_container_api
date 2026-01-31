@@ -52,6 +52,7 @@ public class UserServiceImpl implements UserService {
     private final InventoryFeignClient inventoryFeignClient;
     private final ContactAndRegistrationDetailsRepository contactAndRegistrationDetailsRepository;
     private final SocialMediaDetailsRepository socialMediaDetailsRepository;
+    private final ReferPartnerRepository referPartnerRepository;
     @Value("${image.storage.root-path}")
     private String userProfilePath;
 
@@ -344,8 +345,6 @@ public class UserServiceImpl implements UserService {
                 Optional.ofNullable(r.getExpiryDate()).ifPresent(cardRow::setExpiryDate);
                 Optional.ofNullable(r.getCvv()).ifPresent(cardRow::setCvv);
 
-                cardRow.setStatus("ACTIVE");
-
                 bankDetails = bankRepo.save(cardRow);
             }
 
@@ -361,8 +360,6 @@ public class UserServiceImpl implements UserService {
 
                 Optional.ofNullable(r.getPaymentGatewayId()).ifPresent(payRow::setPaymentGatewayId);
                 Optional.ofNullable(r.getPaymentGatewayName()).ifPresent(payRow::setPaymentGatewayName);
-
-                payRow.setStatus("ACTIVE");
 
                 bankDetails = bankRepo.save(payRow);
             }
@@ -1423,6 +1420,61 @@ public class UserServiceImpl implements UserService {
             }
         }
         return new ApiResponse<>(AuthConstant.SUCCESS, "Restaurant details fetched successfully", response);
+    }
+
+    @Override
+    public ApiResponse<?> referPartner(ReferPartnerRequest request) {
+        try {
+            Optional<ReferPartner> existingReferOpt = referPartnerRepository.findByEmailAndPhone(request.getPartnerEmail(), request.getPartnerPhone());
+            if (existingReferOpt.isPresent()) {
+                ReferPartner existingRefer = existingReferOpt.get();
+                if (existingRefer.getStatus().equalsIgnoreCase(AuthConstant.ACTIVE) && !existingRefer.getReferredByUserId().equals(request.getReferredByUserId())) {
+                    return new ApiResponse<>(AuthConstant.SUCCESS, "Partner with the same email and phone number has already been referred by someone", null);
+                } else if (existingRefer.getStatus().equalsIgnoreCase(AuthConstant.ACTIVE) && existingRefer.getReferredByUserId().equals(request.getReferredByUserId())){
+                    // Update existing record
+                    existingRefer.setContactPersonName(request.getPartnerName());
+                    existingRefer.setBusinessName(request.getBusinessName());
+                    referPartnerRepository.save(existingRefer);
+                    return new ApiResponse<>(AuthConstant.SUCCESS, "Partner referred successfully", null);
+                }
+                else if (existingRefer.getStatus().equalsIgnoreCase(AuthConstant.IN_ACTIVE) && existingRefer.getReferredByUserId().equals(request.getReferredByUserId())){
+                    // Update existing record
+                    existingRefer.setContactPersonName(request.getPartnerName());
+                    existingRefer.setBusinessName(request.getBusinessName());
+                    existingRefer.setStatus(AuthConstant.ACTIVE);
+                    referPartnerRepository.save(existingRefer);
+                    return new ApiResponse<>(AuthConstant.SUCCESS, "Partner referred successfully", null);
+                }
+                else {
+                    // Proceed to create new record
+                    ReferPartner referPartner = ReferPartner.builder()
+                            .referredByUserId(request.getReferredByUserId())
+                            .contactPersonName(request.getPartnerName())
+                            .contactEmail(request.getPartnerEmail())
+                            .contactPhone(request.getPartnerPhone())
+                            .businessName(request.getBusinessName())
+                            .status(AuthConstant.ACTIVE)
+                            .build();
+                    referPartnerRepository.save(referPartner);
+                    return new ApiResponse<>(AuthConstant.SUCCESS, "Partner referred successfully", null);
+                }
+            }
+            ReferPartner referPartner = ReferPartner.builder()
+                    .referredByUserId(request.getReferredByUserId())
+                    .contactPersonName(request.getPartnerName())
+                    .contactEmail(request.getPartnerEmail())
+                    .contactPhone(request.getPartnerPhone())
+                    .businessName(request.getBusinessName())
+                    .status(AuthConstant.ACTIVE)
+                    .build();
+            referPartnerRepository.save(referPartner);
+
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Partner referred successfully", null);
+
+        } catch (Exception e) {
+            log.error("Error referring partner: {}", e.getMessage());
+            return new ApiResponse<>(AuthConstant.ERROR, "Error updating profile image", null);
+        }
     }
 
 

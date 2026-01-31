@@ -72,6 +72,8 @@ public interface UserService {
     ApiResponse<List<RestaurantListResponse>> getAllActiveRestaurants();
 
     ApiResponse<RestaurantDetailsResponse> getRestaurantDetailsById(Long restaurantId);
+
+    ApiResponse<?> referPartner(ReferPartnerRequest request);
 }
 
 
