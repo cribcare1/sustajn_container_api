@@ -629,7 +629,7 @@ public class UserServiceImpl implements UserService {
             }
 
             // ====== DEFAULT STATUS ======
-            bankDetails.setStatus("ACTIVE");
+            bankDetails.setStatus(AuthConstant.ACTIVE);
 
             // ====== SAVE ======
             BankDetails saved = bankRepo.save(bankDetails);
