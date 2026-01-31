@@ -2,6 +2,7 @@ package com.auth.service.Impl;
 
 import com.auth.constant.AuthConstant;
 import com.auth.enumDetails.AccountStatus;
+import com.auth.enumDetails.Gender;
 import com.auth.enumDetails.UserType;
 import com.auth.exception.GenericException;
 import com.auth.exception.ResourceNotFoundException;
@@ -947,7 +948,8 @@ public class UserServiceImpl implements UserService {
 
 
             // ---------------- CREATE USER ----------------
-            User user = User.builder()
+
+            User.UserBuilder userBuilder = User.builder()
                     .userType(UserType.USER)
                     .fullName(request.getFullName())
                     .email(request.getEmail())
@@ -965,9 +967,20 @@ public class UserServiceImpl implements UserService {
                             : null)
                     .accountStatus(AccountStatus.active)
                     .emailVerified(false)
-                    .phoneVerified(false)
-                    .build();
+                    .phoneVerified(false);
 
+            // 2. ✅ ADD GENDER LOGIC HERE
+            if (request.getGender() != null && !request.getGender().isEmpty()) {
+                try {
+                    // Convert String (e.g., "Male") to Enum (Gender.MALE)
+                    userBuilder.gender(Gender.valueOf(request.getGender().toUpperCase()));
+                } catch (IllegalArgumentException e) {
+                    log.warn("Invalid gender provided: {}", request.getGender());
+                }
+            }
+
+            // 3. Build and Save
+            User user = userBuilder.build();
             User savedUser = userRepository.save(user);
 
 
