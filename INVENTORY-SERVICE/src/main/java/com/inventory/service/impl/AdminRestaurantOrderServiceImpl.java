@@ -13,17 +13,21 @@ import com.inventory.repository.AdminOrderRepository;
 import com.inventory.repository.RestaurantContainerInventoryRepository;
 import com.inventory.request.AdminOrderApproveRequest;
 import com.inventory.request.AdminOrderCreateRequest;
-import com.inventory.response.ApiResponse;
-import com.inventory.response.RestaurantOrderedResponse;
+import com.inventory.response.*;
 import com.inventory.service.AdminRestaurantOrderService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderService {
@@ -260,8 +264,6 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
         Map<String, Object> response = new HashMap<>();
 
         try {
-
-
             //  Fetch containers
             List<RestaurantContainerDetails> containers = inventoryRepository.findContainersWithDetails(restaurantId);
 
@@ -301,6 +303,87 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
             e.printStackTrace();
             return new ApiResponse<>("Failed to fetch order details",
                     InventoryConstant.ERROR, null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<IssuedProductsResponse>> getAllIssuedProductsToRestaurant(Long restaurantId) {
+        try {
+            List<Object[]> response =  adminOrderItemRepository.findIssuedProducts(restaurantId);
+            if (CollectionUtils.isEmpty(response)) {
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "No issued products found",
+                         null);
+            }
+            List<IssuedProductsResponse> issuedProducts = response.stream()
+                    .map(record -> {
+                        IssuedProductsResponse issuedProductsResponse = new IssuedProductsResponse();
+                        issuedProductsResponse.setId((Integer)  record[0]);
+                        issuedProductsResponse.setProductName((String) record[1]);
+                        issuedProductsResponse.setProductId((String) record[2]);
+                        issuedProductsResponse.setCapacityMl((Integer) record[3]);
+                        issuedProductsResponse.setTotalIssuedQuantity(((Long) record[4]).intValue());
+                        return issuedProductsResponse;
+                    })
+                    .collect(Collectors.toList());
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Issued products fetched successfully", issuedProducts);
+        } catch (Exception e) {
+            log.error("Error: {}", e.getMessage(), e);
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch issued products", null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<MonthWiseIssuedResponse>> getMonthWiseIssuedProductsToRestaurant(Long restaurantId, Integer productId) {
+        try {
+            List<Object[]> response = adminOrderItemRepository.findDateWiseIssuedQty(restaurantId, productId);
+
+            if (response.isEmpty()) {
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "No issued products", List.of());
+            }
+
+            DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+            Map<String, List<Object[]>> monthMap = response.stream()
+                    .collect(Collectors.groupingBy(
+                            r -> ((LocalDate) r[0]).format(monthFormatter),
+                            LinkedHashMap::new,
+                            Collectors.toList()
+                    ));
+
+            List<MonthWiseIssuedResponse> monthWiseResponse = new ArrayList<>();
+
+            for (Map.Entry<String, List<Object[]>> entry : monthMap.entrySet()) {
+
+                String monthYear = entry.getKey();
+                List<Object[]> monthRows = entry.getValue();
+
+                int monthTotal = monthRows.stream()
+                        .mapToInt(r -> ((Long) r[1]).intValue())
+                        .sum();
+
+                Map<String, Integer> dateMap = new LinkedHashMap<>();
+
+                for (Object[] r : monthRows) {
+                    LocalDate date = (LocalDate) r[0];
+                    int qty = ((Long) r[1]).intValue();
+                    dateMap.merge(date.format(dateFormatter), qty, Integer::sum);
+                }
+
+                List<DateWiseIssuedResponse> dateWiseList = dateMap.entrySet().stream()
+                        .map(e -> new DateWiseIssuedResponse(e.getKey(), e.getValue()))
+                        .toList();
+
+                monthWiseResponse.add(
+                        new MonthWiseIssuedResponse(monthYear, monthTotal, dateWiseList)
+                );
+            }
+
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Month-wise issued products fetched", monthWiseResponse);
+        } catch (Exception e) {
+            log.error("Error: {}", e.getMessage(), e);
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch month-wise issued products", null);
         }
     }
 
