@@ -352,4 +352,9 @@ public class AuthController {
     public ResponseEntity<?> getRestaurantDetailsById(@PathVariable Long restaurantId) {
         return ResponseEntity.ok(userService.getRestaurantDetailsById(restaurantId));
     }
+
+    @PostMapping("/referPartner")
+    public ResponseEntity<?> referPartner(@RequestBody @Validated(CreateGroup.class) ReferPartnerRequest request) {
+        return ResponseEntity.ok(userService.referPartner(request));
+    }
 }
