@@ -1,5 +1,4 @@
 package com.auth.feignClient;
-import com.auth.response.SubscriptionPlanResponse;
 
 import com.auth.config.FeignMultipartConfig;
 import org.springframework.cloud.openfeign.FeignClient;

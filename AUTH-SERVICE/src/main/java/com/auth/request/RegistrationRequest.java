@@ -14,6 +14,7 @@ import java.util.List;
 public class RegistrationRequest {
 
     // ========== USER REGISTRATION PART ==========
+    private Long userId;
     private String fullName;
     @NotNull(message = "Email cannot be null")
     private String email;

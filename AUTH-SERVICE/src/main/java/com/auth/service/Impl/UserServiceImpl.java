@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -378,91 +380,112 @@ public class UserServiceImpl implements UserService {
     public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
 
         try {
-            List<Object[]> profileResultRows = userRepository.getCustomerProfileDetailsByUserId(userId);
+            List<Object[]> result =
+                    userRepository.getCustomerProfileDetailsByUserId(userId);
 
-            if (CollectionUtils.isEmpty(profileResultRows)) {
+            if (result == null || result.isEmpty()) {
                 return new ApiResponse<>(AuthConstant.ERROR, "Customer not found", null);
             }
 
-            Object[] baseProfileRow = profileResultRows.get(0);
+            Object[] row = result.get(0);   // ← THIS LINE FIXES EVERYTHING
 
             CustomerProfileResponse response = new CustomerProfileResponse();
 
-            // 🧍 Basic User Info
-            response.setId((Long) baseProfileRow[0]);
-            response.setFullName((String) baseProfileRow[1]);
-            response.setMobileNumber((String) baseProfileRow[2]);
-            response.setCustomerId((String) baseProfileRow[3]);
-            response.setEmailId((String) baseProfileRow[4]);
-            response.setProfileImageUrl((String) baseProfileRow[5]);
-            response.setSubscriptionPlanId((Integer) baseProfileRow[6]);
-            response.setSecondaryNumber((String) baseProfileRow[24]);
-            response.setDateOfBirth(baseProfileRow.length > 25 && baseProfileRow[25] != null
-                    ? java.time.LocalDate.parse(baseProfileRow[25].toString())
-                    : null);
+            // Basic
+            response.setId(((Number) row[0]).longValue());
+            response.setFullName((String) row[1]);
+            response.setMobileNumber((String) row[2]);
+            response.setCustomerId((String) row[3]);
+            response.setEmailId((String) row[4]);
+            response.setProfileImageUrl((String) row[5]);
+            response.setSubscriptionPlanId(
+                    row[6] != null ? ((Number) row[6]).intValue() : null
+            );
 
-
-            // 🏦 Bank Details
-            if (baseProfileRow[7] != null) {
-                response.setBankDetailsResponse(new BankDetailsResponse(
-                        (Long) baseProfileRow[7],
-                        userId,
-                        (String) baseProfileRow[8],
-                        (String) baseProfileRow[9],
-                        (String) baseProfileRow[10],
-                        (String) baseProfileRow[11]
-                ));
-            }
-
-            // 💳 Card Details
-            if (baseProfileRow[12] != null) {
-                response.setCardDetailsResponse(new CardDetailsResponse(
-                        (Long) baseProfileRow[12],
-                        (String) baseProfileRow[13],
-                        (String) baseProfileRow[14],
-                        (String) baseProfileRow[15]
-                ));
-            }
-
-            // 🧾 Payment Gateway
-            if (baseProfileRow[16] != null) {
-                response.setPaymentGetWayResponse(new PaymentGetWayResponse(
-                        (Long) baseProfileRow[16],
-                        (String) baseProfileRow[17],
-                        (String) baseProfileRow[18]
-                ));
-            }
-
-            // 🏠 Addresses
-            List<AddressResponse> addressList = new ArrayList<>();
-            for (Object[] row : profileResultRows) {
-                if (row[19] != null) {
-                    addressList.add(new AddressResponse(
-                            (Long) row[19],
-                            (String) row[20],
-                            (String) row[21],
-                            (String) row[22],
-                            (String) row[23]
-                    ));
-                }
-            }
-            response.setAddressResponses(addressList);
-
-
-            //=============== CONTACT AND REGISTRATION DETAILS ===============
-            if (baseProfileRow[26] != null) {
-                response.setContactAndRegistrationDetailsResponse(new ContactAndRegistrationDetailsResponse(
-                        (Long) baseProfileRow[26],     // id
-                        (String) baseProfileRow[27],   // contactPersonName
-                        (String) baseProfileRow[28],   // contactEmail
-                        (String) baseProfileRow[29],   // treadLicenseNumber
-                        (String) baseProfileRow[30],   // vatNumber
-                        (String) baseProfileRow[31],   // contactNumber
-                        (String) baseProfileRow[32]    // registrationNumber
-                    )
+            // Bank
+            if (row[7] != null) {
+                response.setBankDetailsResponse(
+                        new BankDetailsResponse(
+                                ((Number) row[7]).longValue(),
+                                userId,
+                                (String) row[8],
+                                (String) row[9],
+                                (String) row[10],
+                                (String) row[11]
+                        )
                 );
-
             }
+
+            // Card
+            if (row[12] != null) {
+                response.setCardDetailsResponse(
+                        new CardDetailsResponse(
+                                ((Number) row[12]).longValue(),
+                                (String) row[13],
+                                (String) row[14],
+                                (String) row[15]
+                        )
+                );
+            }
+
+            // Payment
+            if (row[16] != null) {
+                response.setPaymentGetWayResponse(
+                        new PaymentGetWayResponse(
+                                ((Number) row[16]).longValue(),
+                                (String) row[17],
+                                (String) row[18]
+                        )
+                );
+            }
+
+            // Secondary & DOB
+            response.setSecondaryNumber((String) row[19]);
+            response.setDateOfBirth(
+                    row[20] != null ? (row[20]).toString() : null
+            );
+
+            // Contact
+            if (row[21] != null) {
+                response.setContactAndRegistrationDetailsResponse(
+                        new ContactAndRegistrationDetailsResponse(
+                                ((Number) row[21]).longValue(),
+                                (String) row[22],
+                                (String) row[23],
+                                (String) row[24],
+                                (String) row[25],
+                                (String) row[26],
+                                (String) row[27]
+                        )
+                );
+            }
+
+            // Addresses (JSON)
+            String addressJson = row[28].toString();
+            ObjectMapper mapper = new ObjectMapper();
+            List<AddressResponse> addresses =
+                    mapper.readValue(addressJson,
+                            new TypeReference<List<AddressResponse>>() {});
+            response.setAddressResponses(addresses);
+
+            //Social Media Details (JSON)
+            String socialMediaJson = row[29].toString();
+            List<SocialMediaResponse> socialMediaResponses =
+                    mapper.readValue(socialMediaJson,
+                            new TypeReference<List<SocialMediaResponse>>() {});
+            response.setSocialMediaResponse(socialMediaResponses);
+
+            //Business Details
+            if (row[30] != null) {
+                response.setBusinessDetailsResponse(
+                        new BusinessDetailsResponse(
+                                ((Number) row[30]).longValue(),
+                                (String) row[31],
+                                (String) row[32]
+                        )
+                );
+            }
+
 
             // 🧾 ================= SUBSCRIPTION =================
             if (response.getSubscriptionPlanId() != null) {
@@ -506,6 +529,7 @@ public class UserServiceImpl implements UserService {
                     "Failed to fetch customer profile", null);
         }
     }
+
 
     @Override
     public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request) {
@@ -1455,6 +1479,62 @@ public class UserServiceImpl implements UserService {
         } catch (Exception e) {
             log.error("Error referring partner: {}", e.getMessage());
             return new ApiResponse<>(AuthConstant.ERROR, "Error on referring partner", null);
+        }
+    }
+
+    @Override
+    public ApiResponse<CustomerProfileResponse> addBusinessInfo(RegistrationRequest request) {
+        try {
+            Optional<User> userOpt = userRepository.findById(request.getUserId());
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+
+                if (request.getContactAndRegistrationDetails() != null){
+                    RegistrationRequest.ContactAndRegistrationDetailsRequest contactReq =
+                            request.getContactAndRegistrationDetails();
+                    ContactRegistrationDetails contactDetails = ContactRegistrationDetails.builder()
+                            .userId(user.getId())
+                            .contactPersonName(contactReq.getContactPersonName())
+                            .contactNumber(contactReq.getContactNumber())
+                            .registrationNumber(contactReq.getRegistrationNumber())
+                            .vatNumber(contactReq.getVatNumber())
+                            .contactEmail(contactReq.getContactEmail())
+                            .treadLicenseNumber(contactReq.getTreadLicenseNumber())
+                            .build();
+                    contactAndRegistrationDetailsRepository.save(contactDetails);
+                }
+
+                if (request.getBasicDetails() != null) {
+                    BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
+                            .restaurantId(user.getId())
+                            .businessType(request.getBasicDetails().getBusinessType())
+                            .websiteDetails(request.getBasicDetails().getWebsiteDetails())
+                            .build();
+                    basicRepo.save(basic);
+                }
+
+                if (!CollectionUtils.isEmpty(request.getSocialMediaList())) {
+                    List<SocialMediaDetails> socialMediaDetailsList = new ArrayList<>();
+                    for (RegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
+                        SocialMediaDetails media = SocialMediaDetails.builder()
+                                .restaurantId(user.getId())
+                                .socialMediaType(sm.getSocialMediaType())
+                                .link(sm.getLink())
+                                .build();
+
+                        socialMediaDetailsList.add(media);
+                    }
+                    socialRepo.saveAll(socialMediaDetailsList);
+                }
+
+                CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(user.getId()).getData();
+                return new ApiResponse<>(AuthConstant.SUCCESS, "Business info added successfully", customerProfileResponse);
+            }
+
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Restaurant details not found", null);
+        } catch (Exception e) {
+            log.error("Error on adding business info: {}", e.getMessage());
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on adding business info", null);
         }
     }
 

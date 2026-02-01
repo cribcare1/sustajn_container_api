@@ -74,6 +74,8 @@ public interface UserService {
     ApiResponse<RestaurantDetailsResponse> getRestaurantDetailsById(Long restaurantId);
 
     ApiResponse<?> referPartner(ReferPartnerRequest request);
+
+    ApiResponse<CustomerProfileResponse> addBusinessInfo(RegistrationRequest request);
 }
 
 

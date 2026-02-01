@@ -357,4 +357,9 @@ public class AuthController {
     public ResponseEntity<?> referPartner(@RequestBody @Validated(CreateGroup.class) ReferPartnerRequest request) {
         return ResponseEntity.ok(userService.referPartner(request));
     }
+
+    @PostMapping("/addBusinessInfo")
+    public ResponseEntity<ApiResponse<CustomerProfileResponse>> addBusinessInfo(@RequestBody RegistrationRequest request) {
+        return ResponseEntity.ok(userService.addBusinessInfo(request));
+    }
 }
