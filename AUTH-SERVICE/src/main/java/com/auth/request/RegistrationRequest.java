@@ -14,6 +14,7 @@ import java.util.List;
 public class RegistrationRequest {
 
     // ========== USER REGISTRATION PART ==========
+    private Long userId;
     private String fullName;
     @NotNull(message = "Email cannot be null")
     private String email;
@@ -48,6 +49,7 @@ public class RegistrationRequest {
     @AllArgsConstructor
     @Builder
     public static class BasicDetails {
+        private Long id;
         private String businessType;
         private String websiteDetails;
         private String cuisine;
@@ -93,6 +95,7 @@ public class RegistrationRequest {
     @AllArgsConstructor
     @Builder
     public static class SocialMediaRequest {
+        private Long id;
         private String socialMediaType;
         private String link;
     }
@@ -103,6 +106,7 @@ public class RegistrationRequest {
     @NoArgsConstructor
     @Builder
     public static class ContactAndRegistrationDetailsRequest {
+        private Long id;
         private String contactPersonName;
         private String contactEmail;
         private String treadLicenseNumber;
