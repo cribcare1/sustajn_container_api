@@ -49,7 +49,7 @@ public interface UserService {
 
     // Single API for both
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
-    Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request);
+    ApiResponse<CustomerProfileResponse> updateBusinessInfo(RegistrationRequest request);
 
   ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
 

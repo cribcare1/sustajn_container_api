@@ -283,20 +283,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
             return ResponseEntity.ok(userService.updateBankDetails(request));
     }
-    @PutMapping("/updateBusinessInfo/{restaurantId}")
-    public ResponseEntity<?> updateBusinessInfo(
-            @PathVariable Long restaurantId,  // <--- Renamed variable
-            @RequestBody UpdateBusinessInfoRequest request
-    ) {
-        try {
-            // Pass restaurantId to the service (it matches the Long type expected)
-            return ResponseEntity.ok(userService.updateBusinessInfo(restaurantId, request));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
-                    "status", "error",
-                    "message", e.getMessage()
-            ));
-        }
+    @PostMapping("/updateBusinessInfo")
+    public ResponseEntity<?> updateBusinessInfo(@RequestBody RegistrationRequest request) {
+        return ResponseEntity.ok(userService.updateBusinessInfo(request));
     }
 
     // save new address

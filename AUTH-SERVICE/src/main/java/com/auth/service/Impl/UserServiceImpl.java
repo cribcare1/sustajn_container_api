@@ -532,27 +532,51 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public Map<String, Object> updateBusinessInfo(Long userId, UpdateBusinessInfoRequest request) {
-        // Use basicRepo (which you already have injected)
-        // Note: Using findByRestaurantId because your Entity uses 'restaurantId'
-        BasicRestaurantDetails details = basicRepo.findByRestaurantId(userId)
-                .orElse(BasicRestaurantDetails.builder()
-                        .restaurantId(userId)
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .build());
+    public ApiResponse<CustomerProfileResponse> updateBusinessInfo(RegistrationRequest request) {
+        try {
+            if (request.getContactAndRegistrationDetails() != null){
+                Optional<ContactRegistrationDetails> contactRegistrationDetailsOpt = contactAndRegistrationDetailsRepository.findById(request.getContactAndRegistrationDetails().getId());
+                if (contactRegistrationDetailsOpt.isPresent()){
+                    ContactRegistrationDetails contactDetails = contactRegistrationDetailsOpt.get();
+                    contactDetails.setContactPersonName(request.getContactAndRegistrationDetails().getContactPersonName());
+                    contactDetails.setContactNumber(request.getContactAndRegistrationDetails().getContactNumber());
+                    contactDetails.setContactEmail(request.getContactAndRegistrationDetails().getContactEmail());
+                    contactDetails.setRegistrationNumber(request.getContactAndRegistrationDetails().getRegistrationNumber());
+                    contactDetails.setVatNumber(request.getContactAndRegistrationDetails().getVatNumber());
+                    contactDetails.setTreadLicenseNumber(request.getContactAndRegistrationDetails().getTreadLicenseNumber());
+                    contactAndRegistrationDetailsRepository.save(contactDetails);
+                }
+            }
 
-        // Update fields if they are present in request
-        if (request.getBusinessType() != null) {
-            details.setBusinessType(request.getBusinessType());
+            if (!CollectionUtils.isEmpty(request.getSocialMediaList())){
+                for (RegistrationRequest.SocialMediaRequest socialMediaRequest : request.getSocialMediaList()) {
+                    Optional<SocialMediaDetails> socialMediaDetailsOpt = socialMediaDetailsRepository.findById(socialMediaRequest.getId());
+                    if (socialMediaDetailsOpt.isPresent()){
+                        SocialMediaDetails socialMediaDetails = socialMediaDetailsOpt.get();
+                        socialMediaDetails.setSocialMediaType(socialMediaRequest.getSocialMediaType());
+                        socialMediaDetails.setLink(socialMediaRequest.getLink());
+                        socialMediaDetailsRepository.save(socialMediaDetails);
+                    }
+                }
+            }
+
+            if (request.getBasicDetails() != null){
+                Optional<BasicRestaurantDetails> basicDetailsOpt = basicRepo.findById(request.getBasicDetails().getId());
+                if (basicDetailsOpt.isPresent()){
+                    BasicRestaurantDetails basicDetails = basicDetailsOpt.get();
+                    basicDetails.setBusinessType(request.getBasicDetails().getBusinessType());
+                    basicDetails.setWebsiteDetails(request.getBasicDetails().getWebsiteDetails());
+                    basicRepo.save(basicDetails);
+                }
+            }
+            CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(request.getUserId()).getData();
+
+            return new ApiResponse<>(AuthConstant.ERROR, "Business info updated successfully.", customerProfileResponse);
+
+        }catch (Exception e) {
+            log.error("Error updating business info: {}", e.getMessage(), e);
+            return new ApiResponse<>(AuthConstant.ERROR, "Error on updating business info", null);
         }
-        if (request.getWebsite() != null) {
-            details.setWebsiteDetails(request.getWebsite()); // Map website -> websiteDetails
-        }
-
-        basicRepo.save(details);
-
-        return Map.of("status", "success", "message", "Business info updated successfully");
     }
 
 
