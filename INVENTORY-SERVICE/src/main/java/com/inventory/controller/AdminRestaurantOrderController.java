@@ -34,4 +34,20 @@ public class AdminRestaurantOrderController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/returnedProducts/{restaurantId}")
+    public ResponseEntity<ApiResponse> getAllReturnedProductsToRestaurant(@PathVariable Long restaurantId) {
+        ApiResponse response = adminRestaurantOrderService.getAllReturnedProductsToRestaurant(restaurantId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 2. Get Detailed Return History (Month-wise)
+    @GetMapping("/monthWiseReturnedProducts")
+    public ResponseEntity<ApiResponse> getMonthWiseReturnedProductsToRestaurant(
+            @RequestParam Long restaurantId,
+            @RequestParam Integer productId) {
+
+        ApiResponse response = adminRestaurantOrderService.getMonthWiseReturnedProductsToRestaurant(restaurantId, productId);
+        return ResponseEntity.ok(response);
+    }
+
 }

@@ -6,6 +6,8 @@ import com.inventory.response.ApiResponse;
 import com.inventory.response.IssuedProductsResponse;
 import com.inventory.response.MonthWiseIssuedResponse;
 import com.inventory.response.RestaurantOrderedResponse;
+import com.inventory.response.ReturnedProductsResponse;
+import com.inventory.response.MonthWiseReturnedResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,4 +25,8 @@ public interface AdminRestaurantOrderService {
     ApiResponse<List<IssuedProductsResponse>> getAllIssuedProductsToRestaurant(Long restaurantId);
 
     ApiResponse<List<MonthWiseIssuedResponse>> getMonthWiseIssuedProductsToRestaurant(Long restaurantId, Integer productId);
+
+    ApiResponse<List<ReturnedProductsResponse>> getAllReturnedProductsToRestaurant(Long restaurantId);
+
+    ApiResponse<List<MonthWiseReturnedResponse>> getMonthWiseReturnedProductsToRestaurant(Long restaurantId, Integer productId);
 }

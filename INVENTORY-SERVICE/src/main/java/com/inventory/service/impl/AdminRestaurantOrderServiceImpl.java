@@ -387,4 +387,99 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
         }
     }
 
+    @Override
+    public ApiResponse<List<ReturnedProductsResponse>> getAllReturnedProductsToRestaurant(Long restaurantId) {
+        try {
+            // 1. Fetch data from Repo
+            List<Object[]> response = adminOrderItemRepository.findReturnedProducts(restaurantId);
+
+            if (CollectionUtils.isEmpty(response)) {
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "No returned products found", null);
+            }
+
+            // 2. Map to DTO
+            List<ReturnedProductsResponse> returnedProducts = response.stream()
+                    .map(record -> {
+                        ReturnedProductsResponse res = new ReturnedProductsResponse();
+                        res.setId((Integer) record[0]);
+                        res.setProductName((String) record[1]);
+                        res.setProductId((String) record[2]);
+                        res.setCapacityMl((Integer) record[3]);
+                        res.setTotalReturnedQuantity(((Long) record[4]).intValue());
+                        return res;
+                    })
+                    .collect(Collectors.toList());
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Returned products fetched successfully", returnedProducts);
+        } catch (Exception e) {
+            log.error("Error fetching returned products: {}", e.getMessage(), e);
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch returned products", null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<MonthWiseReturnedResponse>> getMonthWiseReturnedProductsToRestaurant(Long restaurantId, Integer productId) {
+        try {
+            // 1. Fetch Date-wise data
+            List<Object[]> response = adminOrderItemRepository.findDateWiseReturnedQty(restaurantId, productId);
+
+            if (response.isEmpty()) {
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "No return history found", List.of());
+            }
+
+            DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+            // 2. Group by Month (using a LinkedHashMap to keep order)
+            Map<String, List<Object[]>> monthMap = response.stream()
+                    .collect(Collectors.groupingBy(
+                            r -> {
+                                // Handle potential SQL Date vs Local Date types safely
+                                java.sql.Date sqlDate = (java.sql.Date) r[0];
+                                return sqlDate.toLocalDate().format(monthFormatter);
+                            },
+                            LinkedHashMap::new,
+                            Collectors.toList()
+                    ));
+
+            List<MonthWiseReturnedResponse> monthWiseResponse = new ArrayList<>();
+
+            // 3. Process each month
+            for (Map.Entry<String, List<Object[]>> entry : monthMap.entrySet()) {
+                String monthYear = entry.getKey();
+                List<Object[]> monthRows = entry.getValue();
+
+                // Calculate Month Total
+                int monthTotal = monthRows.stream()
+                        .mapToInt(r -> ((Long) r[1]).intValue())
+                        .sum();
+
+                // Group by Date (in case multiple returns happen on same day)
+                Map<String, Integer> dateMap = new LinkedHashMap<>();
+                for (Object[] r : monthRows) {
+                    java.sql.Date sqlDate = (java.sql.Date) r[0];
+                    LocalDate date = sqlDate.toLocalDate();
+                    int qty = ((Long) r[1]).intValue();
+                    dateMap.merge(date.format(dateFormatter), qty, Integer::sum);
+                }
+
+                // Create Daily List
+                List<DateWiseReturnedResponse> dateWiseList = dateMap.entrySet().stream()
+                        .map(e -> new DateWiseReturnedResponse(e.getKey(), e.getValue()))
+                        .toList();
+
+                // Add to Final List
+                monthWiseResponse.add(
+                        new MonthWiseReturnedResponse(monthYear, monthTotal, dateWiseList)
+                );
+            }
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Month-wise returned details fetched", monthWiseResponse);
+
+        } catch (Exception e) {
+            log.error("Error fetching month-wise returns: {}", e.getMessage(), e);
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch return details", null);
+        }
+    }
+
 }
