@@ -664,68 +664,6 @@ public class UserServiceImpl implements UserService {
         }
     }
 
-//    @Override
-//    public ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
-//        try {
-//            UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
-//            if (request == null) {
-//                return new ApiResponse<>(AuthConstant.ERROR, "Please provide valid request", null);
-//            }
-//
-//            Optional<User> userOptional = userRepository.findById(request.getUserId());
-//            if (userOptional.isPresent()) {
-//                User user = userOptional.get();
-//
-//                Optional.ofNullable(request.getFullName()).ifPresent(user::setFullName);
-//
-//                // Validate and update phone number
-//                if (request.getPhoneNumber() != null) {
-//                    Optional<User> otherUserOptional =
-//                            userRepository.findByPhoneNumber(request.getPhoneNumber());
-//
-//                    if (otherUserOptional.isPresent()
-//                            && !otherUserOptional.get().getId().equals(user.getId())) {
-//
-//                        return new ApiResponse<>(AuthConstant.ERROR, "Phone number already in use by another user", null);
-//                    }
-//
-//                    user.setPhoneNumber(request.getPhoneNumber());
-//                }
-//                if (request.getSecondaryNumber() != null) {
-//                    user.setSecondaryNumber(request.getSecondaryNumber());
-//                }
-//
-//                // 4. Update Date of Birth
-//                if (StringUtils.hasText(request.getDateOfBirth())) {
-//                    try {
-//                        LocalDate dob = LocalDate.parse(request.getDateOfBirth(), DateTimeFormatter.ISO_LOCAL_DATE);
-//                        user.setDateOfBirth(dob);
-//                    } catch (DateTimeParseException e) {
-//                        return new ApiResponse<>(AuthConstant.ERROR, "Invalid Date of Birth format. Use YYYY-MM-DD", null);
-//                    }
-//                }
-//
-//                // save profile image if present
-//                String profileImageUrl = null;
-//                if (profileImage != null && !profileImage.isEmpty()) {
-//                    profileImageUrl = notificationFeignClientService.uploadImage("profile", profileImage);
-//                    user.setProfilePictureUrl(profileImageUrl);
-//                }
-//
-//                User updatedUser = userRepository.save(user);
-//
-//                ApiResponse<CustomerProfileResponse> customerProfileResponse = getCustomerProfileDetails(updatedUser.getId());
-//
-//                return new ApiResponse<>(AuthConstant.SUCCESS, "User profile updated successfully", customerProfileResponse.getData());
-//            }
-//
-//            return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            return new ApiResponse<>(AuthConstant.ERROR, "Error on updating profile details", null);
-//        }
-//    }
-
 
     @Override
     public ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
