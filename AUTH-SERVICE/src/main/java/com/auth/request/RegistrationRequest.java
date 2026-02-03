@@ -20,6 +20,7 @@ public class RegistrationRequest {
     private String email;
     @NotNull(message = "Phone number cannot be null")
     private String phoneNumber;
+    private String gender;
     private String password;
     @JsonFormat(pattern = "dd-MM-yyyy")
     private LocalDate dateOfBirth;

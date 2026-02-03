@@ -387,4 +387,90 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
         }
     }
 
+    @Override
+    public ApiResponse<List<ReturnedProductsResponse>> getAllReturnedProductsToRestaurant(Long restaurantId) {
+        try {
+            // Fetch data
+            List<Object[]> response = adminOrderItemRepository.findReturnedProducts(restaurantId);
+
+            if (CollectionUtils.isEmpty(response)) {
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "No returned products found", null);
+            }
+
+            // Map to DTO
+            List<ReturnedProductsResponse> returnedProducts = response.stream()
+                    .map(record -> {
+                        ReturnedProductsResponse res = new ReturnedProductsResponse();
+                        res.setId((Integer) record[0]);
+                        res.setProductName((String) record[1]);
+                        res.setProductId((String) record[2]);
+                        res.setCapacityMl((Integer) record[3]);
+                        res.setTotalReturnedQuantity(((Long) record[4]).intValue());
+                        return res;
+                    })
+                    .collect(Collectors.toList());
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Returned products fetched successfully", returnedProducts);
+        } catch (Exception e) {
+            log.error("Error fetching returned products: {}", e.getMessage(), e);
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch returned products", null);
+        }
+    }
+
+    @Override
+    public ApiResponse<List<MonthWiseReturnedResponse>> getMonthWiseReturnedProductsToRestaurant(Long restaurantId, Integer productId) {
+        try {
+            List<Object[]> response = adminOrderItemRepository.findDateWiseReturnedQty(restaurantId, productId);
+
+            if (response.isEmpty()) {
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "No return history found", List.of());
+            }
+
+            DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+            // Group by Month
+            Map<String, List<Object[]>> monthMap = response.stream()
+                    .collect(Collectors.groupingBy(
+                            r -> {
+                                java.sql.Date sqlDate = (java.sql.Date) r[0];
+                                return sqlDate.toLocalDate().format(monthFormatter);
+                            },
+                            LinkedHashMap::new,
+                            Collectors.toList()
+                    ));
+
+            List<MonthWiseReturnedResponse> monthWiseResponse = new ArrayList<>();
+
+            for (Map.Entry<String, List<Object[]>> entry : monthMap.entrySet()) {
+                String monthYear = entry.getKey();
+                List<Object[]> monthRows = entry.getValue();
+
+                int monthTotal = monthRows.stream()
+                        .mapToInt(r -> ((Long) r[1]).intValue())
+                        .sum();
+
+                Map<String, Integer> dateMap = new LinkedHashMap<>();
+                for (Object[] r : monthRows) {
+                    java.sql.Date sqlDate = (java.sql.Date) r[0];
+                    LocalDate date = sqlDate.toLocalDate();
+                    int qty = ((Long) r[1]).intValue();
+                    dateMap.merge(date.format(dateFormatter), qty, Integer::sum);
+                }
+
+                List<DateWiseReturnedResponse> dateWiseList = dateMap.entrySet().stream()
+                        .map(e -> new DateWiseReturnedResponse(e.getKey(), e.getValue()))
+                        .toList();
+
+                monthWiseResponse.add(new MonthWiseReturnedResponse(monthYear, monthTotal, dateWiseList));
+            }
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Month-wise returned details fetched", monthWiseResponse);
+
+        } catch (Exception e) {
+            log.error("Error fetching month-wise returns: {}", e.getMessage(), e);
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch return details", null);
+        }
+    }
+
 }
