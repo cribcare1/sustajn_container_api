@@ -323,8 +323,6 @@ public class UserServiceImpl implements UserService {
                         ? bankRepo.findById(r.getId()).orElse(new BankDetails())
                         : new BankDetails();
 
-                bankRow.setUserId(r.getUserId());
-
                 Optional.ofNullable(r.getBankName()).ifPresent(bankRow::setBankName);
                 Optional.ofNullable(r.getAccountHolderName()).ifPresent(bankRow::setAccountHolderName);
                 Optional.ofNullable(r.getIBanNumber()).ifPresent(bankRow::setIBanNumber);
@@ -339,8 +337,6 @@ public class UserServiceImpl implements UserService {
                 BankDetails cardRow = (r.getId() != null)
                         ? bankRepo.findById(r.getId()).orElse(new BankDetails())
                         : new BankDetails();
-
-                cardRow.setUserId(r.getUserId());
 
                 Optional.ofNullable(r.getCardHolderName()).ifPresent(cardRow::setCardHolderName);
                 Optional.ofNullable(r.getCardNumber()).ifPresent(cardRow::setCardNumber);
@@ -358,8 +354,6 @@ public class UserServiceImpl implements UserService {
                         ? bankRepo.findById(r.getId()).orElse(new BankDetails())
                         : new BankDetails();
 
-                payRow.setUserId(r.getUserId());
-
                 Optional.ofNullable(r.getPaymentGatewayId()).ifPresent(payRow::setPaymentGatewayId);
                 Optional.ofNullable(r.getPaymentGatewayName()).ifPresent(payRow::setPaymentGatewayName);
 
@@ -369,7 +363,7 @@ public class UserServiceImpl implements UserService {
             CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(bankDetails.getUserId()).getData();
 
 
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Details updated successfully", customerProfileResponse);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank Details updated successfully", customerProfileResponse);
 
         } catch (Exception e) {
             return new ApiResponse<>(AuthConstant.ERROR, "Error on updating details", null);
@@ -715,6 +709,7 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+
     @Override
     public ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
         try {
@@ -724,58 +719,97 @@ public class UserServiceImpl implements UserService {
             }
 
             Optional<User> userOptional = userRepository.findById(request.getUserId());
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-
-                Optional.ofNullable(request.getFullName()).ifPresent(user::setFullName);
-
-                // Validate and update phone number
-                if (request.getPhoneNumber() != null) {
-                    Optional<User> otherUserOptional =
-                            userRepository.findByPhoneNumber(request.getPhoneNumber());
-
-                    if (otherUserOptional.isPresent()
-                            && !otherUserOptional.get().getId().equals(user.getId())) {
-
-                        return new ApiResponse<>(AuthConstant.ERROR, "Phone number already in use by another user", null);
-                    }
-
-                    user.setPhoneNumber(request.getPhoneNumber());
-                }
-                if (request.getSecondaryNumber() != null) {
-                    user.setSecondaryNumber(request.getSecondaryNumber());
-                }
-
-                // 4. Update Date of Birth
-                if (StringUtils.hasText(request.getDateOfBirth())) {
-                    try {
-                        LocalDate dob = LocalDate.parse(request.getDateOfBirth(), DateTimeFormatter.ISO_LOCAL_DATE);
-                        user.setDateOfBirth(dob);
-                    } catch (DateTimeParseException e) {
-                        return new ApiResponse<>(AuthConstant.ERROR, "Invalid Date of Birth format. Use YYYY-MM-DD", null);
-                    }
-                }
-
-                // save profile image if present
-                String profileImageUrl = null;
-                if (profileImage != null && !profileImage.isEmpty()) {
-                    profileImageUrl = notificationFeignClientService.uploadImage("profile", profileImage);
-                    user.setProfilePictureUrl(profileImageUrl);
-                }
-
-                User updatedUser = userRepository.save(user);
-
-                ApiResponse<CustomerProfileResponse> customerProfileResponse = getCustomerProfileDetails(updatedUser.getId());
-
-                return new ApiResponse<>(AuthConstant.SUCCESS, "User profile updated successfully", customerProfileResponse.getData());
+            if (userOptional.isEmpty()) {
+                return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
             }
 
-            return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
+            User user = userOptional.get();
+            List<String> updatedFields = new ArrayList<>();
+
+            // Full Name
+            if (StringUtils.hasText(request.getFullName())
+                    && !request.getFullName().equals(user.getFullName())) {
+                user.setFullName(request.getFullName());
+                updatedFields.add("Full name");
+            }
+
+            // Phone Number
+            if (request.getPhoneNumber() != null
+                    && !request.getPhoneNumber().equals(user.getPhoneNumber())) {
+
+                Optional<User> otherUserOptional =
+                        userRepository.findByPhoneNumber(request.getPhoneNumber());
+
+                if (otherUserOptional.isPresent()
+                        && !otherUserOptional.get().getId().equals(user.getId())) {
+
+                    return new ApiResponse<>(AuthConstant.ERROR,
+                            "Phone number already in use by another user", null);
+                }
+
+                user.setPhoneNumber(request.getPhoneNumber());
+                updatedFields.add("Phone number");
+            }
+
+            // Secondary Number
+            if (request.getSecondaryNumber() != null
+                    && !request.getSecondaryNumber().equals(user.getSecondaryNumber())) {
+                user.setSecondaryNumber(request.getSecondaryNumber());
+                updatedFields.add("Secondary number");
+            }
+
+            // Date of Birth
+            if (StringUtils.hasText(request.getDateOfBirth())) {
+                try {
+                    LocalDate dob = LocalDate.parse(
+                            request.getDateOfBirth(),
+                            DateTimeFormatter.ISO_LOCAL_DATE
+                    );
+
+                    if (!dob.equals(user.getDateOfBirth())) {
+                        user.setDateOfBirth(dob);
+                        updatedFields.add("Date of birth");
+                    }
+                } catch (DateTimeParseException e) {
+                    return new ApiResponse<>(AuthConstant.ERROR,
+                            "Invalid Date of Birth format. Use YYYY-MM-DD", null);
+                }
+            }
+
+            // Profile Image
+            if (profileImage != null && !profileImage.isEmpty()) {
+                String profileImageUrl =
+                        notificationFeignClientService.uploadImage("profile", profileImage);
+                user.setProfilePictureUrl(profileImageUrl);
+                updatedFields.add("Profile image");
+            }
+
+            userRepository.save(user);
+
+            ApiResponse<CustomerProfileResponse> customerProfileResponse =
+                    getCustomerProfileDetails(user.getId());
+
+            // Dynamic message
+            String message;
+            if (updatedFields.isEmpty()) {
+                message = "No changes detected";
+            } else {
+                message = String.join(", ", updatedFields) + " updated successfully";
+            }
+
+            return new ApiResponse<>(
+                    AuthConstant.SUCCESS,
+                    message,
+                    customerProfileResponse.getData()
+            );
+
         } catch (Exception e) {
             e.printStackTrace();
-            return new ApiResponse<>(AuthConstant.ERROR, "Error on updating profile details", null);
+            return new ApiResponse<>(AuthConstant.ERROR,
+                    "Error on updating profile details", null);
         }
     }
+
 
 
     public Map<String, Object> changePassword(Long userId, String newPassword) {
@@ -1338,7 +1372,7 @@ public class UserServiceImpl implements UserService {
         );
 
         // Base ID
-        String baseId = namePart + datePart;
+        String baseId = namePart+ "-" + datePart;
 
         // Fetch existing IDs from DB
         List<String> existingIds = userRepository.findCustomerIdStartingWith(baseId);
