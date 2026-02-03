@@ -56,12 +56,12 @@ public interface AdminOrderItemRepository extends JpaRepository<AdminOrderItem,L
         JOIN ContainerType ct ON ct.id = oi.containerTypeId
         WHERE o.restaurantId = :restaurantId
           AND o.status = com.inventory.Constant.AdminOrderStatus.APPROVED 
-          AND o.type = 'RETURN'  
+          AND o.type = com.inventory.Constant.TransactionType.RETURN  -- ✅ ONLY RETURNS
         GROUP BY ct.id, ct.name, ct.productId, ct.capacityMl
     """)
     List<Object[]> findReturnedProducts(@Param("restaurantId") Long restaurantId);
 
-    // 2. Corrected Date-wise Query
+    // 2. Get Date-wise History for a Specific Returned Product
     @Query(value = """
     SELECT 
         DATE(o.order_date) as order_date, 
@@ -70,7 +70,7 @@ public interface AdminOrderItemRepository extends JpaRepository<AdminOrderItem,L
     JOIN admin_orders o ON o.id = oi.admin_order_id
     WHERE o.restaurant_id = :restaurantId 
       AND o.status = 'APPROVED'
-      AND o.type = 'RETURN'      
+      AND o.type = 'RETURN'       -- ✅ ONLY RETURNS
       AND oi.container_type_id = :productId
     GROUP BY DATE(o.order_date)
     ORDER BY DATE(o.order_date) DESC""", nativeQuery = true)

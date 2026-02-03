@@ -40,7 +40,7 @@ public class AdminRestaurantOrderController {
         return ResponseEntity.ok(response);
     }
 
-    // 2. Get Detailed Return History (Month-wise)
+    // 2. Get Detailed History
     @GetMapping("/monthWiseReturnedProducts")
     public ResponseEntity<ApiResponse> getMonthWiseReturnedProductsToRestaurant(
             @RequestParam Long restaurantId,
