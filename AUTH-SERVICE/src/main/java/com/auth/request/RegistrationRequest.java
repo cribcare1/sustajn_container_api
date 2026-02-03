@@ -14,6 +14,7 @@ import java.util.List;
 public class RegistrationRequest {
 
     // ========== USER REGISTRATION PART ==========
+    private Long userId;
     private String fullName;
     @NotNull(message = "Email cannot be null")
     private String email;
@@ -21,7 +22,7 @@ public class RegistrationRequest {
     private String phoneNumber;
     private String gender;
     private String password;
-    @JsonFormat(pattern = "yyyy-MM-dd")
+    @JsonFormat(pattern = "dd-MM-yyyy")
     private LocalDate dateOfBirth;
     private AddressRequest address;
     private Double latitude;
@@ -49,6 +50,7 @@ public class RegistrationRequest {
     @AllArgsConstructor
     @Builder
     public static class BasicDetails {
+        private Long id;
         private String businessType;
         private String websiteDetails;
         private String cuisine;
@@ -94,6 +96,7 @@ public class RegistrationRequest {
     @AllArgsConstructor
     @Builder
     public static class SocialMediaRequest {
+        private Long id;
         private String socialMediaType;
         private String link;
     }
@@ -104,6 +107,7 @@ public class RegistrationRequest {
     @NoArgsConstructor
     @Builder
     public static class ContactAndRegistrationDetailsRequest {
+        private Long id;
         private String contactPersonName;
         private String contactEmail;
         private String treadLicenseNumber;

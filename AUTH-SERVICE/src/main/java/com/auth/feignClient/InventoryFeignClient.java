@@ -1,6 +1,5 @@
 package com.auth.feignClient;
 
-
 import com.auth.config.FeignMultipartConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;

@@ -55,48 +55,113 @@ public interface UserRepository extends JpaRepository<User,Long> {
     List<String> findCustomerIdStartingWith(String baseId);
 
 
+    @Query(value = """
+    SELECT 
+        u.user_id,
+        u.full_name,
+        u.phone_number,
+        u.customer_id,
+        u.email,
+        u.profile_picture_url,
+        u.subscription_plan_id,
 
-    @Query("""
-SELECT 
-    u.id,
-    u.fullName,
-    u.phoneNumber,
-    u.customerId,
-    u.email,
-    u.profilePictureUrl,
-    u.subscriptionPlanId,
+        b.id,
+        b.bank_name,
+        b.account_holder_name,
+        b.i_ban_number,
+        b.bic_number,
 
-    b1.id, b1.bankName, b1.accountHolderName, b1.iBanNumber, b1.bicNumber,
+        c.id,
+        c.card_holder_name,
+        c.card_number,
+        c.expiry_date,
 
-    c1.id, c1.cardHolderName, c1.cardNumber, c1.expiryDate,
+        p.id,
+        p.payment_gateway_id,
+        p.payment_gateway_name,
 
-    p1.id, p1.paymentGatewayId, p1.paymentGatewayName,
+        u.secondary_number,
+        u.date_of_birth,
 
-    a.id, a.addressType, a.flatDoorHouseDetails, 
-    a.areaStreetCityBlockDetails, a.poBoxOrPostalCode,
-    u.secondaryNumber,
-    u.dateOfBirth,
+        ca.id,
+        ca.contact_person_name,
+        ca.contact_email,
+        ca.tread_license_number,
+        ca.vat_number,
+        ca.contact_number,
+        ca.registration_number,
+
+        COALESCE(
+            json_agg(
+                DISTINCT jsonb_build_object(
+                    'id', a.id,
+                    'addressType', a.address_type,
+                    'flatDoorHouseDetails', a.flat_door_house_details,
+                    'areaStreetCityBlockDetails', a.area_street_city_block_details,
+                    'poBoxOrPostalCode', a.po_box_or_postal_code
+                )
+            ) FILTER (WHERE a.id IS NOT NULL),
+            '[]'
+        ) AS addresses,
+        
+        COALESCE(
+            json_agg(
+                DISTINCT jsonb_build_object(
+                    'id', social.id,
+                    'socialMediaType', social.social_media_type,
+                    'link', social.link
+                )
+            ) FILTER (WHERE social.id IS NOT NULL),
+            '[]'
+        ) AS socialMediaDetails,
+        
+        business.id,
+        business.business_type,
+        business.website_details
+
+    FROM users u
+
+    LEFT JOIN bank_details b 
+        ON b.user_id = u.user_id 
+       AND b.bank_name IS NOT NULL 
+       AND b.status = 'active'
+
+    LEFT JOIN bank_details c 
+        ON c.user_id = u.user_id 
+       AND c.card_number IS NOT NULL 
+       AND c.status = 'active'
+
+    LEFT JOIN bank_details p 
+        ON p.user_id = u.user_id 
+       AND p.payment_gateway_id IS NOT NULL 
+       AND p.status = 'active'
+
+    LEFT JOIN contact_registration_details ca 
+        ON ca.user_id = u.user_id
+
+    LEFT JOIN address a 
+        ON a.user_id = u.user_id 
+       AND a.status = 'active'
     
-    ca.id, ca.contactPersonName, ca.contactEmail, ca.treadLicenseNumber, ca.vatNumber, ca.contactNumber, ca.registrationNumber
+    LEFT JOIN social_media_details social
+        ON social.restaurant_id = u.user_id
     
-FROM User u
+    LEFT JOIN  basic_restaurant_details business
+        ON business.restaurant_id = u.user_id
 
-LEFT JOIN BankDetails b1 
-    ON b1.userId = u.id AND b1.bankName IS NOT NULL AND b1.status = 'active'
+    WHERE u.user_id = :userId
 
-LEFT JOIN BankDetails c1 
-    ON c1.userId = u.id AND c1.cardNumber IS NOT NULL AND c1.status = 'active'
-
-LEFT JOIN BankDetails p1 
-    ON p1.userId = u.id AND p1.paymentGatewayId IS NOT NULL AND p1.status = 'active'
-    
-LEFT JOIN ContactRegistrationDetails ca ON ca.userId = u.id
-
-LEFT JOIN Address a ON a.userId = u.id
-
-WHERE u.id = :userId
-""")
+    GROUP BY 
+        u.user_id,
+        b.id,
+        c.id,
+        p.id,
+        ca.id,
+        business.id
+""", nativeQuery = true)
     List<Object[]> getCustomerProfileDetailsByUserId(@Param("userId") Long userId);
+
+
 
 
     Optional<User> findByPhoneNumber(String phoneNumber);
