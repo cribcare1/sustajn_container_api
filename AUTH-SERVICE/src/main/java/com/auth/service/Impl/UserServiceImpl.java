@@ -508,7 +508,10 @@ public class UserServiceImpl implements UserService {
                             (Boolean) data.get("includesMarketing"),
                             (Boolean) data.get("includesAnalytics"),
                             (String) data.get("billingCycle"),
-                            (String) data.get("planStatus")
+                            (String) data.get("planStatus"),
+                            (String) data.get("userType"),
+                            LocalDateTime.parse((String) data.get("createdAt")),
+                            LocalDateTime.parse((String) data.get("updatedAt"))
                     );
 
                     response.setSubscriptionResponse(subscription);
@@ -1647,7 +1650,10 @@ public class UserServiceImpl implements UserService {
                         (Boolean) data.get("includesMarketing"),
                         (Boolean) data.get("includesAnalytics"),
                         (String) data.get("billingCycle"),
-                        (String) data.get("planStatus")
+                        (String) data.get("planStatus"),
+                        (String) data.get("userType"),
+                        LocalDateTime.parse((String) data.get("createdAt")),
+                        LocalDateTime.parse((String) data.get("updatedAt"))
                 );
             }
         } catch (Exception e) {

@@ -10,6 +10,7 @@ import lombok.Setter;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -48,5 +49,11 @@ public class SubscriptionResponse {
     private String billingCycle;
 
     private String planStatus;
+
+    private String userType;
+
+    private LocalDateTime createdAt;
+
+    private LocalDateTime updatedAt;
 
 }
