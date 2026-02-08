@@ -127,4 +127,11 @@ public class OrderController {
                         null)
         );
     }
+
+
+    // Get most and least used container for a restaurant
+    @GetMapping("/mostLeastUsedContainer/{restaurantId}")
+    public ResponseEntity<?> getMostAndLeastUsedContainer(@PathVariable Long restaurantId) {
+        return ResponseEntity.ok(orderService.getMostAndLeastUsedContainer(restaurantId));
+    }
 }

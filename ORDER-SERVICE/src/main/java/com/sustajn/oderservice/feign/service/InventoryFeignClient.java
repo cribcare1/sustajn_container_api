@@ -3,6 +3,7 @@ package com.sustajn.oderservice.feign.service;
 import com.sustajn.oderservice.config.FeignClientConfig;
 import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.ProductResponse;
+import com.sustajn.oderservice.dto.RestaurantContainerInventoryResponse;
 import com.sustajn.oderservice.dto.RestaurantOrderedResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +24,11 @@ public interface InventoryFeignClient {
 
     @GetMapping("/inventory/restaurantOrders/orderHistory/{restaurantId}")
     ApiResponse<List<RestaurantOrderedResponse>> getOrderHistory(
+            @PathVariable("restaurantId") Long restaurantId
+    );
+
+    @GetMapping("/inventory/getAllResturantInventory/{restaurantId}")
+    ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(
             @PathVariable("restaurantId") Long restaurantId
     );
 

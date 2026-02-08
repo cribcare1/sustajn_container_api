@@ -32,4 +32,6 @@ public interface OrderService {
     ApiResponse<List<LeasedReturnedMonthYearResponse>> getLeasedReturnedMonthYearDetails(LeasedReturnedGraphInput leasedReturnedGraphInput);
 
     ApiResponse<List<LeasedReturnedCountWithTimeGraphResponse>> getLeasedReturnedCountWithTimeGraph(LeasedReturnedGraphInput leasedReturnedGraphInput);
+
+    ApiResponse<MostAndLeastUsedContainerResponse> getMostAndLeastUsedContainer(Long restaurantId);
 }

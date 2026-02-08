@@ -2,6 +2,7 @@ package com.inventory.repository;
 
 import com.inventory.dto.RestaurantInventoryViewResponse;
 import com.inventory.entity.AdminRestaurantInventoryDetails;
+import com.inventory.response.RestaurantContainerInventoryResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,5 +32,23 @@ public interface AdminRestaurantInventoryDetailsRepository extends JpaRepository
 """)
     List<RestaurantInventoryViewResponse> getRestaurantInventoryLogs(@Param("restaurantId") Long restaurantId);
 
+
+    @Query("""
+    SELECT new com.inventory.response.RestaurantContainerInventoryResponse(
+        r.id,
+        r.restaurantId,
+        r.containerTypeId,
+        c.name,
+        c.productId,
+        c.imageUrl,
+        c.capacityMl,
+        r.currentQuantity
+    )
+    FROM RestaurantContainerInventory r
+    JOIN ContainerType c 
+        ON r.containerTypeId = c.id AND c.status = 'active'                                 
+    WHERE r.restaurantId = :restaurantId
+""")
+    List<RestaurantContainerInventoryResponse> getRestaurantContainerInventoryByRestaurantId(Long restaurantId);
 
 }
