@@ -5,10 +5,7 @@ import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
 import com.inventory.dto.ProductResponse;
 import com.inventory.dto.RestaurantInventoryViewResponse;
-import com.inventory.entity.AdminInventoryMaster;
-import com.inventory.entity.AdminInventoryMasterAudit;
-import com.inventory.entity.AdminRestaurantInventoryDetails;
-import com.inventory.entity.ContainerType;
+import com.inventory.entity.*;
 import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
 import com.inventory.exception.ResourceNotFoundException;
@@ -18,12 +15,15 @@ import com.inventory.repository.AdminInventoryMasterRepository;
 import com.inventory.repository.AdminRestaurantInventoryDetailsRepository;
 import com.inventory.repository.ContainerTypeRepository;
 import com.inventory.request.*;
+import com.inventory.response.ApiResponse;
+import com.inventory.response.RestaurantContainerInventoryResponse;
 import com.inventory.service.InventoryService;
 import com.inventory.util.DateTimeUtil;
 import com.inventory.util.FileStorageUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
@@ -568,6 +568,20 @@ public class InventoryServiceImpl implements InventoryService {
             throw new IllegalArgumentException("Product ID list cannot be empty");
         }
         return containerTypeRepository.findProductResponsesByIds(ids);
+    }
+
+    @Override
+    public ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(Long restaurantId) {
+        try {
+                List<RestaurantContainerInventoryResponse> restaurantContainerInventoryResponses = adminRestaurantInventoryDetailsRepository.getRestaurantContainerInventoryByRestaurantId(restaurantId);
+
+                if (CollectionUtils.isEmpty(restaurantContainerInventoryResponses)) {
+                    return new ApiResponse<>(InventoryConstant.SUCCESS, "No inventory data found for restaurantId: " + restaurantId, null);
+                }
+                return new ApiResponse<>(InventoryConstant.SUCCESS, "Inventory data found successfully ", restaurantContainerInventoryResponses);
+        } catch (Exception e) {
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch inventory data for restaurantId: " + restaurantId, null);
+        }
     }
 
 }

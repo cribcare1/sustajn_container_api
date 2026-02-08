@@ -54,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
             order.setUserId(request.getUserId());
             order.setOrderDate(LocalDateTime.now());
             order.setTransactionId(UUID.randomUUID().toString());
+            order.setOrderStatus(OrderServiceConstant.PENDING);
 
             orderRepository.save(order);
 
@@ -591,6 +592,142 @@ public class OrderServiceImpl implements OrderService {
             );
         }
     }
+
+
+    @Override
+    public ApiResponse<MostAndLeastUsedContainerResponse> getMostAndLeastUsedContainer(Long restaurantId) {
+        try {
+            // 1. Borrow usage from order DB
+            List<Object[]> usageList =
+                    borrowOrderRepository.findUsageByRestaurant(restaurantId);
+
+            if (usageList == null || usageList.isEmpty()) {
+                return new ApiResponse<>(
+                        OrderServiceConstant.STATUS_SUCCESS,
+                        "No borrow data found",
+                        new MostAndLeastUsedContainerResponse(List.of(), List.of())
+                );
+            }
+
+            // 2. Inventory from Inventory service
+            ApiResponse<List<RestaurantContainerInventoryResponse>> inventoryResp =
+                    inventoryFeignClient.getRestaurantContainerInventoryByRestaurantId(restaurantId);
+
+            List<RestaurantContainerInventoryResponse> inventoryList =
+                    inventoryResp.getData();
+
+            if (inventoryList == null || inventoryList.isEmpty()) {
+                return new ApiResponse<>(
+                        OrderServiceConstant.STATUS_SUCCESS,
+                        "No inventory data found",
+                        new MostAndLeastUsedContainerResponse(List.of(), List.of())
+                );
+            }
+
+            // 3. Map inventory by productUniqueId
+            Map<Integer, RestaurantContainerInventoryResponse> inventoryMap =
+                    inventoryList.stream().collect(
+                            Collectors.toMap(
+                                    RestaurantContainerInventoryResponse::getContainerTypeId,
+                                    i -> i
+                            )
+                    );
+
+            // 4. Calculate percentage for each product
+            List<ProductUsageTemp> tempList = new ArrayList<>();
+
+            for (Object[] obj : usageList) {
+                Long productId = ((Number) obj[0]).longValue();
+                long borrowCount = ((Number) obj[1]).longValue();
+
+                RestaurantContainerInventoryResponse inv =
+                        inventoryMap.get(productId.intValue());
+
+                if (inv == null || inv.getCurrentQuantity() == null
+                        || inv.getCurrentQuantity() == 0) continue;
+
+                double percentage =
+                        round((borrowCount * 100.0) / inv.getCurrentQuantity());
+
+                tempList.add(new ProductUsageTemp(inv, percentage));
+            }
+
+            if (tempList.isEmpty()) {
+                return new ApiResponse<>(
+                        OrderServiceConstant.STATUS_SUCCESS,
+                        "No matching inventory found",
+                        new MostAndLeastUsedContainerResponse(List.of(), List.of())
+                );
+            }
+
+            // 5. Find MAX and MIN percentages
+            double maxPercentage = tempList.stream()
+                    .mapToDouble(ProductUsageTemp::getPercentage)
+                    .max()
+                    .orElse(0);
+
+            double minPercentage = tempList.stream()
+                    .mapToDouble(ProductUsageTemp::getPercentage)
+                    .min()
+                    .orElse(0);
+
+            List<MostUsedContainerResponse> mostUsedList = new ArrayList<>();
+            List<LeastUsedContainerResponse> leastUsedList = new ArrayList<>();
+
+            // 6. Collect ALL ties
+            for (ProductUsageTemp temp : tempList) {
+                double percentage = temp.getPercentage();
+                RestaurantContainerInventoryResponse inv = temp.getInventory();
+
+                if (Double.compare(percentage, maxPercentage) == 0) {
+                    mostUsedList.add(new MostUsedContainerResponse(
+                            inv.getContainerTypeId(),
+                            percentage,
+                            inv.getContainerTypeName(),
+                            inv.getProductUniqueId(),
+                            inv.getCapacity(),
+                            inv.getProductImageUrl()
+                    ));
+                }
+
+                if (Double.compare(percentage, minPercentage) == 0) {
+                    leastUsedList.add(new LeastUsedContainerResponse(
+                            inv.getContainerTypeId(),
+                            percentage,
+                            inv.getContainerTypeName(),
+                            inv.getProductUniqueId(),
+                            inv.getCapacity(),
+                            inv.getProductImageUrl()
+                    ));
+                }
+            }
+
+            return new ApiResponse<>(
+                    OrderServiceConstant.STATUS_SUCCESS,
+                    "Fetched successfully",
+                    new MostAndLeastUsedContainerResponse(
+                            mostUsedList,
+                            leastUsedList
+                    )
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>(
+                    OrderServiceConstant.STATUS_ERROR,
+                    "Failed to fetch most and least used container",
+                    null
+            );
+        }
+    }
+
+
+
+    private double round(double value) {
+        return Math.round(value * 100.0) / 100.0;
+    }
+
+
 
 
     private Map<String, Object> handleReturnError(Exception ex) {

@@ -220,4 +220,13 @@ public class InventoryController {
         Map<String, Object> response = adminOrderService.getAvailableContainers(restaurantId);
         return ResponseEntity.ok(response);
     }
+
+    // get Inventory details
+    @GetMapping("/getAllResturantInventory/{restaurantId}")
+    public ResponseEntity<?> getAllResturantInventory(
+            @PathVariable Long restaurantId
+    ) {
+        return ResponseEntity.ok(inventoryService.getRestaurantContainerInventoryByRestaurantId(restaurantId));
+    }
+
 }

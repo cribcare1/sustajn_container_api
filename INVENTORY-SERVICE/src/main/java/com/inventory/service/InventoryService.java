@@ -3,7 +3,10 @@ package com.inventory.service;
 import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
 import com.inventory.dto.ProductResponse;
+import com.inventory.entity.RestaurantContainerInventory;
 import com.inventory.request.*;
+import com.inventory.response.ApiResponse;
+import com.inventory.response.RestaurantContainerInventoryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,4 +31,6 @@ public interface InventoryService {
     public Map<String, Object> addContainer(AddContainerRequest request, MultipartFile image) ;
 
     List<ProductResponse> getProductsByIds(List<Integer> ids);
+
+    ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(Long restaurantId);
 }

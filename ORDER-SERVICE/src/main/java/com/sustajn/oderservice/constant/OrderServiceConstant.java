@@ -7,4 +7,5 @@ public class OrderServiceConstant {
     public  static final String STATUS="status";
     public static final String LEASED = "leased";
     public static final String RETURNED = "returned";
+    public static final String PENDING = "pending";
 }

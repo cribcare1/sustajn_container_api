@@ -150,4 +150,14 @@ GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
     List<BorrowOrder> findActiveBorrowOrders();
 
     List<BorrowOrder> findByOrderId(Long orderId);
+
+    @Query("""
+    SELECT b.productId, SUM(b.quantity - b.returnedQuantity)
+    FROM BorrowOrder b
+    WHERE b.restaurantId = :restaurantId
+      AND (b.quantity - b.returnedQuantity) > 0
+    GROUP BY b.productId
+""")
+    List<Object[]> findUsageByRestaurant(Long restaurantId);
+
 }
