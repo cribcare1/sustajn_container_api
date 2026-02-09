@@ -21,9 +21,7 @@ public class RestaurantInventoryMaster extends BaseEntity {
     private Integer containerTypeId;
     private Integer totalContainers;
     private Integer availableContainers;
-    private String borrowedContainers;
-    @Enumerated(EnumType.STRING)
-    private StatusEnum status;
+    private Integer borrowedContainers;
 
 }
 

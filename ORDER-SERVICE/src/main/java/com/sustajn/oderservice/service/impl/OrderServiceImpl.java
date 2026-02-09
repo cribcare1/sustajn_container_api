@@ -49,16 +49,41 @@ public class OrderServiceImpl implements OrderService {
 
             validateBorrowRequest(request);
 
-            // 1. Create Order internally
+            // 1. Build qty map
+            Map<Integer, Integer> qtyMap =
+                    request.getItems().stream()
+                            .collect(Collectors.groupingBy(
+                                    item -> item.getProductId().intValue(),
+                                    Collectors.summingInt(
+                                            BorrowItemRequest::getQuantity)
+                            ));
+
+            ReduceInventoryRequest inventoryRequest =
+                    new ReduceInventoryRequest();
+            inventoryRequest.setRestaurantId(request.getRestaurantId());
+            inventoryRequest.setContainerQtyMap(qtyMap);
+
+            // 🔥 CALL INVENTORY FIRST
+            Map<String, Object> response = inventoryFeignClient.checkAvailability(inventoryRequest);
+
+            if (response.get(OrderServiceConstant.STATUS).equals(OrderServiceConstant.STATUS_ERROR)){
+                System.err.println("Inventory check failed: " + response);
+                return ApiResponseUtil.error(
+                        response.get(OrderServiceConstant.MESSAGE) != null
+                                ? response.get(OrderServiceConstant.MESSAGE).toString()
+                                : "Inventory check failed"
+                );
+            }
+
+            // 2. Only if inventory is OK → create order
             Order order = new Order();
             order.setUserId(request.getUserId());
             order.setOrderDate(LocalDateTime.now());
             order.setTransactionId(UUID.randomUUID().toString());
             order.setOrderStatus(OrderServiceConstant.PENDING);
-
             orderRepository.save(order);
 
-            // 2. Create Borrow Orders
+            // 3. Create borrow rows
             for (BorrowItemRequest item : request.getItems()) {
 
                 BorrowOrder borrowOrder = new BorrowOrder();
@@ -114,21 +139,18 @@ public class OrderServiceImpl implements OrderService {
 
         try {
 
-            // 1. Collect productIds
             List<Long> productIds = request.getItems()
                     .stream()
                     .map(ReturnItemRequest::getProductId)
                     .distinct()
                     .toList();
 
-            // 2. Fetch ALL pending borrows at once
             List<BorrowOrder> pendingBorrows =
                     borrowOrderRepository.findAllPendingBorrowsFIFO(
                             request.getUserId(),
                             productIds
                     );
 
-            // 3. Group by productId
             Map<Long, List<BorrowOrder>> borrowsByProduct =
                     pendingBorrows.stream()
                             .collect(Collectors.groupingBy(
@@ -137,10 +159,8 @@ public class OrderServiceImpl implements OrderService {
                                     Collectors.toList()
                             ));
 
-            // ✅ Collect return orders here
             List<ReturnOrder> returnOrdersToSave = new ArrayList<>();
 
-            // 4. Process each return item
             for (ReturnItemRequest item : request.getItems()) {
 
                 int returnQty = item.getQuantity();
@@ -153,17 +173,15 @@ public class OrderServiceImpl implements OrderService {
 
                 for (BorrowOrder borrow : borrows) {
 
-                    int pending = borrow.getQuantity() - borrow.getReturnedQuantity();
+                    int pending =
+                            borrow.getQuantity() - borrow.getReturnedQuantity();
                     if (pending <= 0) continue;
 
                     int used = Math.min(returnQty, pending);
 
-                    // Update BorrowOrder (in-memory)
                     borrow.setReturnedQuantity(
-                            borrow.getReturnedQuantity() + used
-                    );
+                            borrow.getReturnedQuantity() + used);
 
-                    // Create ReturnOrder (collect only)
                     ReturnOrder returnOrder = new ReturnOrder();
                     returnOrder.setBorrowOrderId(borrow.getId());
                     returnOrder.setUserId(request.getUserId());
@@ -178,7 +196,6 @@ public class OrderServiceImpl implements OrderService {
                     if (returnQty == 0) break;
                 }
 
-                // Validation
                 if (returnQty > 0) {
                     throw new IllegalArgumentException(
                             "Return quantity exceeds borrowed quantity for productId="
@@ -187,18 +204,40 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
 
-            // 5. Batch save ReturnOrders
-            returnOrderRepository.saveAll(returnOrdersToSave);
+            // 🔥 UPDATE INVENTORY FIRST
+            Map<Integer, Integer> qtyMap =
+                    request.getItems().stream()
+                            .collect(Collectors.groupingBy(
+                                    item -> item.getProductId().intValue(),
+                                    Collectors.summingInt(
+                                            ReturnItemRequest::getQuantity)
+                            ));
 
-            // 6. Batch update BorrowOrders
+            ReduceInventoryRequest inventoryRequest =
+                    new ReduceInventoryRequest();
+            inventoryRequest.setRestaurantId(request.getRestaurantId());
+            inventoryRequest.setContainerQtyMap(qtyMap);
+
+            Map<String, Object> invResponse =
+                    inventoryFeignClient.increaseContainers(inventoryRequest);
+
+            if (OrderServiceConstant.STATUS_ERROR.equals(invResponse.get(OrderServiceConstant.STATUS))) {
+                return ApiResponseUtil.error(
+                        invResponse.get(OrderServiceConstant.MESSAGE).toString());
+            }
+
+            // Commit DB only if inventory OK
+            returnOrderRepository.saveAll(returnOrdersToSave);
             borrowOrderRepository.saveAll(pendingBorrows);
 
-            return ApiResponseUtil.success("Containers returned successfully");
+            return ApiResponseUtil.success(
+                    "Containers returned successfully");
 
         } catch (Exception ex) {
             return handleReturnError(ex);
         }
     }
+
 
     @Override
     public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status) {
@@ -938,31 +977,100 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
-
+    @Transactional(rollbackOn = Exception.class)
     @Override
     public Map<String, Object> approveOrder(Long orderId) {
 
-        Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        try {
 
-        // If already approved — no update needed
-        if ("APPROVED".equalsIgnoreCase(order.getOrderStatus())) {
-            throw new RuntimeException("Order is already APPROVED");
+            Order order = orderRepository.findById(orderId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException(
+                                    "Order not found with id: " + orderId));
+
+            // Already approved
+            if (OrderServiceConstant.APPROVED
+                    .equalsIgnoreCase(order.getOrderStatus())) {
+                throw new RuntimeException("Order is already APPROVED");
+            }
+
+            // Only pending allowed
+            if (!OrderServiceConstant.PENDING
+                    .equalsIgnoreCase(order.getOrderStatus())) {
+                throw new RuntimeException(
+                        "Only PENDING orders can be approved");
+            }
+
+            List<BorrowOrder> borrowOrders =
+                    borrowOrderRepository
+                            .findByOrderId(orderId);
+
+            if (borrowOrders.isEmpty()) {
+                throw new RuntimeException(
+                        "No borrow items found");
+            }
+
+            // Build qty map
+            Map<Integer, Integer> qtyMap =
+                    borrowOrders.stream()
+                            .collect(Collectors.groupingBy(
+                                    b -> b.getProductId().intValue(),
+                                    Collectors.summingInt(
+                                            BorrowOrder::getQuantity)
+                            ));
+
+            ReduceInventoryRequest request =
+                    new ReduceInventoryRequest();
+            request.setRestaurantId(
+                    borrowOrders.get(0)
+                            .getRestaurantId());
+            request.setContainerQtyMap(qtyMap);
+
+            // 🔥 Call inventory
+            ApiResponse<?> feignResponse =
+                    inventoryFeignClient
+                            .reduceAvailableContainers(request);
+
+            if (OrderServiceConstant.STATUS_SUCCESS
+                    .equalsIgnoreCase(
+                            feignResponse.getStatus())) {
+
+                order.setOrderStatus(
+                        OrderServiceConstant.APPROVED);
+                orderRepository.save(order);
+
+                return Map.of(
+                        OrderServiceConstant.STATUS,
+                        OrderServiceConstant.STATUS_SUCCESS,
+                        OrderServiceConstant.MESSAGE,
+                        "Order status updated to APPROVED"
+                );
+            }
+
+            // Inventory rejected
+            order.setOrderStatus(
+                    OrderServiceConstant.REJECTED);
+            orderRepository.save(order);
+
+            System.err.println(feignResponse.getMessage());
+
+            return Map.of(
+                    OrderServiceConstant.STATUS,
+                    OrderServiceConstant.STATUS_ERROR,
+                    OrderServiceConstant.MESSAGE,
+                    feignResponse.getMessage()
+            );
+
+        }catch (Exception ex) {
+
+            // Any business failure → rollback
+            throw new RuntimeException(
+                    ex.getMessage() != null
+                            ? ex.getMessage()
+                            : "Failed to approve order");
         }
-
-        // Allow only pending → approved
-        if (!"PENDING".equalsIgnoreCase(order.getOrderStatus())) {
-            throw new RuntimeException("Only PENDING orders can be approved");
-        }
-
-        order.setOrderStatus("APPROVED");
-        orderRepository.save(order);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "Order status updated to APPROVED");
-        return response;
     }
+
 
 
     @Override

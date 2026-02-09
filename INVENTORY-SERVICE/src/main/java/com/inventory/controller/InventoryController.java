@@ -229,4 +229,26 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getRestaurantContainerInventoryByRestaurantId(restaurantId));
     }
 
+
+    @PostMapping("/reduceAvailableContainers")
+    public ResponseEntity<?> reduceAvailableContainers(@RequestBody ReduceInventoryRequest request) {
+        return ResponseEntity.ok(inventoryService.reduceAvailableContainers(request));
+    }
+
+    @PostMapping("/checkAvailabilityOfContainers")
+    public ResponseEntity<?> checkAvailability(@RequestBody ReduceInventoryRequest request) {
+        Map<String, Object> result = inventoryService.checkAvailability(request);
+
+        if (InventoryConstant.ERROR.equals(result.get(InventoryConstant.STATUS))) {
+            return ResponseEntity.ok(result);  // business error, not 500
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/increaseAvailableContainers")
+    public Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest request) {
+        return inventoryService.increaseAvailableContainers(request);
+    }
+
 }

@@ -10,10 +10,7 @@ import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.feignClient.service.NotificationFeignClientService;
-import com.inventory.repository.AdminInventoryMasterAuditRepository;
-import com.inventory.repository.AdminInventoryMasterRepository;
-import com.inventory.repository.AdminRestaurantInventoryDetailsRepository;
-import com.inventory.repository.ContainerTypeRepository;
+import com.inventory.repository.*;
 import com.inventory.request.*;
 import com.inventory.response.ApiResponse;
 import com.inventory.response.RestaurantContainerInventoryResponse;
@@ -43,6 +40,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final AdminInventoryMasterRepository masterRepo;
     private final AdminInventoryMasterAuditRepository auditRepo;
     private final AdminRestaurantInventoryDetailsRepository adminRestaurantInventoryDetailsRepository;
+    private final RestaurantInventoryMasterRepository restaurantInventoryMasterRepository;
 
     public Map<String, Object> saveOrUpdate(ContainerTypeRequest request, MultipartFile file) {
 
@@ -583,5 +581,90 @@ public class InventoryServiceImpl implements InventoryService {
             return new ApiResponse<>(InventoryConstant.ERROR, "Failed to fetch inventory data for restaurantId: " + restaurantId, null);
         }
     }
+
+    @Override
+    public ApiResponse<List<RestaurantInventoryMaster>> reduceAvailableContainers(ReduceInventoryRequest request) {
+        try {
+            Long restaurantId = request.getRestaurantId();
+            Map<Integer, Integer> qtyMap = request.getContainerQtyMap();
+
+            List<RestaurantInventoryMaster> masters =
+                    restaurantInventoryMasterRepository
+                            .findAllByRestaurantIdAndContainerTypeIdIn(
+                                    restaurantId, qtyMap.keySet());
+
+            for (RestaurantInventoryMaster master : masters) {
+                int reduceQty = qtyMap.get(master.getContainerTypeId());
+
+                if (master.getAvailableContainers() < reduceQty) {
+                    return new ApiResponse<>(InventoryConstant.ERROR, "Not enough containers available", null);
+                }
+
+                master.setAvailableContainers(
+                        master.getAvailableContainers() - reduceQty);
+
+                master.setBorrowedContainers(
+                        master.getBorrowedContainers() + reduceQty);
+            }
+
+            List<RestaurantInventoryMaster> inventoryMasters = restaurantInventoryMasterRepository.saveAll(masters);
+            return new ApiResponse<>(InventoryConstant.SUCCESS, "Available containers reduced successfully ", inventoryMasters);
+        } catch (Exception e) {
+            return new ApiResponse<>(InventoryConstant.ERROR, "Failed to reduce available container ", null);
+        }
+    }
+
+
+
+    public Map<String, Object> checkAvailability(
+            ReduceInventoryRequest request) {
+
+        Long restaurantId = request.getRestaurantId();
+        Map<Integer, Integer> qtyMap = request.getContainerQtyMap();
+
+        List<RestaurantInventoryMaster> masters =
+                restaurantInventoryMasterRepository
+                        .findAllByRestaurantIdAndContainerTypeIdIn(
+                                restaurantId, qtyMap.keySet());
+
+        for (RestaurantInventoryMaster master : masters) {
+            int requested = qtyMap.get(master.getContainerTypeId());
+
+            if (master.getAvailableContainers() < requested) {
+                return Map.of(InventoryConstant.STATUS, InventoryConstant.ERROR,
+                        InventoryConstant.MESSAGE, "Not enough containers for type " + master.getContainerTypeId());
+            }
+        }
+
+        return Map.of(InventoryConstant.STATUS, "success");
+    }
+
+
+    @Transactional
+    public Map<String, Object> increaseAvailableContainers(
+            ReduceInventoryRequest request) {
+
+        List<RestaurantInventoryMaster> masters =
+                restaurantInventoryMasterRepository
+                        .findAllByRestaurantIdAndContainerTypeIdIn(
+                                request.getRestaurantId(),
+                                request.getContainerQtyMap().keySet()
+                        );
+
+        for (RestaurantInventoryMaster master : masters) {
+            int qty = request.getContainerQtyMap()
+                    .get(master.getContainerTypeId());
+
+            master.setAvailableContainers(
+                    master.getAvailableContainers() + qty);
+
+            master.setBorrowedContainers(
+                    master.getBorrowedContainers() - qty);
+        }
+
+        restaurantInventoryMasterRepository.saveAll(masters);
+        return Map.of(InventoryConstant.STATUS, InventoryConstant.SUCCESS);
+    }
+
 
 }

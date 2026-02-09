@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.sustajn.oderservice.util.ApiResponseUtil;
+import feign.FeignException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -97,5 +99,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleAll(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return new ResponseEntity<>(buildResponse("Internal server error", "error", null), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(FeignException.class)
+    public Map<String,Object> handleFeign(FeignException ex) {
+        return ApiResponseUtil.error(ex.contentUTF8());
     }
 }
