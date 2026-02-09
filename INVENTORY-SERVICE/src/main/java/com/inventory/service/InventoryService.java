@@ -4,6 +4,7 @@ import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
 import com.inventory.dto.ProductResponse;
 import com.inventory.entity.RestaurantContainerInventory;
+import com.inventory.entity.RestaurantInventoryMaster;
 import com.inventory.request.*;
 import com.inventory.response.ApiResponse;
 import com.inventory.response.RestaurantContainerInventoryResponse;
@@ -33,4 +34,10 @@ public interface InventoryService {
     List<ProductResponse> getProductsByIds(List<Integer> ids);
 
     ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(Long restaurantId);
+
+    ApiResponse<List<RestaurantInventoryMaster>> reduceAvailableContainers(ReduceInventoryRequest request);
+
+    Map<String, Object> checkAvailability(ReduceInventoryRequest request);
+
+    Map<String, Object> increaseAvailableContainers( ReduceInventoryRequest request);
 }

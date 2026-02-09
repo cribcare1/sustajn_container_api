@@ -7,10 +7,12 @@ import com.inventory.dto.RestaurantContainerDetails;
 import com.inventory.entity.AdminOrder;
 import com.inventory.entity.AdminOrderItem;
 import com.inventory.entity.RestaurantContainerInventory;
+import com.inventory.entity.RestaurantInventoryMaster;
 import com.inventory.exception.BusinessException;
 import com.inventory.repository.AdminOrderItemRepository;
 import com.inventory.repository.AdminOrderRepository;
 import com.inventory.repository.RestaurantContainerInventoryRepository;
+import com.inventory.repository.RestaurantInventoryMasterRepository;
 import com.inventory.request.AdminOrderApproveRequest;
 import com.inventory.request.AdminOrderCreateRequest;
 import com.inventory.response.*;
@@ -35,6 +37,7 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
     private final AdminOrderRepository adminOrderRepository;
     private final AdminOrderItemRepository adminOrderItemRepository;
     private final RestaurantContainerInventoryRepository inventoryRepository;
+    private final RestaurantInventoryMasterRepository restaurantInventoryMasterRepository;
 
     @Override
     @Transactional
@@ -168,38 +171,29 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
 
         return response;
     }
+
+
     @Override
     @Transactional
     public Map<String, Object> markOrderAsDelivered(Long orderId) {
+
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // 1️⃣ Fetch the order
-            Optional<AdminOrder> optionalOrder = adminOrderRepository.findById(orderId);
-            if (optionalOrder.isEmpty()) {
-                response.put("status", "error");
-                response.put("message", "Order not found");
-                response.put("value", null);
-                return response;
-            }
+            // 1. Fetch order
+            AdminOrder order = adminOrderRepository.findById(orderId)
+                    .orElseThrow(() -> new RuntimeException("Order not found"));
 
-            AdminOrder order = optionalOrder.get();
-
-            // Only APPROVED orders can be delivered
             if (order.getStatus() != AdminOrderStatus.APPROVED) {
-                response.put("status", "error");
-                response.put("message", "Only approved orders can be delivered");
-                response.put("value", null);
-                return response;
+                throw new RuntimeException("Only approved orders can be delivered");
             }
 
-            // 2️⃣ Load order items
-            List<AdminOrderItem> orderItems = adminOrderItemRepository.findAllByOrder(order);
+            // 2. Load order items
+            List<AdminOrderItem> orderItems =
+                    adminOrderItemRepository.findAllByOrder(order);
+
             if (orderItems.isEmpty()) {
-                response.put("status", "error");
-                response.put("message", "No items found for this order");
-                response.put("value", null);
-                return response;
+                throw new RuntimeException("No items found for this order");
             }
 
             Long restaurantId = order.getRestaurantId();
@@ -207,57 +201,99 @@ public class AdminRestaurantOrderServiceImpl implements AdminRestaurantOrderServ
                     .map(AdminOrderItem::getContainerTypeId)
                     .collect(Collectors.toSet());
 
-            // 3️⃣ Pre-fetch existing inventory for all container types at once
+            // 3. Fetch inventories
             List<RestaurantContainerInventory> inventories =
-                    inventoryRepository.findAllByRestaurantIdAndContainerTypeIdIn(restaurantId, containerTypeIds);
+                    inventoryRepository.findAllByRestaurantIdAndContainerTypeIdIn(
+                            restaurantId, containerTypeIds);
 
-            // Create a map for quick lookup
-            Map<Integer, RestaurantContainerInventory> inventoryMap = inventories.stream()
-                    .collect(Collectors.toMap(RestaurantContainerInventory::getContainerTypeId, inv -> inv));
+            List<RestaurantInventoryMaster> masters =
+                    restaurantInventoryMasterRepository
+                            .findAllByRestaurantIdAndContainerTypeIdIn(
+                                    restaurantId, containerTypeIds);
 
-            // 4️⃣ Update inventory in memory
+            Map<Integer, RestaurantContainerInventory> inventoryMap =
+                    inventories.stream().collect(Collectors.toMap(
+                            RestaurantContainerInventory::getContainerTypeId,
+                            inv -> inv));
+
+            Map<Integer, RestaurantInventoryMaster> masterMap =
+                    masters.stream().collect(Collectors.toMap(
+                            RestaurantInventoryMaster::getContainerTypeId,
+                            im -> im));
+
             List<RestaurantContainerInventory> inventoriesToSave = new ArrayList<>();
+            List<RestaurantInventoryMaster> mastersToSave = new ArrayList<>();
+
             LocalDateTime now = LocalDateTime.now();
 
+            // 4. Update both inventories
             for (AdminOrderItem item : orderItems) {
+
                 Integer containerTypeId = item.getContainerTypeId();
                 Integer approvedQty = item.getApprovedQty();
 
                 if (approvedQty == null || approvedQty <= 0) continue;
 
-                RestaurantContainerInventory inventory = inventoryMap.get(containerTypeId);
+                // ---------- CHILD INVENTORY ----------
+                RestaurantContainerInventory inventory =
+                        inventoryMap.get(containerTypeId);
+
                 if (inventory == null) {
-                    // If inventory does not exist, create new
                     inventory = new RestaurantContainerInventory();
                     inventory.setRestaurantId(restaurantId);
                     inventory.setContainerTypeId(containerTypeId);
-                    inventory.setCurrentQuantity(0);
-                    inventoryMap.put(containerTypeId, inventory);
+                    inventory.setCurrentQuantity(0); // CRITICAL FIX
                 }
 
-                inventory.setCurrentQuantity(inventory.getCurrentQuantity() + approvedQty);
+                inventory.setCurrentQuantity(
+                        inventory.getCurrentQuantity() + approvedQty);
                 inventory.setLastUpdated(now);
 
                 inventoriesToSave.add(inventory);
+
+                // ---------- MASTER INVENTORY ----------
+                RestaurantInventoryMaster master =
+                        masterMap.get(containerTypeId);
+
+                if (master == null) {
+                    master = RestaurantInventoryMaster.builder()
+                            .restaurantId(restaurantId)
+                            .containerTypeId(containerTypeId)
+                            .totalContainers(0)
+                            .availableContainers(0)
+                            .borrowedContainers(0)
+                            .build();
+                }
+
+                master.setTotalContainers(
+                        master.getTotalContainers() + approvedQty);
+
+                master.setAvailableContainers(
+                        master.getAvailableContainers() + approvedQty);
+
+                mastersToSave.add(master);
             }
 
-            // 5️⃣ Save all inventory updates in batch
+            // 5. Save both in batch
             inventoryRepository.saveAll(inventoriesToSave);
+            restaurantInventoryMasterRepository.saveAll(mastersToSave);
 
-            // 6️⃣ Update order status to DELIVERED
+            // 6. Update order
             order.setStatus(AdminOrderStatus.DELIVERED);
             adminOrderRepository.save(order);
 
-            response.put("status", "success");
-            response.put("message", "Order delivered and inventory updated successfully");
+            response.put(InventoryConstant.STATUS, InventoryConstant.SUCCESS);
+            response.put(InventoryConstant.MESSAGE,
+                    "Order delivered & both inventories updated successfully");
             return response;
 
         } catch (Exception e) {
-            response.put("status", "error");
-            response.put("message", "Failed to mark order as delivered"+e.getMessage());
+            response.put(InventoryConstant.STATUS, InventoryConstant.ERROR);
+            response.put(InventoryConstant.MESSAGE, e.getMessage());
             return response;
         }
     }
+
 
     @Override
     public Map<String, Object> getAvailableContainers(Long restaurantId) {
