@@ -56,9 +56,8 @@ public class OrderController {
 
     @GetMapping("/monthWiseBorrowedDetails")
     public ResponseEntity<Map<String, Object>> getMonthWiseOrders(
-            @RequestParam Long userId,
-            @RequestParam int year) {
-        Map<String, Object> response = orderService.getMonthWiseOrders(userId, year);
+            @RequestParam Long userId) {
+        Map<String, Object> response = orderService.getMonthWiseOrders(userId);
         return ResponseEntity.ok(response);
     }
 
@@ -76,9 +75,8 @@ public class OrderController {
 
     @GetMapping("/monthWiseReturnedDetails")
     public ResponseEntity<Map<String, Object>> getMonthWiseReturnOrders(
-            @RequestParam Long userId,
-            @RequestParam int year) {
-        Map<String, Object> response = orderService.getMonthWiseReturnOrders(userId, year);
+            @RequestParam Long userId) {
+        Map<String, Object> response = orderService.getMonthWiseReturnOrders(userId);
         return ResponseEntity.ok(response);
     }
 

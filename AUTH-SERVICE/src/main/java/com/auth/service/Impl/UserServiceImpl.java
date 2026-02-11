@@ -255,7 +255,6 @@ public class UserServiceImpl implements UserService {
             // because 'customer' is a User object. It acts as the "Submitter".
             Feedback feedback = Feedback.builder()
                     .customer(user)
-                    .restaurantId(null) // No specific target restaurant (App Feedback)
                     .rating(request.getRating())
                     .subject(request.getSubject())
                     .remark(request.getRemark())
