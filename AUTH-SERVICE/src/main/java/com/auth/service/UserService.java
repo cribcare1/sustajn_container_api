@@ -51,9 +51,9 @@ public interface UserService {
     public List<FeedbackResponse> getFeedbackByType(Long id, String type);
     ApiResponse<CustomerProfileResponse> updateBusinessInfo(RegistrationRequest request);
 
-  ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
+    ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request);
 
-   ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
+    ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId);
 
     ApiResponse<CustomerProfileResponse> saveNewAddress(AddressRequest request);
 

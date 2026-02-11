@@ -20,10 +20,10 @@ public interface OrderService {
 
 
     public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId);
-    public Map<String, Object> getMonthWiseReturnOrders(Long userId, int year);
+    public Map<String, Object> getMonthWiseReturnOrders(Long userId);
     public Map<String,Object> approveOrder(Long orderId);
     public Map<String, Object> getOrderDetailsByOrderId(Long orderId);
-    public Map<String, Object> getMonthWiseOrders(Long userId, int year);
+    public Map<String, Object> getMonthWiseOrders(Long userId);
     public Map<String, Object> getOrderDetailsListByStatusForUser(Long userId, String status);
 
     ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId);

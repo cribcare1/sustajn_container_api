@@ -42,14 +42,79 @@ public class OrderServiceImpl implements OrderService {
     private final AuthClient authClient;
     private final InventoryFeignClient inventoryFeignClient;
 
+//    @Override
+//    @Transactional
+//    public Map<String, Object> borrowContainers(BorrowRequest request) {
+//        try {
+//
+//            validateBorrowRequest(request);
+//
+//            // 1. Build qty map
+//            Map<Integer, Integer> qtyMap =
+//                    request.getItems().stream()
+//                            .collect(Collectors.groupingBy(
+//                                    item -> item.getProductId().intValue(),
+//                                    Collectors.summingInt(
+//                                            BorrowItemRequest::getQuantity)
+//                            ));
+//
+//            ReduceInventoryRequest inventoryRequest =
+//                    new ReduceInventoryRequest();
+//            inventoryRequest.setRestaurantId(request.getRestaurantId());
+//            inventoryRequest.setContainerQtyMap(qtyMap);
+//
+//            // 🔥 CALL INVENTORY FIRST
+//            Map<String, Object> response = inventoryFeignClient.checkAvailability(inventoryRequest);
+//
+//            if (response.get(OrderServiceConstant.STATUS).equals(OrderServiceConstant.STATUS_ERROR)){
+//                System.err.println("Inventory check failed: " + response);
+//                return ApiResponseUtil.error(
+//                        response.get(OrderServiceConstant.MESSAGE) != null
+//                                ? response.get(OrderServiceConstant.MESSAGE).toString()
+//                                : "Inventory check failed"
+//                );
+//            }
+//
+//            // 2. Only if inventory is OK → create order
+//            Order order = new Order();
+//            order.setUserId(request.getUserId());
+//            order.setOrderDate(LocalDateTime.now());
+//            order.setTransactionId(UUID.randomUUID().toString());
+//            order.setOrderStatus(OrderServiceConstant.PENDING);
+//            orderRepository.save(order);
+//
+//            // 3. Create borrow rows
+//            for (BorrowItemRequest item : request.getItems()) {
+//
+//                BorrowOrder borrowOrder = new BorrowOrder();
+//                borrowOrder.setOrderId(order.getId());
+//                borrowOrder.setRestaurantId(request.getRestaurantId());
+//                borrowOrder.setUserId(request.getUserId());
+//                borrowOrder.setProductId(item.getProductId());
+//                borrowOrder.setQuantity(item.getQuantity());
+//                borrowOrder.setReturnedQuantity(0);
+//                borrowOrder.setBorrowedAt(LocalDateTime.now());
+//                borrowOrder.setDueDate(LocalDateTime.now().plusDays(7));
+//
+//                borrowOrderRepository.save(borrowOrder);
+//            }
+//
+//            return ApiResponseUtil.success("Containers borrowed successfully");
+//
+//        } catch (Exception ex) {
+//            return handleBorrowError(ex);
+//        }
+//    }
+
+
     @Override
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public Map<String, Object> borrowContainers(BorrowRequest request) {
         try {
 
             validateBorrowRequest(request);
 
-            // 1. Build qty map
+            // 1️⃣ Build qty map
             Map<Integer, Integer> qtyMap =
                     request.getItems().stream()
                             .collect(Collectors.groupingBy(
@@ -63,27 +128,41 @@ public class OrderServiceImpl implements OrderService {
             inventoryRequest.setRestaurantId(request.getRestaurantId());
             inventoryRequest.setContainerQtyMap(qtyMap);
 
-            // 🔥 CALL INVENTORY FIRST
-            Map<String, Object> response = inventoryFeignClient.checkAvailability(inventoryRequest);
+            // 2️⃣ CHECK ONLY (no change)
+            Map<String, Object> checkResponse =
+                    inventoryFeignClient.checkAvailability(inventoryRequest);
 
-            if (response.get(OrderServiceConstant.STATUS).equals(OrderServiceConstant.STATUS_ERROR)){
-                System.err.println("Inventory check failed: " + response);
+            if (!OrderServiceConstant.STATUS_SUCCESS
+                    .equalsIgnoreCase(
+                            checkResponse.get(OrderServiceConstant.STATUS).toString())) {
+
                 return ApiResponseUtil.error(
-                        response.get(OrderServiceConstant.MESSAGE) != null
-                                ? response.get(OrderServiceConstant.MESSAGE).toString()
-                                : "Inventory check failed"
+                        checkResponse.get(OrderServiceConstant.MESSAGE).toString()
                 );
             }
 
-            // 2. Only if inventory is OK → create order
+            // 3️⃣ FINAL REDUCE
+            ApiResponse<?> reduceResponse =
+                    inventoryFeignClient
+                            .reduceAvailableContainers(inventoryRequest);
+
+            if (!OrderServiceConstant.STATUS_SUCCESS
+                    .equalsIgnoreCase(reduceResponse.getStatus())) {
+
+                return ApiResponseUtil.error(
+                        reduceResponse.getMessage()
+                );
+            }
+
+            // 4️⃣ Create APPROVED order
             Order order = new Order();
             order.setUserId(request.getUserId());
             order.setOrderDate(LocalDateTime.now());
             order.setTransactionId(UUID.randomUUID().toString());
-            order.setOrderStatus(OrderServiceConstant.PENDING);
+            order.setOrderStatus(OrderServiceConstant.APPROVED);
             orderRepository.save(order);
 
-            // 3. Create borrow rows
+            // 5️⃣ Create borrow rows
             for (BorrowItemRequest item : request.getItems()) {
 
                 BorrowOrder borrowOrder = new BorrowOrder();
@@ -105,6 +184,7 @@ public class OrderServiceImpl implements OrderService {
             return handleBorrowError(ex);
         }
     }
+
 
     private Map<String, Object> handleBorrowError(Exception ex) {
 
@@ -779,25 +859,28 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public Map<String, Object> getMonthWiseOrders(Long userId, int year) {
+    public Map<String, Object> getMonthWiseOrders(Long userId) {
+        // 'year' is ignored, kept only for compatibility
 
         Map<String, Object> response = new HashMap<>();
 
         try {
-            int currentMonth = LocalDate.now().getMonthValue();
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime twoMonthsAgo = now.minusMonths(3);
 
-            // 1️⃣ Fetch orders up to current month
+            // 1️⃣ Fetch last 2 months
             List<BorrowOrder> borrowOrders =
-                    borrowOrderRepository.findAllByUserIdAndYear(userId, year)
-                            .stream()
-                            .filter(b -> b.getBorrowedAt().getMonthValue() <= currentMonth)
-                            .collect(Collectors.toList());
+                    borrowOrderRepository.findAllByUserIdBetweenDates(
+                            userId, twoMonthsAgo, now
+                    );
 
-            // 2️⃣ Month map in DESCENDING order  (Dec → Nov → … → Jan)
+            // 2️⃣ Month map (Current → Previous)
             Map<String, List<OrderListDetails>> monthWiseOrders = new LinkedHashMap<>();
-            for (int m = currentMonth; m >= 1; m--) {
+
+            for (int i = 0; i < 3; i++) {
+                LocalDateTime dt = now.minusMonths(i);
                 String monthName =
-                        Month.of(m).getDisplayName(TextStyle.FULL, Locale.ENGLISH); // e.g., "December"
+                        dt.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
                 monthWiseOrders.put(monthName, new ArrayList<>());
             }
 
@@ -873,20 +956,18 @@ public class OrderServiceImpl implements OrderService {
                     monthWiseOrders.get(monthName).add(details);
                 }
             }
-
             response.put("status", "success");
-            response.put("message", "Month-wise orders fetched successfully");
+            response.put("message", "Last 2 months orders fetched successfully");
             response.put("value", monthWiseOrders);
             return response;
-
-        } catch (Exception ex) {
-
+        }catch (Exception ex) {
             response.put("status", "error");
             response.put("message", "Failed to fetch month-wise orders");
             response.put("value", null);
             return response;
         }
     }
+
 
     @Override
     public Map<String, Object> getOrderDetailsByOrderId(Long orderId) {
@@ -1074,26 +1155,28 @@ public class OrderServiceImpl implements OrderService {
 
 
     @Override
-    public Map<String, Object> getMonthWiseReturnOrders(Long userId, int year) {
+    public Map<String, Object> getMonthWiseReturnOrders(Long userId) {
 
         Map<String, Object> response = new HashMap<>();
 
         try {
-            int currentMonth = LocalDate.now().getMonthValue();
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime twoMonthsAgo = now.minusMonths(2);
+
             DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
 
-            // 1️⃣ Fetch return orders up to current month
+            // 1️⃣ Fetch last 2 months returns
             List<ReturnOrder> returnOrders =
-                    returnOrderRepository.findAllByUserIdAndYear(userId, year)
-                            .stream()
-                            .filter(r -> r.getReturnedAt().getMonthValue() <= currentMonth)
-                            .collect(Collectors.toList());
+                    returnOrderRepository.findAllByUserIdBetweenDates(
+                            userId, twoMonthsAgo, now
+                    );
 
-            // 2️⃣ Month map in DESC order (Dec -> … -> Jan)
+            // 2️⃣ Month map (Current → Previous)
             Map<String, List<OrderListDetails>> monthWiseReturns = new LinkedHashMap<>();
-            for (int m = currentMonth; m >= 1; m--) {
-                String monthName = Month.of(m)
-                        .getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+            for (int i = 0; i < 2; i++) {
+                LocalDateTime dt = now.minusMonths(i);
+                String monthName =
+                        dt.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
                 monthWiseReturns.put(monthName, new ArrayList<>());
             }
 

@@ -16,11 +16,12 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
     SELECT r.*
     FROM return_orders r
     WHERE r.user_id = :userId
-      AND EXTRACT(YEAR FROM r.returned_at) = :year
+      AND r.returned_at BETWEEN :fromDate AND :toDate
 """, nativeQuery = true)
-    List<ReturnOrder> findAllByUserIdAndYear(
+    List<ReturnOrder> findAllByUserIdBetweenDates(
             @Param("userId") Long userId,
-            @Param("year") int year
+            @Param("fromDate") LocalDateTime fromDate,
+            @Param("toDate") LocalDateTime toDate
     );
 
     List<ReturnOrder> findByRestaurantId(Long restaurantId);
