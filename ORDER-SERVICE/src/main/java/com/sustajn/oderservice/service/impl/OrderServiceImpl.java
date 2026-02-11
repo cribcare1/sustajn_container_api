@@ -42,14 +42,79 @@ public class OrderServiceImpl implements OrderService {
     private final AuthClient authClient;
     private final InventoryFeignClient inventoryFeignClient;
 
+//    @Override
+//    @Transactional
+//    public Map<String, Object> borrowContainers(BorrowRequest request) {
+//        try {
+//
+//            validateBorrowRequest(request);
+//
+//            // 1. Build qty map
+//            Map<Integer, Integer> qtyMap =
+//                    request.getItems().stream()
+//                            .collect(Collectors.groupingBy(
+//                                    item -> item.getProductId().intValue(),
+//                                    Collectors.summingInt(
+//                                            BorrowItemRequest::getQuantity)
+//                            ));
+//
+//            ReduceInventoryRequest inventoryRequest =
+//                    new ReduceInventoryRequest();
+//            inventoryRequest.setRestaurantId(request.getRestaurantId());
+//            inventoryRequest.setContainerQtyMap(qtyMap);
+//
+//            // 🔥 CALL INVENTORY FIRST
+//            Map<String, Object> response = inventoryFeignClient.checkAvailability(inventoryRequest);
+//
+//            if (response.get(OrderServiceConstant.STATUS).equals(OrderServiceConstant.STATUS_ERROR)){
+//                System.err.println("Inventory check failed: " + response);
+//                return ApiResponseUtil.error(
+//                        response.get(OrderServiceConstant.MESSAGE) != null
+//                                ? response.get(OrderServiceConstant.MESSAGE).toString()
+//                                : "Inventory check failed"
+//                );
+//            }
+//
+//            // 2. Only if inventory is OK → create order
+//            Order order = new Order();
+//            order.setUserId(request.getUserId());
+//            order.setOrderDate(LocalDateTime.now());
+//            order.setTransactionId(UUID.randomUUID().toString());
+//            order.setOrderStatus(OrderServiceConstant.PENDING);
+//            orderRepository.save(order);
+//
+//            // 3. Create borrow rows
+//            for (BorrowItemRequest item : request.getItems()) {
+//
+//                BorrowOrder borrowOrder = new BorrowOrder();
+//                borrowOrder.setOrderId(order.getId());
+//                borrowOrder.setRestaurantId(request.getRestaurantId());
+//                borrowOrder.setUserId(request.getUserId());
+//                borrowOrder.setProductId(item.getProductId());
+//                borrowOrder.setQuantity(item.getQuantity());
+//                borrowOrder.setReturnedQuantity(0);
+//                borrowOrder.setBorrowedAt(LocalDateTime.now());
+//                borrowOrder.setDueDate(LocalDateTime.now().plusDays(7));
+//
+//                borrowOrderRepository.save(borrowOrder);
+//            }
+//
+//            return ApiResponseUtil.success("Containers borrowed successfully");
+//
+//        } catch (Exception ex) {
+//            return handleBorrowError(ex);
+//        }
+//    }
+
+
     @Override
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public Map<String, Object> borrowContainers(BorrowRequest request) {
         try {
 
             validateBorrowRequest(request);
 
-            // 1. Build qty map
+            // 1️⃣ Build qty map
             Map<Integer, Integer> qtyMap =
                     request.getItems().stream()
                             .collect(Collectors.groupingBy(
@@ -63,27 +128,41 @@ public class OrderServiceImpl implements OrderService {
             inventoryRequest.setRestaurantId(request.getRestaurantId());
             inventoryRequest.setContainerQtyMap(qtyMap);
 
-            // 🔥 CALL INVENTORY FIRST
-            Map<String, Object> response = inventoryFeignClient.checkAvailability(inventoryRequest);
+            // 2️⃣ CHECK ONLY (no change)
+            Map<String, Object> checkResponse =
+                    inventoryFeignClient.checkAvailability(inventoryRequest);
 
-            if (response.get(OrderServiceConstant.STATUS).equals(OrderServiceConstant.STATUS_ERROR)){
-                System.err.println("Inventory check failed: " + response);
+            if (!OrderServiceConstant.STATUS_SUCCESS
+                    .equalsIgnoreCase(
+                            checkResponse.get(OrderServiceConstant.STATUS).toString())) {
+
                 return ApiResponseUtil.error(
-                        response.get(OrderServiceConstant.MESSAGE) != null
-                                ? response.get(OrderServiceConstant.MESSAGE).toString()
-                                : "Inventory check failed"
+                        checkResponse.get(OrderServiceConstant.MESSAGE).toString()
                 );
             }
 
-            // 2. Only if inventory is OK → create order
+            // 3️⃣ FINAL REDUCE
+            ApiResponse<?> reduceResponse =
+                    inventoryFeignClient
+                            .reduceAvailableContainers(inventoryRequest);
+
+            if (!OrderServiceConstant.STATUS_SUCCESS
+                    .equalsIgnoreCase(reduceResponse.getStatus())) {
+
+                return ApiResponseUtil.error(
+                        reduceResponse.getMessage()
+                );
+            }
+
+            // 4️⃣ Create APPROVED order
             Order order = new Order();
             order.setUserId(request.getUserId());
             order.setOrderDate(LocalDateTime.now());
             order.setTransactionId(UUID.randomUUID().toString());
-            order.setOrderStatus(OrderServiceConstant.PENDING);
+            order.setOrderStatus(OrderServiceConstant.APPROVED);
             orderRepository.save(order);
 
-            // 3. Create borrow rows
+            // 5️⃣ Create borrow rows
             for (BorrowItemRequest item : request.getItems()) {
 
                 BorrowOrder borrowOrder = new BorrowOrder();
@@ -105,6 +184,7 @@ public class OrderServiceImpl implements OrderService {
             return handleBorrowError(ex);
         }
     }
+
 
     private Map<String, Object> handleBorrowError(Exception ex) {
 
@@ -777,7 +857,7 @@ public class OrderServiceImpl implements OrderService {
                         : "Failed to return containers"
         );
     }
-    
+
     @Override
     public Map<String, Object> getMonthWiseOrders(Long userId) {
         // 'year' is ignored, kept only for compatibility
