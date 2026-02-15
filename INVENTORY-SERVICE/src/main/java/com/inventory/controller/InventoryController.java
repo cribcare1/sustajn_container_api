@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.ErrorResponses;
 import com.inventory.dto.ProductResponse;
+import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
+import com.inventory.response.ApiResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
 import jakarta.validation.Valid;
@@ -249,6 +251,11 @@ public class InventoryController {
     @PostMapping("/increaseAvailableContainers")
     public Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest request) {
         return inventoryService.increaseAvailableContainers(request);
+    }
+
+    @PostMapping("/reportDamagedContainer")
+    public ResponseEntity<ApiResponse<DamagedContainer>> reportDamagedContainer(@RequestPart ReportDamagedContainerRequest request, @RequestPart List<MultipartFile> images) {
+        return ResponseEntity.ok(inventoryService.reportDamagedContainer(request, images));
     }
 
 }

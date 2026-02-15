@@ -351,4 +351,9 @@ public class AuthController {
     public ResponseEntity<ApiResponse<CustomerProfileResponse>> addBusinessInfo(@RequestBody RegistrationRequest request) {
         return ResponseEntity.ok(userService.addBusinessInfo(request));
     }
+
+    @GetMapping("/getUserIdByCustomerId")
+    public ResponseEntity<?> getUserIdByCustomerId(@RequestParam String customerId) {
+        return ResponseEntity.ok(userService.getUserIdByCustomerId(customerId));
+    }
 }

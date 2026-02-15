@@ -1,14 +1,12 @@
 package com.sustajn.oderservice.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@ToString
 public class ProductResponse {
     private Integer productId;
     private String productName;

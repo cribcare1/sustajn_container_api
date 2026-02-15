@@ -3,6 +3,7 @@ package com.inventory.service;
 import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.InventoryWithContainerResponse;
 import com.inventory.dto.ProductResponse;
+import com.inventory.entity.DamagedContainer;
 import com.inventory.entity.RestaurantContainerInventory;
 import com.inventory.entity.RestaurantInventoryMaster;
 import com.inventory.request.*;
@@ -40,4 +41,6 @@ public interface InventoryService {
     Map<String, Object> checkAvailability(ReduceInventoryRequest request);
 
     Map<String, Object> increaseAvailableContainers( ReduceInventoryRequest request);
+
+    ApiResponse<DamagedContainer> reportDamagedContainer(ReportDamagedContainerRequest request, List<MultipartFile> damagedContainerImages);
 }

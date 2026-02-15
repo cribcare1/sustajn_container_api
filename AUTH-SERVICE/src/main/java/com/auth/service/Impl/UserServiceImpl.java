@@ -1611,6 +1611,15 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public Long getUserIdByCustomerId(String customerId) {
+        Long userId = userRepository.findUserIdByCustomerId(customerId);
+        if (userId != null) {
+            return userId;
+        }
+        return 0L;
+    }
+
 
     // Helper to convert Address Entity -> AddressResponse DTO
     private AddressResponse mapToAddressResponse(Address address) {

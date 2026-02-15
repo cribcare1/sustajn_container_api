@@ -76,6 +76,8 @@ public interface UserService {
     ApiResponse<?> referPartner(ReferPartnerRequest request);
 
     ApiResponse<CustomerProfileResponse> addBusinessInfo(RegistrationRequest request);
+
+    Long getUserIdByCustomerId(String customerId);
 }
 
 

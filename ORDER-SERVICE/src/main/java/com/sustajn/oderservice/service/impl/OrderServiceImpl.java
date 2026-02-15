@@ -639,6 +639,12 @@ public class OrderServiceImpl implements OrderService {
                                     Collectors.toList()
                             ));
 
+            System.err.println("Grouped Response: " + leasedReturnedGroupedResponse);
+            log.error("restaurantId={}, productId={}",
+                    leasedReturnedGraphInput.getRestaurantId(),
+                    leasedReturnedGraphInput.getProductId()
+            );
+
             List<LeasedReturnedMonthYearResponse> response =
                     leasedReturnedGroupedResponse.entrySet().stream().map(entry -> {
 
@@ -1278,10 +1284,18 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId) {
+    public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId, String customerId) {
 
         try {
-            List<BorrowOrderResponse> rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+            List<BorrowOrderResponse> rows = new ArrayList<>();
+
+            if (userId != null){
+                rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+            }
+            if (customerId != null){
+                userId = authClient.getUserIdByCustomerId(customerId);
+                rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+            }
             if (rows == null || rows.isEmpty()) {
                 return new ApiResponse<>("success", "No borrowed products found for user", Collections.emptyList());
             }
@@ -1293,6 +1307,8 @@ public class OrderServiceImpl implements OrderService {
             try {
                 List<ProductResponse> products =
                         inventoryFeignClient.getProductsByIds(productIds.stream().map(Long::intValue).toList());
+
+                System.err.println("Fetched products: " + products);
 
                 if (products != null) {
                     productMap = products.stream()
