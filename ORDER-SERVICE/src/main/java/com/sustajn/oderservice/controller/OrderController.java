@@ -80,9 +80,9 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/productsSummary/{userId}")
-    public ResponseEntity<?> getBorrowSummary(@PathVariable Long userId) {
-        return ResponseEntity.ok(orderService.getBorrowedProductSummary(userId));
+    @GetMapping("/getBorrowedProduct")
+    public ResponseEntity<?> getBorrowSummary(@RequestParam(required = false) Long userId, @RequestParam(required = false) String customerId) {
+        return ResponseEntity.ok(orderService.getBorrowedProductSummary(userId, customerId));
     }
 
     @GetMapping("/orderHistory/{restaurantId}")

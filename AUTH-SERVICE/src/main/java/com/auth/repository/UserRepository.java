@@ -200,4 +200,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
     WHERE u.id = :restaurantId
 """)
     List<Object[]> findRestaurantDetailsById(Long restaurantId);
+
+    @Query("SELECT u FROM User u WHERE u.customerId = :customerId")
+    Optional<User> findUserByCustomerId(String customerId);
 }

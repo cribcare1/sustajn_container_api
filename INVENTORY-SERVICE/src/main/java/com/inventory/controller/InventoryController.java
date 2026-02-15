@@ -4,8 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.ErrorResponses;
 import com.inventory.dto.ProductResponse;
+import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
+import com.inventory.response.ApiResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
 import jakarta.validation.Valid;
@@ -14,6 +16,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -249,6 +252,14 @@ public class InventoryController {
     @PostMapping("/increaseAvailableContainers")
     public Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest request) {
         return inventoryService.increaseAvailableContainers(request);
+    }
+
+    @PostMapping(
+            value = "/reportDamagedContainer",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<DamagedContainer>> reportDamagedContainer(@RequestPart("request") String request, @RequestPart("images") List<MultipartFile> images) {
+        return ResponseEntity.ok(inventoryService.reportDamagedContainer(request, images));
     }
 
 }

@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ProductDetailsResponse {
+    private Long userId;
     private Long orderId;
     private Long productId;
     private String productName;

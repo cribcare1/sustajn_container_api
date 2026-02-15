@@ -1611,6 +1611,16 @@ public class UserServiceImpl implements UserService {
         }
     }
 
+    @Override
+    public ApiResponse<User> getUserByCustomerId(String customerId) {
+        Optional<User> userOptional = userRepository.findUserByCustomerId(customerId);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            return new ApiResponse<>(AuthConstant.SUCCESS, "User found with customer ID", user);
+        }
+        return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
+    }
+
 
     // Helper to convert Address Entity -> AddressResponse DTO
     private AddressResponse mapToAddressResponse(Address address) {

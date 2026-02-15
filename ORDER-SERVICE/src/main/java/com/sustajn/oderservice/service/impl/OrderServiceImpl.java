@@ -110,6 +110,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackOn = Exception.class)
     public Map<String, Object> borrowContainers(BorrowRequest request) {
+        // add push notification  logic
         try {
 
             validateBorrowRequest(request);
@@ -154,9 +155,17 @@ public class OrderServiceImpl implements OrderService {
                 );
             }
 
+            ApiResponse<UserResponse> userResponse = authClient.getUserByCustomerId(request.getCustomerId());
+
+            if (userResponse == null || userResponse.getData() == null) {
+                throw new ResourceNotFoundException("User not found for customerId: " + request.getCustomerId());
+            }
+
+            Long userId = userResponse.getData().getId();
+
             // 4️⃣ Create APPROVED order
             Order order = new Order();
-            order.setUserId(request.getUserId());
+            order.setUserId(userId);
             order.setOrderDate(LocalDateTime.now());
             order.setTransactionId(UUID.randomUUID().toString());
             order.setOrderStatus(OrderServiceConstant.APPROVED);
@@ -168,7 +177,7 @@ public class OrderServiceImpl implements OrderService {
                 BorrowOrder borrowOrder = new BorrowOrder();
                 borrowOrder.setOrderId(order.getId());
                 borrowOrder.setRestaurantId(request.getRestaurantId());
-                borrowOrder.setUserId(request.getUserId());
+                borrowOrder.setUserId(userId);
                 borrowOrder.setProductId(item.getProductId());
                 borrowOrder.setQuantity(item.getQuantity());
                 borrowOrder.setReturnedQuantity(0);
@@ -196,8 +205,8 @@ public class OrderServiceImpl implements OrderService {
 
     private void validateBorrowRequest(BorrowRequest request) {
 
-        if (request.getUserId() == null) {
-            throw new IllegalArgumentException("UserId is required");
+        if (request.getCustomerId() == null || request.getCustomerId().isEmpty()) {
+            throw new IllegalArgumentException("CustomerId is required");
         }
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
@@ -638,6 +647,12 @@ public class OrderServiceImpl implements OrderService {
                                     LinkedHashMap::new,
                                     Collectors.toList()
                             ));
+
+            System.err.println("Grouped Response: " + leasedReturnedGroupedResponse);
+            log.error("restaurantId={}, productId={}",
+                    leasedReturnedGraphInput.getRestaurantId(),
+                    leasedReturnedGraphInput.getProductId()
+            );
 
             List<LeasedReturnedMonthYearResponse> response =
                     leasedReturnedGroupedResponse.entrySet().stream().map(entry -> {
@@ -1278,10 +1293,24 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId) {
+    public ApiResponse<List<ProductDetailsResponse>> getBorrowedProductSummary(Long userId, String customerId) {
 
         try {
-            List<BorrowOrderResponse> rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+            List<BorrowOrderResponse> rows = new ArrayList<>();
+
+            if (userId != null){
+                rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+            }
+            if (customerId != null){
+                ApiResponse<UserResponse> userResponse = authClient.getUserByCustomerId(customerId);
+                if (userResponse == null || userResponse.getData() == null) {
+                    return new ApiResponse<>("error",
+                            "User not found for customerId: " + customerId,
+                            null);
+                }
+                userId = userResponse.getData().getId();
+                rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
+            }
             if (rows == null || rows.isEmpty()) {
                 return new ApiResponse<>("success", "No borrowed products found for user", Collections.emptyList());
             }
@@ -1293,6 +1322,7 @@ public class OrderServiceImpl implements OrderService {
             try {
                 List<ProductResponse> products =
                         inventoryFeignClient.getProductsByIds(productIds.stream().map(Long::intValue).toList());
+
 
                 if (products != null) {
                     productMap = products.stream()
@@ -1308,12 +1338,15 @@ public class OrderServiceImpl implements OrderService {
             }
 
             Map<Long, ProductResponse> finalProductMap = productMap;
+            Long finalUserId = userId;
             List<ProductDetailsResponse> result = rows.stream().map(r -> {
                 int remainingQty = Math.max(0, r.getRemainingQty());
                 long daysPassed = ChronoUnit.DAYS.between(r.getOrderDate(), LocalDate.now());
                 long daysLeft = Math.max(0, 7 - daysPassed);
                 ProductResponse p = finalProductMap.get(r.getProductId());
-                return new ProductDetailsResponse(r.getOrderId(),
+                return new ProductDetailsResponse(
+                        finalUserId,
+                        r.getOrderId(),
                         r.getProductId(),
                         p != null ? p.getProductName() : null,
                         remainingQty,
