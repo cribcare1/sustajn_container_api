@@ -1612,12 +1612,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Long getUserIdByCustomerId(String customerId) {
-        Long userId = userRepository.findUserIdByCustomerId(customerId);
-        if (userId != null) {
-            return userId;
+    public ApiResponse<User> getUserByCustomerId(String customerId) {
+        Optional<User> userOptional = userRepository.findUserByCustomerId(customerId);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            return new ApiResponse<>(AuthConstant.SUCCESS, "User found with customer ID", user);
         }
-        return 0L;
+        return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
     }
 
 

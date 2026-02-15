@@ -201,6 +201,6 @@ public interface UserRepository extends JpaRepository<User,Long> {
 """)
     List<Object[]> findRestaurantDetailsById(Long restaurantId);
 
-    @Query("SELECT u.id FROM User u WHERE u.customerId = :customerId")
-    Long findUserIdByCustomerId(String customerId);
+    @Query("SELECT u FROM User u WHERE u.customerId = :customerId")
+    Optional<User> findUserByCustomerId(String customerId);
 }

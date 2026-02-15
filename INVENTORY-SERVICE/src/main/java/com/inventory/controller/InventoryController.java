@@ -16,6 +16,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -253,8 +254,11 @@ public class InventoryController {
         return inventoryService.increaseAvailableContainers(request);
     }
 
-    @PostMapping("/reportDamagedContainer")
-    public ResponseEntity<ApiResponse<DamagedContainer>> reportDamagedContainer(@RequestPart ReportDamagedContainerRequest request, @RequestPart List<MultipartFile> images) {
+    @PostMapping(
+            value = "/reportDamagedContainer",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<DamagedContainer>> reportDamagedContainer(@RequestPart("request") String request, @RequestPart("images") List<MultipartFile> images) {
         return ResponseEntity.ok(inventoryService.reportDamagedContainer(request, images));
     }
 

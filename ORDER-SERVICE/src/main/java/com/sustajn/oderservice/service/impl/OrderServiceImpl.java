@@ -154,9 +154,17 @@ public class OrderServiceImpl implements OrderService {
                 );
             }
 
+            ApiResponse<UserResponse> userResponse = authClient.getUserByCustomerId(request.getCustomerId());
+
+            if (userResponse == null || userResponse.getData() == null) {
+                throw new ResourceNotFoundException("User not found for customerId: " + request.getCustomerId());
+            }
+
+            Long userId = userResponse.getData().getId();
+
             // 4️⃣ Create APPROVED order
             Order order = new Order();
-            order.setUserId(request.getUserId());
+            order.setUserId(userId);
             order.setOrderDate(LocalDateTime.now());
             order.setTransactionId(UUID.randomUUID().toString());
             order.setOrderStatus(OrderServiceConstant.APPROVED);
@@ -168,7 +176,7 @@ public class OrderServiceImpl implements OrderService {
                 BorrowOrder borrowOrder = new BorrowOrder();
                 borrowOrder.setOrderId(order.getId());
                 borrowOrder.setRestaurantId(request.getRestaurantId());
-                borrowOrder.setUserId(request.getUserId());
+                borrowOrder.setUserId(userId);
                 borrowOrder.setProductId(item.getProductId());
                 borrowOrder.setQuantity(item.getQuantity());
                 borrowOrder.setReturnedQuantity(0);
@@ -196,8 +204,8 @@ public class OrderServiceImpl implements OrderService {
 
     private void validateBorrowRequest(BorrowRequest request) {
 
-        if (request.getUserId() == null) {
-            throw new IllegalArgumentException("UserId is required");
+        if (request.getCustomerId() == null || request.getCustomerId().isEmpty()) {
+            throw new IllegalArgumentException("CustomerId is required");
         }
 
         if (request.getItems() == null || request.getItems().isEmpty()) {
@@ -1293,7 +1301,13 @@ public class OrderServiceImpl implements OrderService {
                 rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
             }
             if (customerId != null){
-                userId = authClient.getUserIdByCustomerId(customerId);
+                ApiResponse<UserResponse> userResponse = authClient.getUserByCustomerId(customerId);
+                if (userResponse == null || userResponse.getData() == null) {
+                    return new ApiResponse<>("error",
+                            "User not found for customerId: " + customerId,
+                            null);
+                }
+                userId = userResponse.getData().getId();
                 rows = borrowOrderRepository.getProductBorrowReturnSummary(userId);
             }
             if (rows == null || rows.isEmpty()) {
@@ -1308,7 +1322,6 @@ public class OrderServiceImpl implements OrderService {
                 List<ProductResponse> products =
                         inventoryFeignClient.getProductsByIds(productIds.stream().map(Long::intValue).toList());
 
-                System.err.println("Fetched products: " + products);
 
                 if (products != null) {
                     productMap = products.stream()

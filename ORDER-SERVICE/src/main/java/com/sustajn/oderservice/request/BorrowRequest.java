@@ -8,6 +8,7 @@ import java.util.List;
 @Getter
 @Setter
 public class BorrowRequest {
+    private String customerId;
     private Long userId;
     private Long restaurantId;
     private List<BorrowItemRequest> items;

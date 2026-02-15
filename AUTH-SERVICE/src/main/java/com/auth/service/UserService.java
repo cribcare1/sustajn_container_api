@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public interface UserService {
@@ -77,7 +78,7 @@ public interface UserService {
 
     ApiResponse<CustomerProfileResponse> addBusinessInfo(RegistrationRequest request);
 
-    Long getUserIdByCustomerId(String customerId);
+    ApiResponse<User> getUserByCustomerId(String customerId);
 }
 
 

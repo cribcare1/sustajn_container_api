@@ -1,6 +1,7 @@
 package com.inventory.config;
 
 import feign.codec.Encoder;
+import feign.form.spring.SpringFormEncoder;
 import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cloud.openfeign.support.FeignHttpMessageConverters;

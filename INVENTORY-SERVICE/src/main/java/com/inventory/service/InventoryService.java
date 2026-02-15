@@ -42,5 +42,5 @@ public interface InventoryService {
 
     Map<String, Object> increaseAvailableContainers( ReduceInventoryRequest request);
 
-    ApiResponse<DamagedContainer> reportDamagedContainer(ReportDamagedContainerRequest request, List<MultipartFile> damagedContainerImages);
+    ApiResponse<DamagedContainer> reportDamagedContainer(String reportDamagedContainerRequest, List<MultipartFile> damagedContainerImages);
 }

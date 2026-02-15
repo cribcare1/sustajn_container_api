@@ -1,7 +1,9 @@
 package com.sustajn.oderservice.feign.service;
 
 import com.sustajn.oderservice.config.FeignClientConfig;
+import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.RestaurantRegisterResponse;
+import com.sustajn.oderservice.dto.UserResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +22,6 @@ public interface AuthClient {
             @RequestBody List<Long> ids
     );
 
-    @GetMapping(value = "/auth/getUserIdByCustomerId")
-    Long getUserIdByCustomerId(@RequestParam String customerId);
+    @GetMapping(value = "/auth/getUserByCustomerId")
+    ApiResponse<UserResponse> getUserByCustomerId(@RequestParam String customerId);
 }

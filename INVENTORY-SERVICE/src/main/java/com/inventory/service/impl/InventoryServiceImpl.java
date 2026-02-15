@@ -17,6 +17,7 @@ import com.inventory.response.RestaurantContainerInventoryResponse;
 import com.inventory.service.InventoryService;
 import com.inventory.util.DateTimeUtil;
 import com.inventory.util.FileStorageUtil;
+import com.inventory.util.InventoryUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -673,65 +674,121 @@ public class InventoryServiceImpl implements InventoryService {
     @Transactional(rollbackOn = Exception.class)
     @Override
     public ApiResponse<DamagedContainer> reportDamagedContainer(
-            ReportDamagedContainerRequest request,
+            String reportDamagedContainerRequest,
             List<MultipartFile> damagedContainerImages) {
+
+        ReportDamagedContainerRequest request = InventoryUtils.convertToJson(reportDamagedContainerRequest, ReportDamagedContainerRequest.class);
 
         ContainerType containerType = containerTypeRepository.findById(request.getContainerTypeId())
                 .orElseThrow(() -> new InventoryException("Container type not found"));
 
-        DamagedContainer damagedContainer = DamagedContainer.builder()
-                .containerTypeId(request.getContainerTypeId())
-                .remark(request.getRemark())
-                .restaurantId(request.getRestaurantId())
-                .userId(request.getUserId())
-                .damagedByRestaurant(request.getIsDamagedByRestaurant())
-                .damagedByUser(request.getIsDamagedByUser())
-                .build();
+        if (request.getIsDamagedByRestaurant()){
+            DamagedContainer damagedContainer = DamagedContainer.builder()
+                    .containerTypeId(request.getContainerTypeId())
+                    .remark(request.getRemark())
+                    .restaurantId(request.getRestaurantId())
+                    .damagedByRestaurant(true)
+                    .damagedByUser(false)
+                    .build();
 
-        DamagedContainer savedDamagedContainer =
-                damagedContainerRepository.save(damagedContainer);
+            DamagedContainer savedDamagedContainer =
+                    damagedContainerRepository.save(damagedContainer);
 
-        if (!CollectionUtils.isEmpty(damagedContainerImages)) {
-            List<String> imageUrls = damagedContainerImages.stream()
-                    .filter(f -> f != null && !f.isEmpty())
-                    .map(file -> notificationFeignClientService.uploadImage("damaged-container", file))
-                    .toList();
+            if (!CollectionUtils.isEmpty(damagedContainerImages)) {
+                List<String> imageUrls = damagedContainerImages.stream()
+                        .filter(f -> f != null && !f.isEmpty())
+                        .map(file -> notificationFeignClientService.uploadImage("damaged-container", file))
+                        .toList();
 
-            if (imageUrls.isEmpty()) {
-                throw new InventoryException("Image upload failed");
+                if (imageUrls.isEmpty()) {
+                    throw new InventoryException("Image upload failed");
+                }
+
+                List<DamagedContainerImages> images = imageUrls.stream()
+                        .map(url -> DamagedContainerImages.builder()
+                                .damageId(savedDamagedContainer.getId())
+                                .damageImageUrl(url)
+                                .build())
+                        .toList();
+
+                damagedContainerImagesRepository.saveAll(images);
             }
 
-            List<DamagedContainerImages> images = imageUrls.stream()
-                    .map(url -> DamagedContainerImages.builder()
-                            .damageId(savedDamagedContainer.getId())
-                            .damageImageUrl(url)
-                            .build())
-                    .toList();
+            RestaurantInventoryMaster master =
+                    restaurantInventoryMasterRepository
+                            .findByRestaurantIdAndContainerTypeId(
+                                    request.getRestaurantId(),
+                                    request.getContainerTypeId());
 
-            damagedContainerImagesRepository.saveAll(images);
+            if (master == null) {
+                throw new InventoryException("Inventory master not found");
+            }
+
+            if (master.getAvailableContainers() <= 0) {
+                throw new InventoryException("No containers available");
+            }
+
+            master.setTotalContainers(master.getTotalContainers() - 1);
+            master.setAvailableContainers(master.getAvailableContainers() - 1);
+            restaurantInventoryMasterRepository.save(master);
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS,
+                    "Damaged container reported successfully",
+                    savedDamagedContainer);
+
         }
 
-        RestaurantInventoryMaster master =
-                restaurantInventoryMasterRepository
-                        .findByRestaurantIdAndContainerTypeId(
-                                request.getRestaurantId(),
-                                request.getContainerTypeId());
+        if (request.getIsDamagedByUser()){
+            DamagedContainer damagedContainer = DamagedContainer.builder()
+                    .containerTypeId(request.getContainerTypeId())
+                    .remark(request.getRemark())
+                    .userId(request.getUserId())
+                    .restaurantId(request.getRestaurantId())
+                    .damagedByRestaurant(false)
+                    .damagedByUser(true)
+                    .build();
 
-        if (master == null) {
-            throw new InventoryException("Inventory master not found");
+            DamagedContainer savedDamagedContainer =
+                    damagedContainerRepository.save(damagedContainer);
+
+            if (!CollectionUtils.isEmpty(damagedContainerImages)) {
+                List<String> imageUrls = damagedContainerImages.stream()
+                        .filter(f -> f != null && !f.isEmpty())
+                        .map(file -> notificationFeignClientService.uploadImage("damaged-container", file))
+                        .toList();
+
+                if (imageUrls.isEmpty()) {
+                    throw new InventoryException("Image upload failed");
+                }
+
+                List<DamagedContainerImages> images = imageUrls.stream()
+                        .map(url -> DamagedContainerImages.builder()
+                                .damageId(savedDamagedContainer.getId())
+                                .damageImageUrl(url)
+                                .build())
+                        .toList();
+
+                damagedContainerImagesRepository.saveAll(images);
+            }
+
+            AdminInventoryMaster master =
+                    masterRepo.findByContainerTypeId(request.getContainerTypeId())
+                            .orElseThrow(() -> new InventoryException("Inventory master not found"));
+
+            if (master.getAvailableContainers() <= 0) {
+                throw new InventoryException("No containers available");
+            }
+
+            master.setTotalContainers(master.getTotalContainers() - 1);
+            masterRepo.save(master);
+
+            return new ApiResponse<>(InventoryConstant.SUCCESS,
+                    "Damaged container reported successfully",
+                    savedDamagedContainer);
         }
 
-        if (master.getAvailableContainers() <= 0) {
-            throw new InventoryException("No containers available");
-        }
+        throw new InventoryException("Invalid damage report: must be either by restaurant or user");
 
-        master.setTotalContainers(master.getTotalContainers() - 1);
-        master.setAvailableContainers(master.getAvailableContainers() - 1);
-        restaurantInventoryMasterRepository.save(master);
-
-        return new ApiResponse<>(InventoryConstant.SUCCESS,
-                "Damaged container reported successfully",
-                savedDamagedContainer);
     }
 
 
