@@ -110,6 +110,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackOn = Exception.class)
     public Map<String, Object> borrowContainers(BorrowRequest request) {
+        // add push notification  logic
         try {
 
             validateBorrowRequest(request);
@@ -1337,12 +1338,15 @@ public class OrderServiceImpl implements OrderService {
             }
 
             Map<Long, ProductResponse> finalProductMap = productMap;
+            Long finalUserId = userId;
             List<ProductDetailsResponse> result = rows.stream().map(r -> {
                 int remainingQty = Math.max(0, r.getRemainingQty());
                 long daysPassed = ChronoUnit.DAYS.between(r.getOrderDate(), LocalDate.now());
                 long daysLeft = Math.max(0, 7 - daysPassed);
                 ProductResponse p = finalProductMap.get(r.getProductId());
-                return new ProductDetailsResponse(r.getOrderId(),
+                return new ProductDetailsResponse(
+                        finalUserId,
+                        r.getOrderId(),
                         r.getProductId(),
                         p != null ? p.getProductName() : null,
                         remainingQty,

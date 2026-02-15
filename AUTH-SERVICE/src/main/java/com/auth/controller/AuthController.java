@@ -1,5 +1,6 @@
 package com.auth.controller;
 
+import com.auth.constant.AuthConstant;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
 import com.auth.request.UserDto;
@@ -88,22 +89,22 @@ public class AuthController {
             log.info("UserOpt: {}", userOpt);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-                        Map.of(
-                                "status", "ERROR",
-                                "message", "Username not found"
-                        )
-                );
+                        new ApiResponse<>(AuthConstant.ERROR, "Username not found"));
             }
 
             User user = userOpt.get();
 
+            if(!user.getUserType().equals(loginRequest.getRole())){
+                System.err.println("User role mismatch: expected " + user.getUserType() + " but got " + loginRequest.getRole());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                        new ApiResponse<>(AuthConstant.ERROR, "User role mismatch")
+                );
+            }
+
             // 2️⃣ Check password manually
             if (!passwordEncoder.matches(loginRequest.getPassword(), user.getPasswordHash())) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        Map.of(
-                                "status", "error",
-                                "message", "Invalid password"
-                        )
+                        new ApiResponse<>(AuthConstant.ERROR, "Invalid password")
                 );
             }
 
@@ -117,10 +118,7 @@ public class AuthController {
 
             if (!authentication.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                        Map.of(
-                                "status", "error",
-                                "message", "Authentication failed"
-                        )
+                        new ApiResponse<>(AuthConstant.ERROR, "Authentication failed")
                 );
             }
 
@@ -128,19 +126,12 @@ public class AuthController {
             LoginResponse response = userService.generateToken(loginRequest.getUserName());
 
             return ResponseEntity.ok(
-                    Map.of(
-                            "status", "success",
-                            "message", "Login successful",
-                            "data", response
-                    )
+                    new ApiResponse<>(AuthConstant.SUCCESS, "Login successful", response)
             );
 
         } catch (Exception ex) {
             return ResponseEntity.status(HttpStatus.OK).body(
-                    Map.of(
-                            "status", "error",
-                            "message", "Something went wrong"
-                    )
+                    new ApiResponse<>(AuthConstant.ERROR, "Something went wrong")
             );
         }
     }

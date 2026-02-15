@@ -80,7 +80,7 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/productsSummary")
+    @GetMapping("/getBorrowedProduct")
     public ResponseEntity<?> getBorrowSummary(@RequestParam(required = false) Long userId, @RequestParam(required = false) String customerId) {
         return ResponseEntity.ok(orderService.getBorrowedProductSummary(userId, customerId));
     }
