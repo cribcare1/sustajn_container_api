@@ -9,6 +9,7 @@ import com.sustajn.oderservice.entity.ReturnOrder;
 import com.sustajn.oderservice.exception.ResourceNotFoundException;
 import com.sustajn.oderservice.feign.service.AuthClient;
 import com.sustajn.oderservice.feign.service.InventoryFeignClient;
+import com.sustajn.oderservice.feign.service.NotificationFeignClient;
 import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.OrderRepository;
@@ -21,8 +22,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-
-import java.sql.Timestamp;
+import com.sustajn.oderservice.dto.DeviceTokenResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -41,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
     private final ReturnOrderRepository returnOrderRepository;
     private final AuthClient authClient;
     private final InventoryFeignClient inventoryFeignClient;
+    private final NotificationFeignClient notificationFeignClient;
 
 //    @Override
 //    @Transactional
@@ -110,7 +111,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackOn = Exception.class)
     public Map<String, Object> borrowContainers(BorrowRequest request) {
-        // add push notification  logic
         try {
 
             validateBorrowRequest(request);
@@ -178,7 +178,7 @@ public class OrderServiceImpl implements OrderService {
                 borrowOrder.setOrderId(order.getId());
                 borrowOrder.setRestaurantId(request.getRestaurantId());
                 borrowOrder.setUserId(userId);
-                borrowOrder.setProductId(item.getProductId());
+                borrowOrder.setProductId(item.getProductId().longValue());
                 borrowOrder.setQuantity(item.getQuantity());
                 borrowOrder.setReturnedQuantity(0);
                 borrowOrder.setBorrowedAt(LocalDateTime.now());
@@ -186,6 +186,55 @@ public class OrderServiceImpl implements OrderService {
 
                 borrowOrderRepository.save(borrowOrder);
             }
+
+            List<Integer> productIds = request.getItems()
+                    .stream()
+                    .map(BorrowItemRequest::getProductId)
+                    .collect(Collectors.toList());
+
+            List<ProductResponse> products =
+                    inventoryFeignClient.getProductsByIds(productIds);
+
+            Map<Integer, String> productNameMap =
+                    products.stream()
+                            .collect(Collectors.toMap(
+                                    ProductResponse::getProductId,
+                                    ProductResponse::getProductName
+                            ));
+
+            // ===============================
+            // 8️⃣ Notification
+            // ===============================
+            String title = "Containers Borrowed Successfully";
+            StringBuilder body = new StringBuilder();
+            body.append("Hi ")
+                    .append(userResponse.getData().getFullName())
+                    .append(",\n\n")
+                    .append("You have successfully borrowed the following containers:\n");
+
+            DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(userId);
+
+            for (BorrowItemRequest item : request.getItems()) {
+
+                String productName =
+                        productNameMap.getOrDefault(
+                                item.getProductId(),
+                                "Unknown Product");
+
+                body.append("- Product Name: ")
+                        .append(productName)
+                        .append(", Quantity: ")
+                        .append(item.getQuantity())
+                        .append("\n");
+            }
+            NotificationResponse notification = NotificationResponse.builder()
+                    .title(title)
+                    .body(body.toString())
+                    .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
+                    .data(OrderServiceConstant.ACTION_BORROW)
+                    .build();
+
+            notificationFeignClient.sendNotificationToMultipleDevices(notification);
 
             return ApiResponseUtil.success("Containers borrowed successfully");
 
@@ -498,6 +547,7 @@ public class OrderServiceImpl implements OrderService {
                 String transactionId = orderTransactionMap.get(orderId);
                 List<BorrowOrder> list = entry.getValue();
 
+
                 String products = list.stream()
                         .map(b -> productNameMap.get(b.getProductId()))
                         .distinct()
@@ -532,9 +582,11 @@ public class OrderServiceImpl implements OrderService {
 
             // ================= RECEIVED SECTION =================
             Map<Long, List<ReturnOrder>> returnedGrouped =
-                    returnOrders.stream().collect(Collectors.groupingBy(
-                            r -> borrowById.get(r.getBorrowOrderId()).getOrderId()
-                    ));
+                    returnOrders.stream()
+                            .filter(r -> borrowById.containsKey(r.getBorrowOrderId()))
+                            .collect(Collectors.groupingBy(
+                                    r -> borrowById.get(r.getBorrowOrderId()).getOrderId()
+                            ));
 
             List<ReceivedResponse> receivedResponses = new ArrayList<>();
 

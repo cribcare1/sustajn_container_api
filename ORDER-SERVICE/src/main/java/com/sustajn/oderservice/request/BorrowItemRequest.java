@@ -6,7 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BorrowItemRequest {
-    private Long productId;
+    private Integer productId;
     private int quantity;
 }
 

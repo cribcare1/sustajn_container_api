@@ -91,4 +91,10 @@ public class NotificationController {
         return ResponseEntity.ok(saved);
     }
 
+
+    @PostMapping("/getDeviceTokens")
+    public ResponseEntity<DeviceToken> getDeviceTokens(@RequestParam Long userId) {
+        return ResponseEntity.ok(deviceTokenService.getDeviceTokenByUserId(userId));
+    }
+
 }

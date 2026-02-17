@@ -39,4 +39,9 @@ public class DeviceTokenService {
                     return deviceTokenRepository.save(token);
                 });
     }
+
+    public DeviceToken getDeviceTokenByUserId(Long userId) {
+        return deviceTokenRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Device token not found for user ID: " + userId));
+    }
 }
