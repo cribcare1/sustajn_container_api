@@ -214,27 +214,30 @@ public class OrderServiceImpl implements OrderService {
 
             DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(userId);
 
-            for (BorrowItemRequest item : request.getItems()) {
+            if (deviceTokenResponse != null){
+                log.error("Device token for userId {}: {}", userId, deviceTokenResponse.getDeviceToken());
+                for (BorrowItemRequest item : request.getItems()) {
 
-                String productName =
-                        productNameMap.getOrDefault(
-                                item.getProductId(),
-                                "Unknown Product");
+                    String productName =
+                            productNameMap.getOrDefault(
+                                    item.getProductId(),
+                                    "Unknown Product");
 
-                body.append("- Product Name: ")
-                        .append(productName)
-                        .append(", Quantity: ")
-                        .append(item.getQuantity())
-                        .append("\n");
+                    body.append("- Product Name: ")
+                            .append(productName)
+                            .append(", Quantity: ")
+                            .append(item.getQuantity())
+                            .append("\n");
+                }
+                NotificationResponse notification = NotificationResponse.builder()
+                        .title(title)
+                        .body(body.toString())
+                        .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
+                        .data(OrderServiceConstant.ACTION_BORROW)
+                        .build();
+
+                notificationFeignClient.sendNotificationToMultipleDevices(notification);
             }
-            NotificationResponse notification = NotificationResponse.builder()
-                    .title(title)
-                    .body(body.toString())
-                    .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
-                    .data(OrderServiceConstant.ACTION_BORROW)
-                    .build();
-
-            notificationFeignClient.sendNotificationToMultipleDevices(notification);
 
             return ApiResponseUtil.success("Containers borrowed successfully");
 
