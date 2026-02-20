@@ -275,7 +275,7 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getSoldContainerMonthWiseDetails(restaurantId));
     }
 
-    @GetMapping("/getDamageContainerDamagedByCustomerOrPartner")
+    @GetMapping("/getDamageContainerByUserType")
     public ResponseEntity<ApiResponse<List<DamageContainerMonthWiseResponse>>> getDamageContainerDamagedByCustomerOrPartner(@RequestParam String damageBy){
         return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(damageBy));
     }
