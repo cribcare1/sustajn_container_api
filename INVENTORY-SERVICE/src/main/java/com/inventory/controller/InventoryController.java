@@ -2,8 +2,10 @@ package com.inventory.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
+import com.inventory.dto.DamageContainerMonthWiseResponse;
 import com.inventory.dto.ErrorResponses;
 import com.inventory.dto.ProductResponse;
+import com.inventory.dto.SoldContainerMonthWiseResponse;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
@@ -179,7 +181,7 @@ public class InventoryController {
     }
 
     @PostMapping("/getProductsByIds")
-    public List<ProductResponse> getProductsByIds(@RequestBody List<Integer> ids) {
+    public ApiResponse<List<ProductResponse>> getProductsByIds(@RequestBody List<Integer> ids) {
         return inventoryService.getProductsByIds(ids);
     }
 
@@ -261,5 +263,22 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<DamagedContainer>> reportDamagedContainer(@RequestPart("request") String request, @RequestPart("images") List<MultipartFile> images) {
         return ResponseEntity.ok(inventoryService.reportDamagedContainer(request, images));
     }
+
+
+    @GetMapping("/getDamagedContainersByRestaurant")
+    public ResponseEntity<ApiResponse<List<DamageContainerMonthWiseResponse>>> getDamageContainerMonthWiseDetails(@RequestParam Long restaurantId){
+        return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetails(restaurantId));
+    }
+
+    @GetMapping("/getSoldContainersByRestaurant")
+    public ResponseEntity<ApiResponse<List<SoldContainerMonthWiseResponse>>> getSoldContainerMonthWiseDetails(@RequestParam Long restaurantId){
+        return ResponseEntity.ok(inventoryService.getSoldContainerMonthWiseDetails(restaurantId));
+    }
+
+    @GetMapping("/getDamageContainerDamagedByCustomerOrPartner")
+    public ResponseEntity<ApiResponse<List<DamageContainerMonthWiseResponse>>> getDamageContainerDamagedByCustomerOrPartner(@RequestParam String damageBy){
+        return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(damageBy));
+    }
+
 
 }

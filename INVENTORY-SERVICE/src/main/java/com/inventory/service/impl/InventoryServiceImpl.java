@@ -1,14 +1,12 @@
 package com.inventory.service.impl;
 
 import com.inventory.Constant.InventoryConstant;
-import com.inventory.dto.ContainerTypeResponse;
-import com.inventory.dto.InventoryWithContainerResponse;
-import com.inventory.dto.ProductResponse;
-import com.inventory.dto.RestaurantInventoryViewResponse;
+import com.inventory.dto.*;
 import com.inventory.entity.*;
 import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
 import com.inventory.exception.ResourceNotFoundException;
+import com.inventory.feignClient.AuthFeignClient;
 import com.inventory.feignClient.service.NotificationFeignClientService;
 import com.inventory.repository.*;
 import com.inventory.request.*;
@@ -23,13 +21,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.format.DateTimeFormatter;
+import java.time.format.TextStyle;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -46,6 +44,8 @@ public class InventoryServiceImpl implements InventoryService {
     private final RestaurantInventoryMasterRepository restaurantInventoryMasterRepository;
     private final DamagedContainerRepository damagedContainerRepository;
     private final DamagedContainerImagesRepository damagedContainerImagesRepository;
+    private final SoldContainerRepository soldContainerRepository;
+    private final AuthFeignClient authFeignClient;
 
     public Map<String, Object> saveOrUpdate(ContainerTypeRequest request, MultipartFile file) {
 
@@ -565,13 +565,62 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
 
-    @Override
-    public List<ProductResponse> getProductsByIds(List<Integer> ids) {
-        if (ids == null || ids.isEmpty()) {
-            throw new IllegalArgumentException("Product ID list cannot be empty");
+//    @Override
+//    public List<ProductResponse> getProductsByIds(List<Integer> ids) {
+//        if (ids == null || ids.isEmpty()) {
+//            throw new IllegalArgumentException("Product ID list cannot be empty");
+//        }
+//        return containerTypeRepository.findProductResponsesByIds(ids);
+//    }
+
+
+    public ApiResponse<List<ProductResponse>> getProductsByIds(
+            @RequestBody List<Integer> ids) {
+
+        try {
+
+            // If ids null or empty → return empty list safely
+            if (ids == null || ids.isEmpty()) {
+                return new ApiResponse<>(
+                        "No product ids provided",
+                        "SUCCESS",
+                        new ArrayList<>()
+                );
+            }
+
+            List<ContainerType> products = containerTypeRepository.findAllById(ids);
+
+            List<ProductResponse> responseList = products.stream()
+                    .map(product -> new ProductResponse(
+                            product.getId(),
+                            product.getName(),
+                            product.getDescription(),
+                            product.getCostPerUnit().doubleValue(),
+                            product.getImageUrl(),
+                            product.getCapacityMl(),
+                            product.getProductId()
+                    ))
+                    .collect(Collectors.toList());
+
+            // 🔥 IMPORTANT: Always return empty list instead of null
+            return new ApiResponse<>(
+                    responseList.isEmpty()
+                            ? "No products found"
+                            : "Products fetched successfully",
+                    "SUCCESS",
+                    responseList
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>(
+                    "Failed to fetch products",
+                    "ERROR",
+                    new ArrayList<>()
+            );
         }
-        return containerTypeRepository.findProductResponsesByIds(ids);
     }
+
 
     @Override
     public ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(Long restaurantId) {
@@ -791,5 +840,507 @@ public class InventoryServiceImpl implements InventoryService {
 
     }
 
+    @Override
+    public ApiResponse<List<DamageContainerMonthWiseResponse>>
+    getDamageContainerMonthWiseDetails(Long restaurantId) {
 
+        try {
+
+            // ================= FETCH DAMAGED CONTAINERS =================
+            List<DamagedContainer> damagedContainers =
+                    damagedContainerRepository.findByRestaurantId(restaurantId);
+
+            if (damagedContainers == null || damagedContainers.isEmpty()) {
+                return new ApiResponse<>(
+                        InventoryConstant.SUCCESS,
+                        "No damaged containers found",
+                        Collections.emptyList()
+                );
+            }
+
+            // ================= BULK FETCH CONTAINER TYPES =================
+            Set<Integer> containerTypeIds = damagedContainers.stream()
+                    .map(DamagedContainer::getContainerTypeId)
+                    .collect(Collectors.toSet());
+
+            Map<Integer, ContainerType> containerTypeMap =
+                    containerTypeRepository.findByIdIn(containerTypeIds)
+                            .stream()
+                            .collect(Collectors.toMap(ContainerType::getId, ct -> ct));
+
+            // ================= BULK FETCH DAMAGE IMAGES =================
+            Set<Long> damageIds = damagedContainers.stream()
+                    .map(DamagedContainer::getId)
+                    .collect(Collectors.toSet());
+
+            Map<Long, List<DamagedContainerImages>> damageImagesMap =
+                    damagedContainerImagesRepository.findByDamageIdIn(damageIds)
+                            .stream()
+                            .collect(Collectors.groupingBy(DamagedContainerImages::getDamageId));
+
+            // ================= GROUP BY MONTH-YEAR =================
+            Map<String, List<DamagedContainer>> monthWiseMap =
+                    damagedContainers.stream()
+                            .collect(Collectors.groupingBy(dc -> {
+                                LocalDateTime date = dc.getCreatedAt();
+                                return date.getMonth()
+                                        .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
+                                        + "-" + date.getYear();
+                            }));
+
+            List<DamageContainerMonthWiseResponse> monthWiseResponses = new ArrayList<>();
+
+            for (Map.Entry<String, List<DamagedContainer>> monthEntry : monthWiseMap.entrySet()) {
+
+                String monthYear = monthEntry.getKey();
+                List<DamagedContainer> monthContainers = monthEntry.getValue();
+
+                Integer monthWiseTotal = monthContainers.size();
+
+                // ================= GROUP BY DATE-TIME =================
+                Map<String, List<DamagedContainer>> dateWiseMap =
+                        monthContainers.stream()
+                                .collect(Collectors.groupingBy(dc ->
+                                        dc.getCreatedAt()
+                                                .format(DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm"))
+                                ));
+
+                List<DamageContainerDateWiseResponse> dateResponses = new ArrayList<>();
+
+                for (Map.Entry<String, List<DamagedContainer>> dateEntry : dateWiseMap.entrySet()) {
+
+                    String dateTime = dateEntry.getKey();
+                    List<DamagedContainer> dateContainers = dateEntry.getValue();
+
+                    Integer dateWiseTotal = dateContainers.size();
+
+                    List<DamageProductResponse> productResponses = new ArrayList<>();
+                    Set<String> productIds = new LinkedHashSet<>();
+
+                    for (DamagedContainer dc : dateContainers) {
+
+                        ContainerType containerType =
+                                containerTypeMap.get(dc.getContainerTypeId());
+
+                        if (containerType == null) continue;
+
+                        // Get images
+                        List<DamagedContainerImages> images =
+                                damageImagesMap.getOrDefault(dc.getId(), Collections.emptyList());
+
+                        String imageUrls = images.stream()
+                                .map(DamagedContainerImages::getDamageImageUrl)
+                                .collect(Collectors.joining("#"));
+
+                        DamageProductResponse product = new DamageProductResponse(
+                                null,
+                                null,
+                                containerType.getId(),
+                                containerType.getName(),
+                                containerType.getDescription(),
+                                containerType.getImageUrl(),
+                                containerType.getCapacityMl(),
+                                containerType.getProductId(),
+                                dc.getRemark(),
+                                imageUrls
+                        );
+
+                        productResponses.add(product);
+
+                        if (containerType.getProductId() != null) {
+                            productIds.add(containerType.getProductId());
+                        }
+                    }
+
+                    DamageContainerDateWiseResponse damageResponse =
+                            new DamageContainerDateWiseResponse(
+                                    String.join(" | ", productIds),
+                                    dateTime,
+                                    dateWiseTotal,
+                                    productResponses
+                            );
+
+                    dateResponses.add(damageResponse);
+                }
+
+                DamageContainerMonthWiseResponse monthResponse =
+                        new DamageContainerMonthWiseResponse(
+                                monthYear,
+                                monthWiseTotal,
+                                dateResponses
+                        );
+
+                monthWiseResponses.add(monthResponse);
+            }
+
+            return new ApiResponse<>(
+                    InventoryConstant.SUCCESS,
+                    "Damaged container details fetched successfully",
+                    monthWiseResponses
+            );
+
+        } catch (Exception e) {
+
+            log.error("Error fetching month-wise damaged container details for restaurantId {}: {}",
+                    restaurantId, e.getMessage(), e);
+
+            return new ApiResponse<>(
+                    InventoryConstant.ERROR,
+                    "Failed to fetch month-wise damaged container details",
+                    null
+            );
+        }
+    }
+
+    @Override
+    public ApiResponse<List<SoldContainerMonthWiseResponse>> getSoldContainerMonthWiseDetails(Long restaurantId) {
+
+        try {
+
+            // ================= FETCH SOLD CONTAINERS =================
+            List<SoldContainers> soldContainers =
+                    soldContainerRepository.findByRestaurantId(restaurantId);
+
+            if (soldContainers == null || soldContainers.isEmpty()) {
+                return new ApiResponse<>(
+                        InventoryConstant.SUCCESS,
+                        "No sold containers found",
+                        Collections.emptyList()
+                );
+            }
+
+            // ================= BULK FETCH CONTAINER TYPES =================
+            Set<Integer> containerIds = soldContainers.stream()
+                    .map(SoldContainers::getContainerId)
+                    .collect(Collectors.toSet());
+
+            Map<Integer, ContainerType> containerTypeMap =
+                    containerTypeRepository.findByIdIn(containerIds)
+                            .stream()
+                            .collect(Collectors.toMap(ContainerType::getId, ct -> ct));
+
+            // ================= GROUP BY MONTH-YEAR =================
+            Map<String, List<SoldContainers>> monthWiseMap =
+                    soldContainers.stream()
+                            .collect(Collectors.groupingBy(sc -> {
+                                LocalDateTime date = sc.getCreatedAt();
+                                return date.getMonth()
+                                        .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
+                                        + "-" + date.getYear();
+                            }));
+
+            List<SoldContainerMonthWiseResponse> monthWiseResponses = new ArrayList<>();
+
+            for (Map.Entry<String, List<SoldContainers>> monthEntry : monthWiseMap.entrySet()) {
+
+                String monthYear = monthEntry.getKey();
+                List<SoldContainers> monthContainers = monthEntry.getValue();
+
+                Integer monthWiseTotal = monthContainers.stream()
+                        .mapToInt(SoldContainers::getSoldQuantity)
+                        .sum();
+
+                // ================= GROUP BY DATE-TIME =================
+                Map<String, List<SoldContainers>> dateWiseMap =
+                        monthContainers.stream()
+                                .collect(Collectors.groupingBy(sc ->
+                                        sc.getCreatedAt()
+                                                .format(DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm"))
+                                ));
+
+                List<SoldContainersDateWiseResponse> dateResponses = new ArrayList<>();
+
+                for (Map.Entry<String, List<SoldContainers>> dateEntry : dateWiseMap.entrySet()) {
+
+                    String dateTime = dateEntry.getKey();
+                    List<SoldContainers> dateContainers = dateEntry.getValue();
+
+                    Integer dateWiseTotal = dateContainers.stream()
+                            .mapToInt(SoldContainers::getSoldQuantity)
+                            .sum();
+
+                    List<SoldProductResponse> productResponses = new ArrayList<>();
+                    Set<String> productIds = new LinkedHashSet<>();
+
+                    for (SoldContainers sc : dateContainers) {
+
+                        ContainerType containerType =
+                                containerTypeMap.get(sc.getContainerId());
+
+                        if (containerType == null) continue;
+
+                        SoldProductResponse product = new SoldProductResponse(
+                                containerType.getId(),
+                                containerType.getName(),
+                                containerType.getDescription(),
+                                containerType.getImageUrl(),
+                                containerType.getCapacityMl(),
+                                containerType.getProductId(),
+                                sc.getSoldPrice()
+                        );
+
+                        productResponses.add(product);
+
+                        if (containerType.getProductId() != null) {
+                            productIds.add(containerType.getProductId());
+                        }
+                    }
+
+                    dateResponses.add(
+                            new SoldContainersDateWiseResponse(
+                                    String.join(" | ", productIds),
+                                    dateTime,
+                                    dateWiseTotal,
+                                    productResponses
+                            )
+                    );
+                }
+
+                monthWiseResponses.add(
+                        new SoldContainerMonthWiseResponse(
+                                monthYear,
+                                monthWiseTotal,
+                                dateResponses
+                        )
+                );
+            }
+
+            return new ApiResponse<>(
+                    InventoryConstant.SUCCESS,
+                    "Sold container details fetched successfully",
+                    monthWiseResponses
+            );
+
+        } catch (Exception e) {
+
+            log.error("Error fetching month-wise sold container details for restaurantId {}: {}",
+                    restaurantId, e.getMessage(), e);
+
+            return new ApiResponse<>(
+                    InventoryConstant.ERROR,
+                    "Failed to fetch month-wise sold container details",
+                    null
+            );
+        }
+    }
+
+    @Override
+    public ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(String damageBy) {
+
+        try {
+
+            List<DamagedContainer> damagedContainers = new ArrayList<>();
+
+            if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
+                damagedContainers = damagedContainerRepository.findAllIsDamageByCustomer();
+            }
+
+            if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+                damagedContainers = damagedContainerRepository.findAllIsDamageByRestaurant();
+            }
+
+            if (damagedContainers == null || damagedContainers.isEmpty()) {
+                return new ApiResponse<>(
+                        InventoryConstant.SUCCESS,
+                        "No damaged containers found",
+                        Collections.emptyList()
+                );
+            }
+
+            // ================= BULK FETCH CONTAINER TYPES =================
+            Set<Integer> containerTypeIds = damagedContainers.stream()
+                    .map(DamagedContainer::getContainerTypeId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+
+            Map<Integer, ContainerType> containerTypeMap =
+                    containerTypeRepository.findByIdIn(containerTypeIds)
+                            .stream()
+                            .collect(Collectors.toMap(
+                                    ContainerType::getId,
+                                    ct -> ct
+                            ));
+
+            // ================= BULK FETCH DAMAGE IMAGES =================
+            Set<Long> damageIds = damagedContainers.stream()
+                    .map(DamagedContainer::getId)
+                    .collect(Collectors.toSet());
+
+            Map<Long, List<DamagedContainerImages>> damageImagesMap =
+                    damagedContainerImagesRepository.findByDamageIdIn(damageIds)
+                            .stream()
+                            .collect(Collectors.groupingBy(
+                                    DamagedContainerImages::getDamageId
+                            ));
+
+            // ================= BULK FETCH USER DETAILS (Feign) =================
+            Set<Long> userIds = new HashSet<>();
+
+            if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
+                userIds = damagedContainers.stream()
+                        .map(DamagedContainer::getUserId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+            }
+            if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+                userIds = damagedContainers.stream()
+                        .map(DamagedContainer::getRestaurantId)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toSet());
+            }
+
+            Map<Long, Map<String, Object>> userDetailsMap = new HashMap<>();
+
+            for (Long userId : userIds) {
+                try {
+                    Map<String, Object> userDetails =
+                            authFeignClient.getUserDetails(userId);
+
+                    userDetailsMap.put(userId, userDetails);
+                } catch (Exception ex) {
+                    log.error("Failed to fetch user details for userId {}", userId);
+                }
+            }
+
+            // ================= GROUP BY MONTH =================
+            Map<String, List<DamagedContainer>> monthWiseMap =
+                    damagedContainers.stream()
+                            .collect(Collectors.groupingBy(dc -> {
+                                LocalDateTime date = dc.getCreatedAt();
+                                return date.getMonth()
+                                        .getDisplayName(TextStyle.FULL, Locale.ENGLISH)
+                                        + "-" + date.getYear();
+                            }));
+
+            List<DamageContainerMonthWiseResponse> monthWiseResponses = new ArrayList<>();
+
+            for (Map.Entry<String, List<DamagedContainer>> monthEntry : monthWiseMap.entrySet()) {
+
+                String monthYear = monthEntry.getKey();
+                List<DamagedContainer> monthContainers = monthEntry.getValue();
+
+                Map<String, List<DamagedContainer>> dateWiseMap =
+                        monthContainers.stream()
+                                .collect(Collectors.groupingBy(dc ->
+                                        dc.getCreatedAt()
+                                                .format(DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm"))
+                                ));
+
+                List<DamageContainerDateWiseResponse> dateResponses = new ArrayList<>();
+
+                for (Map.Entry<String, List<DamagedContainer>> dateEntry : dateWiseMap.entrySet()) {
+
+                    String dateTime = dateEntry.getKey();
+                    List<DamagedContainer> dateContainers = dateEntry.getValue();
+
+                    List<DamageProductResponse> productResponses = new ArrayList<>();
+                    Set<String> productIds = new LinkedHashSet<>();
+
+                    for (DamagedContainer dc : dateContainers) {
+
+                        ContainerType containerType =
+                                containerTypeMap.get(dc.getContainerTypeId());
+
+                        if (containerType == null) continue;
+
+                        // ===== Fetch user details from Map =====
+                        Map<String, Object> userDetails = new HashMap<>();
+
+                        if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
+                            userDetails = userDetailsMap.get(dc.getUserId());
+                        }
+                        if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+                            userDetails = userDetailsMap.get(dc.getRestaurantId());
+                        }
+
+                        String customerId = null;
+                        String restaurantName = null;
+
+                        if (userDetails != null && userDetails.get("data") != null) {
+
+                            Map<String, Object> data =
+                                    (Map<String, Object>) userDetails.get("data");
+
+                            if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
+                                customerId = data.get("customerId") != null
+                                        ? data.get("customerId").toString()
+                                        : null;
+                            }
+
+                            if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+                                restaurantName = data.get("fullName") != null
+                                        ? data.get("fullName").toString()
+                                        : null;
+                            }
+                        }
+
+                        // ===== Fetch Images =====
+                        List<DamagedContainerImages> images =
+                                damageImagesMap.getOrDefault(
+                                        dc.getId(),
+                                        Collections.emptyList()
+                                );
+
+                        String imageUrls = images.stream()
+                                .map(DamagedContainerImages::getDamageImageUrl)
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.joining("#"));
+
+                        DamageProductResponse product =
+                                new DamageProductResponse(
+                                        customerId,
+                                        restaurantName,
+                                        containerType.getId(),
+                                        containerType.getName(),
+                                        containerType.getDescription(),
+                                        containerType.getImageUrl(),
+                                        containerType.getCapacityMl(),
+                                        containerType.getProductId(),
+                                        dc.getRemark(),
+                                        imageUrls
+                                );
+
+                        productResponses.add(product);
+
+                        if (containerType.getProductId() != null) {
+                            productIds.add(containerType.getProductId());
+                        }
+                    }
+
+                    dateResponses.add(
+                            new DamageContainerDateWiseResponse(
+                                    String.join(" | ", productIds),
+                                    dateTime,
+                                    dateContainers.size(),
+                                    productResponses
+                            )
+                    );
+                }
+
+                monthWiseResponses.add(
+                        new DamageContainerMonthWiseResponse(
+                                monthYear,
+                                monthContainers.size(),
+                                dateResponses
+                        )
+                );
+            }
+
+            return new ApiResponse<>(
+                    InventoryConstant.SUCCESS,
+                    "Damaged container details fetched successfully",
+                    monthWiseResponses
+            );
+
+        } catch (Exception e) {
+
+            log.error("Error fetching month-wise damaged container details", e);
+
+            return new ApiResponse<>(
+                    InventoryConstant.ERROR,
+                    "Failed to fetch month-wise damaged container details",
+                    null
+            );
+        }
+    }
 }

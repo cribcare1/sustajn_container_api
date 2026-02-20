@@ -8,8 +8,6 @@ import com.notification.service.DeviceTokenService;
 import com.notification.service.EmailService;
 import com.notification.service.PushNotificationService;
 import com.notification.service.TokenService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,7 +27,7 @@ public class NotificationController {
         this.tokenService = tokenService;
         this.emailService = emailService;
         this.notificationService=notificationService;
-        this.deviceTokenService=deviceTokenService;
+        this.deviceTokenService = deviceTokenService;
         this.authServiceClient = authServiceClient;
     }
 
@@ -85,9 +83,9 @@ public class NotificationController {
 
     @PostMapping("/registerOrUpdateDeviceToken")
     public ResponseEntity<DeviceToken> registerOrUpdateToken(
-            DeviceTokenRequest deviceTokenRequest
+            @RequestBody DeviceTokenRequest deviceTokenRequest
     ) {
-        DeviceToken saved = deviceTokenService.upsertUserDeviceToken(deviceTokenRequest.getUserId(),deviceTokenRequest.getDeviceToken(), deviceTokenRequest.getDeviceType());
+        DeviceToken saved = deviceTokenService.addOrUpdateUserDeviceToken(deviceTokenRequest.getUserId(),deviceTokenRequest.getDeviceToken(), deviceTokenRequest.getDeviceType());
         return ResponseEntity.ok(saved);
     }
 
