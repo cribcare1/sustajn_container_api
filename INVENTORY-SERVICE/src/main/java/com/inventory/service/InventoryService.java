@@ -1,8 +1,6 @@
 package com.inventory.service;
 
-import com.inventory.dto.ContainerTypeResponse;
-import com.inventory.dto.InventoryWithContainerResponse;
-import com.inventory.dto.ProductResponse;
+import com.inventory.dto.*;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.entity.RestaurantContainerInventory;
 import com.inventory.entity.RestaurantInventoryMaster;
@@ -32,7 +30,7 @@ public interface InventoryService {
 
     public Map<String, Object> addContainer(AddContainerRequest request, MultipartFile image) ;
 
-    List<ProductResponse> getProductsByIds(List<Integer> ids);
+    ApiResponse<List<ProductResponse>> getProductsByIds(List<Integer> ids);
 
     ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(Long restaurantId);
 
@@ -43,4 +41,14 @@ public interface InventoryService {
     Map<String, Object> increaseAvailableContainers( ReduceInventoryRequest request);
 
     ApiResponse<DamagedContainer> reportDamagedContainer(String reportDamagedContainerRequest, List<MultipartFile> damagedContainerImages);
+
+    ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetails(Long restaurantId);
+
+    ApiResponse<List<SoldContainerMonthWiseResponse>> getSoldContainerMonthWiseDetails(Long restaurantId);
+
+    ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(String damageBy);
+
+
+
+
 }

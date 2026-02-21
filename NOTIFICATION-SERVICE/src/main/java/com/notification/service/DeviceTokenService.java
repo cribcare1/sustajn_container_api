@@ -1,42 +1,14 @@
 package com.notification.service;
 
 import com.notification.entity.DeviceToken;
-import com.notification.repository.DeviceTokenRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
-public class DeviceTokenService {
+public interface DeviceTokenService {
 
-    private final DeviceTokenRepository deviceTokenRepository;
+    DeviceToken addOrUpdateUserDeviceToken(Long userId, String newToken, String deviceType);
 
-    public DeviceToken upsertUserDeviceToken(Long userId, String newToken, String deviceType) {
+    DeviceToken getDeviceTokenByUserId(Long userId);
 
-        return deviceTokenRepository
-                .findByUserId(userId)
-                .map(existing -> {
 
-                    // 👍 If token is SAME → do nothing
-                    if (existing.getDeviceToken() != null
-                            && existing.getDeviceToken().equals(newToken)) {
-                        return existing;
-                    }
-
-                    // 🔁 Token changed → update record
-                    existing.setDeviceToken(newToken);
-                    existing.setDeviceType(deviceType);
-                    existing.setActive(true);
-                    return deviceTokenRepository.save(existing);
-                })
-                .orElseGet(() -> {
-                    // 🆕 First-time registration
-                    DeviceToken token = new DeviceToken();
-                    token.setUserId(userId);
-                    token.setDeviceToken(newToken);
-                    token.setDeviceType(deviceType);
-                    token.setActive(true);
-                    return deviceTokenRepository.save(token);
-                });
-    }
 }

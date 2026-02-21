@@ -11,4 +11,6 @@ public class InventoryConstant {
     public static final String CONTAINER="container";
 
     public static final String DETAILS = "details";
+    public static final String RESTAURANT = "restaurant" ;
+    public static final String USER = "user";
 }

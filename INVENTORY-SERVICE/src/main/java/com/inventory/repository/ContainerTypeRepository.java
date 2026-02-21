@@ -9,8 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface ContainerTypeRepository extends JpaRepository<ContainerType,Integer> {
     boolean existsByNameIgnoreCase(String name);
@@ -44,4 +46,6 @@ public interface ContainerTypeRepository extends JpaRepository<ContainerType,Int
     List<ProductResponse> findProductResponsesByIds(@Param("ids") List<Integer> ids);
 
     Optional<ContainerType> findByNameIgnoreCase(@NotBlank(message = "Container name is required") @Size(max = 100, message = "Container name must be less than 100 characters") String containerName);
+
+    Collection<ContainerType> findByIdIn(Set<Integer> containerTypeIds);
 }

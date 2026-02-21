@@ -22,7 +22,7 @@ import java.util.Map;
 public interface InventoryFeignClient {
     @PostMapping(value = "/inventory/getProductsByIds",consumes = "application/json"
     )
-    List<ProductResponse> getProductsByIds(@RequestBody List<Integer> ids);
+    ApiResponse<List<ProductResponse>> getProductsByIds(@RequestBody List<Integer> ids);
 
     @GetMapping("/inventory/restaurantOrders/orderHistory/{restaurantId}")
     ApiResponse<List<RestaurantOrderedResponse>> getOrderHistory(
