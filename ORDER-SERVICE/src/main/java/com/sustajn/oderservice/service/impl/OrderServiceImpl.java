@@ -206,16 +206,17 @@ public class OrderServiceImpl implements OrderService {
             // ===============================
             // 8️⃣ Notification
             // ===============================
-            String title = "Containers Borrowed Successfully";
-            StringBuilder body = new StringBuilder();
-            body.append("Hi ")
-                    .append(userResponse.getData().getFullName())
-                    .append(",\n\n")
-                    .append("You have successfully borrowed the following containers:\n");
 
             DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(userId);
 
             if (deviceTokenResponse != null){
+                String title = "Containers Borrowed Successfully";
+                StringBuilder body = new StringBuilder();
+                body.append("Hi ")
+                        .append(userResponse.getData().getFullName())
+                        .append(",\n\n")
+                        .append("You have successfully borrowed the following containers:\n");
+
                 log.error("Device token for userId {}: {}", userId, deviceTokenResponse.getDeviceToken());
                 for (BorrowItemRequest item : request.getItems()) {
 

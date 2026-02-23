@@ -681,6 +681,11 @@ public class InventoryServiceImpl implements InventoryService {
                         .findAllByRestaurantIdAndContainerTypeIdIn(
                                 restaurantId, qtyMap.keySet());
 
+        if (CollectionUtils.isEmpty(masters)) {
+            return Map.of(InventoryConstant.STATUS, InventoryConstant.ERROR,
+                    InventoryConstant.MESSAGE, "No inventory records found for the requested container types");
+        }
+
         for (RestaurantInventoryMaster master : masters) {
             int requested = qtyMap.get(master.getContainerTypeId());
 

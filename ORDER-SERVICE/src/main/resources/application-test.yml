@@ -3,9 +3,13 @@ spring:
     name: ORDER-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-autumn-frog-a1kpsarq-pooler.ap-southeast-1.aws.neon.tech:5432/order_service?sslmode=require
+#    url: jdbc:postgresql://ep-autumn-frog-a1kpsarq-pooler.ap-southeast-1.aws.neon.tech:5432/order_service?sslmode=require
+    url: jdbc:postgresql://ep-red-glade-a1rfoaov-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+
     username: neondb_owner
-    password: npg_Tzxn1GRg6ESp
+#    password: npg_Tzxn1GRg6ESp
+    password: npg_QIbTYVnql3i7
+
     driver-class-name: org.postgresql.Driver
 
   jpa:

@@ -51,32 +51,4 @@ public class DeviceTokenServiceImpl implements DeviceTokenService {
         return deviceTokenRepository.findByUserId(userId)
                 .orElse(null);
     }
-
-
-
-    //        return deviceTokenRepository
-//                .findByUserId(userId)
-//                .map(existing -> {
-//
-//                    // 👍 If token is SAME → do nothing
-//                    if (existing.getDeviceToken() != null
-//                            && existing.getDeviceToken().equals(newToken)) {
-//                        return existing;
-//                    }
-//
-//                    // 🔁 Token changed → update record
-//                    existing.setDeviceToken(newToken);
-//                    existing.setDeviceType(deviceType);
-//                    existing.setActive(true);
-//                    return deviceTokenRepository.save(existing);
-//                })
-//                .orElseGet(() -> {
-//                    // 🆕 First-time registration
-//                    DeviceToken token = new DeviceToken();
-//                    token.setUserId(userId);
-//                    token.setDeviceToken(newToken);
-//                    token.setDeviceType(deviceType);
-//                    token.setActive(true);
-//                    return deviceTokenRepository.save(token);
-//                });
 }
