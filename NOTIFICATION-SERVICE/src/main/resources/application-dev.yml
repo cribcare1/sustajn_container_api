@@ -3,9 +3,13 @@ spring:
     name: NOTIFICATION-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-super-cake-a1j1ut2g-pooler.ap-southeast-1.aws.neon.tech:5432/auth_service?sslmode=require
+#    url: jdbc:postgresql://ep-super-cake-a1j1ut2g-pooler.ap-southeast-1.aws.neon.tech:5432/auth_service?sslmode=
+    url: jdbc:postgresql://ep-shiny-hat-a1z06pls-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+
     username: neondb_owner
-    password: npg_LhDJWq4C0ANH
+#    password: npg_LhDJWq4C0ANH
+    password: npg_c1NYetKqXkd3
+
     driver-class-name: org.postgresql.Driver
 
   jpa:

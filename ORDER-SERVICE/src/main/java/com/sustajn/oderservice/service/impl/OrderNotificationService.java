@@ -29,6 +29,7 @@ public class OrderNotificationService {
 
 
     @Scheduled(cron = "0 0 1 * * ?")
+//    @Scheduled(cron = "* * * * * ?")
     @Transactional
     public void sendBorrowOrderNotificationsNEW() {
 

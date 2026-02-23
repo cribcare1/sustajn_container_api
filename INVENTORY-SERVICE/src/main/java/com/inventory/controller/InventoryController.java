@@ -244,9 +244,9 @@ public class InventoryController {
     public ResponseEntity<?> checkAvailability(@RequestBody ReduceInventoryRequest request) {
         Map<String, Object> result = inventoryService.checkAvailability(request);
 
-        if (InventoryConstant.ERROR.equals(result.get(InventoryConstant.STATUS))) {
-            return ResponseEntity.ok(result);  // business error, not 500
-        }
+//        if (InventoryConstant.ERROR.equals(result.get(InventoryConstant.STATUS))) {
+//            return ResponseEntity.ok(result);  // business error, not 500
+//        }
 
         return ResponseEntity.ok(result);
     }
