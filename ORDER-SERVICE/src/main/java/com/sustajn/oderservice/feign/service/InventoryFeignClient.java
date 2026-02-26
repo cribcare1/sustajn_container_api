@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -42,4 +43,12 @@ public interface InventoryFeignClient {
 
     @PostMapping("/inventory/increaseAvailableContainers")
     Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest inventoryRequest);
+
+    @GetMapping("/inventory/damaged/count")
+    Integer getDamagedCount(
+            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam(value = "containerTypeId", required = false) Integer containerTypeId,
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year
+    );
 }

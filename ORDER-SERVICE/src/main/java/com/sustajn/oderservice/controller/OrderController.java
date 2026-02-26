@@ -1,6 +1,7 @@
 package com.sustajn.oderservice.controller;
 
 import com.sustajn.oderservice.dto.ApiResponse;
+import com.sustajn.oderservice.dto.ContainerChartResponse;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
@@ -131,5 +132,21 @@ public class OrderController {
     @GetMapping("/mostLeastUsedContainer/{restaurantId}")
     public ResponseEntity<?> getMostAndLeastUsedContainer(@PathVariable Long restaurantId) {
         return ResponseEntity.ok(orderService.getMostAndLeastUsedContainer(restaurantId));
+    }
+
+    @GetMapping("/restaurantOrders/chart-stats")
+    public ResponseEntity<Map<String, Object>> getContainerChartStats(
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Long productId // Acts as container ID
+    ) {
+        ContainerChartResponse stats = orderService.getChartStatistics(restaurantId, month, year, productId);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "Chart data fetched successfully",
+                "data", stats
+        ));
     }
 }

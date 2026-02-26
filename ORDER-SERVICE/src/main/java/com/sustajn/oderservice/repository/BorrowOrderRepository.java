@@ -174,4 +174,19 @@ GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
 """)
     List<Object[]> findUsageByRestaurant(Long restaurantId);
 
+    @Query("""
+        SELECT COALESCE(SUM(b.quantity), 0) 
+        FROM BorrowOrder b 
+        WHERE b.restaurantId = :restaurantId 
+          AND (:productId IS NULL OR b.productId = :productId) 
+          AND (cast(:startDate as timestamp) IS NULL OR b.borrowedAt >= :startDate) 
+          AND (cast(:endDate as timestamp) IS NULL OR b.borrowedAt <= :endDate)
+    """)
+    Integer getTotalLeased(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Long productId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
 }
