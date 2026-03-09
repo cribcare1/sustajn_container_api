@@ -37,6 +37,13 @@ spring:
           filters:
             - name: AuthFilter
 
+        - id: PAYMENT-SERVICE
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/payments/**
+          filters:
+            - name: AuthFilter
+
 server:
   port: 9090
 

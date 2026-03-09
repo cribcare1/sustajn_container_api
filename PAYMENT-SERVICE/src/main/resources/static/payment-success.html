@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Payment Successful</title>
+</head>
+<body>
+<h2>✅ Payment Successful</h2>
+<p>Your extension payment has been completed.</p>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get("session_id");
+
+    document.body.innerHTML += "<p>Session ID: " + sessionId + "</p>";
+</script>
+</body>
+</html>
