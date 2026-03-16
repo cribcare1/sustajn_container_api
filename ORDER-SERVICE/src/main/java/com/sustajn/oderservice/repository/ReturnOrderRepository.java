@@ -71,4 +71,19 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
             @Param("endTime") LocalDateTime endTime
     );
 
+    @Query("""
+        SELECT COALESCE(SUM(r.returnedQuantity), 0) 
+        FROM ReturnOrder r 
+        WHERE r.restaurantId = :restaurantId 
+          AND (:productId IS NULL OR r.productId = :productId) 
+          AND (cast(:startDate as timestamp) IS NULL OR r.returnedAt >= :startDate) 
+          AND (cast(:endDate as timestamp) IS NULL OR r.returnedAt <= :endDate)
+    """)
+    Integer getTotalReturned(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Long productId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate
+    );
+
 }
