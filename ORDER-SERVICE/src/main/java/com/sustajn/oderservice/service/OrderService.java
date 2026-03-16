@@ -5,6 +5,7 @@ import com.sustajn.oderservice.dto.LeasedResponse;
 import com.sustajn.oderservice.dto.LeasedReturnedContainerCountResponse;
 import com.sustajn.oderservice.dto.OrderHistoryResponse;
 import com.sustajn.oderservice.dto.*;
+import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
@@ -34,4 +35,6 @@ public interface OrderService {
     ApiResponse<List<LeasedReturnedCountWithTimeGraphResponse>> getLeasedReturnedCountWithTimeGraph(LeasedReturnedGraphInput leasedReturnedGraphInput);
 
     ApiResponse<MostAndLeastUsedContainerResponse> getMostAndLeastUsedContainer(Long restaurantId);
+
+    ApiResponse<List<BorrowOrder>> getBorrowedOrderByOrderId(Long orderId);
 }

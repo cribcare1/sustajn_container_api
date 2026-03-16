@@ -132,4 +132,10 @@ public class OrderController {
     public ResponseEntity<?> getMostAndLeastUsedContainer(@PathVariable Long restaurantId) {
         return ResponseEntity.ok(orderService.getMostAndLeastUsedContainer(restaurantId));
     }
+
+    // Get Borrowed details by order id
+    @PostMapping("/getBorrowedDetailsByOrderId")
+    public ResponseEntity<?> getBorrowedDetailsByOrderId(@RequestParam Long orderId) {
+        return ResponseEntity.ok(orderService.getBorrowedOrderByOrderId(orderId));
+    }
 }
