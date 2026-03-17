@@ -134,6 +134,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getMostAndLeastUsedContainer(restaurantId));
     }
 
+    // Get Borrowed details by order id
+    @PostMapping("/getBorrowedDetailsByOrderId")
+    public ResponseEntity<?> getBorrowedDetailsByOrderId(@RequestParam Long orderId) {
+        return ResponseEntity.ok(orderService.getBorrowedOrderByOrderId(orderId));
+  
     @GetMapping("/restaurantOrders/chart-stats")
     public ResponseEntity<Map<String, Object>> getContainerChartStats(
             @RequestParam Long restaurantId,
@@ -148,5 +153,6 @@ public class OrderController {
                 "message", "Chart data fetched successfully",
                 "data", stats
         ));
+
     }
 }
