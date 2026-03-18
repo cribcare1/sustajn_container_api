@@ -170,8 +170,6 @@ public class NotificationService {
                 .receiverId(n.getReceiverId())
                 .timestamp(n.getTimestamp())
                 .isRead(n.getIsRead())
-                .readStatus(Boolean.TRUE.equals(n.getIsRead())
-                        ? "READ" : "UNREAD")
                 .approvalStatus(n.getApprovalStatus())
                 .orderId(n.getOrderId())
                 .status(n.getStatus())

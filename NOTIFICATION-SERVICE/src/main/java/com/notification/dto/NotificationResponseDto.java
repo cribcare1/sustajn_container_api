@@ -14,7 +14,6 @@ public class NotificationResponseDto {
     private Long receiverId;
     private String timestamp;
     private Boolean isRead;           // true = READ, false = UNREAD
-    private String readStatus;        // "READ" or "UNREAD" — for display
     private String approvalStatus;
     private Long orderId;
     private String status;

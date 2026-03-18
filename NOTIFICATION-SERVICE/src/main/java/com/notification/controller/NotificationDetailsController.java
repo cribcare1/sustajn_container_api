@@ -4,6 +4,8 @@ import com.notification.constant.NotificationConstant;
 import com.notification.dto.ApiResponse;
 import com.notification.dto.NotificationResponseDto;
 import com.notification.service.NotificationService;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -12,45 +14,28 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/notificationsDetails")
+@RequestMapping("/notifications")
 @RequiredArgsConstructor
 public class NotificationDetailsController {
 
     private final NotificationService notificationService;
 
-    // ── 1. Get ALL notifications (read + unread) ──────────
-    @GetMapping("/all/{receiverId}")
+    @GetMapping("/getAll/{receiverId}")
     public ResponseEntity<ApiResponse<List<NotificationResponseDto>>> getAll(
-            @PathVariable Long receiverId) {
-
-        if (receiverId == null || receiverId <= 0) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(new ApiResponse<>(
-                            NotificationConstant.ERROR,
-                            "Invalid receiverId."
-                                    + " Must be a positive number"));
-        }
+            @PathVariable @NotNull @Positive Long receiverId) {
 
         List<NotificationResponseDto> data =
                 notificationService.getAllNotifications(receiverId);
 
-        if (data.isEmpty()) {
-            return ResponseEntity.ok(
-                    new ApiResponse<>(
-                            NotificationConstant.SUCCESS,
-                            "No notifications found"
-                                    + " for receiverId: " + receiverId,
-                            data));
-        }
+        String message = data.isEmpty()
+                ? "No notifications found for receiverId: " + receiverId
+                : data.size() + " notifications fetched successfully";
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                                        NotificationConstant.SUCCESS,
-                        data.size()
-                                + " notifications fetched successfully",
-                        data));
+                new ApiResponse<>(NotificationConstant.SUCCESS, message, data)
+        );
     }
+
 
     // ── 2. Get only UNREAD notifications ──────────────────
     @GetMapping("/unread/{receiverId}")
@@ -62,29 +47,20 @@ public class NotificationDetailsController {
                     .badRequest()
                     .body(new ApiResponse<>(
                             NotificationConstant.ERROR,
-                            "Invalid receiverId."
-                                    + " Must be a positive number"));
+                            "Invalid receiverId. Must be a positive number"));
         }
 
         List<NotificationResponseDto> data =
                 notificationService.getUnreadNotifications(receiverId);
 
-        if (data.isEmpty()) {
-            return ResponseEntity.ok(
-                    new ApiResponse<>(
-                            NotificationConstant.SUCCESS,
-                            "No unread notifications found"
-                                    + " for receiverId: " + receiverId,
-                            data));
-        }
+        String message = data.isEmpty()
+                ? "No unread notifications found for receiverId: " + receiverId
+                : data.size() + " unread notifications fetched successfully";
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                        NotificationConstant.SUCCESS,
-                        data.size()
-                                + " unread notifications fetched successfully",
-                        data));
+                new ApiResponse<>(NotificationConstant.SUCCESS, message, data));
     }
+
 
     // ── 3. Get only READ notifications ────────────────────
     @GetMapping("/read/{receiverId}")
@@ -96,29 +72,20 @@ public class NotificationDetailsController {
                     .badRequest()
                     .body(new ApiResponse<>(
                             NotificationConstant.ERROR,
-                            "Invalid receiverId."
-                                    + " Must be a positive number"));
+                            "Invalid receiverId. Must be a positive number"));
         }
 
         List<NotificationResponseDto> data =
                 notificationService.getReadNotifications(receiverId);
 
-        if (data.isEmpty()) {
-            return ResponseEntity.ok(
-                    new ApiResponse<>(
-                                            NotificationConstant.SUCCESS,
-                            "No read notifications found"
-                                    + " for receiverId: " + receiverId,
-                            data));
-        }
+        String message = data.isEmpty()
+                ? "No read notifications found for receiverId: " + receiverId
+                : data.size() + " read notifications fetched successfully";
 
         return ResponseEntity.ok(
-                new ApiResponse<>(
-                                        NotificationConstant.SUCCESS,
-                        data.size()
-                                + " read notifications fetched successfully",
-                        data));
+                new ApiResponse<>(NotificationConstant.SUCCESS, message, data));
     }
+
 
     // ── 4. Get UNREAD COUNT (bell badge 🔔) ───────────────
     @GetMapping("/unread/count/{receiverId}")
@@ -233,7 +200,7 @@ public class NotificationDetailsController {
     }
 
     // ── 7. Mark ALL notifications as READ ─────────────────
-    @PutMapping("/mark-all-read/{receiverId}")
+    @PostMapping("/mark-all-read/{receiverId}")
     public ResponseEntity<ApiResponse<String>> markAllAsRead(
             @PathVariable Long receiverId) {
 
