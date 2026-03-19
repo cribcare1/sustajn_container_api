@@ -36,5 +36,9 @@ public interface OrderService {
 
     ApiResponse<MostAndLeastUsedContainerResponse> getMostAndLeastUsedContainer(Long restaurantId);
 
+
     ApiResponse<List<BorrowOrder>> getBorrowedOrderByOrderId(Long orderId);
+
+    ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId);
+
 }
