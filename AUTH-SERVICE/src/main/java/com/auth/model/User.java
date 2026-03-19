@@ -68,7 +68,7 @@ public class User {
     private String secondaryNumber;
 
     @Column(name = "password_hash", length = 250)
-    @JsonIgnore
+//    @JsonIgnore
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
