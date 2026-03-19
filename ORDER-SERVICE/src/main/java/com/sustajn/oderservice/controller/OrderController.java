@@ -138,6 +138,7 @@ public class OrderController {
     @PostMapping("/getBorrowedDetailsByOrderId")
     public ResponseEntity<?> getBorrowedDetailsByOrderId(@RequestParam Long orderId) {
         return ResponseEntity.ok(orderService.getBorrowedOrderByOrderId(orderId));
+    }
   
     @GetMapping("/restaurantOrders/chart-stats")
     public ResponseEntity<Map<String, Object>> getContainerChartStats(
