@@ -151,8 +151,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             SessionCreateParams params = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
-                    .setSuccessUrl("http://localhost:8086/payment-success.html?session_id={CHECKOUT_SESSION_ID}")
-                    .setCancelUrl("http://localhost:8086/payment-cancel.html")
+                    .setSuccessUrl("http://13.232.106.224:8086/payment-success.html?session_id={CHECKOUT_SESSION_ID}")
+                    .setCancelUrl("http://13.232.106.224:8086/payment-cancel.html")
                     .setClientReferenceId(String.valueOf(request.getOrderId()))
 
                     // ✅ IMPORTANT: attach metadata to PaymentIntent
