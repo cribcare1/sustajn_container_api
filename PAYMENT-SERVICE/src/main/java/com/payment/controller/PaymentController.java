@@ -2,8 +2,10 @@ package com.payment.controller;
 
 import com.payment.request.CreateExtensionPaymentRequest;
 import com.payment.response.ApiResponse;
-import com.payment.response.ExtensionPaymentResponse;
-import com.payment.service.ExtensionPaymentService;
+import com.payment.response.PaymentResponse;
+import com.payment.service.PaymentService;
+import com.stripe.exception.StripeException;
+import com.stripe.model.checkout.Session;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,9 +13,9 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("payments/extension")
 @RequiredArgsConstructor
-public class ExtensionPaymentController {
+public class PaymentController {
 
-    private final ExtensionPaymentService extensionPaymentService;
+    private final PaymentService paymentService;
 
     /**
      * POST /api/payments/extension/checkout
@@ -28,12 +30,27 @@ public class ExtensionPaymentController {
      * }
      */
     @PostMapping("/checkout")
-    public ResponseEntity<ApiResponse<ExtensionPaymentResponse>> createCheckout(
+    public ResponseEntity<ApiResponse<PaymentResponse>> createCheckout(
             @RequestBody CreateExtensionPaymentRequest request) {
 
-        ApiResponse<ExtensionPaymentResponse> response =
-                extensionPaymentService.createCheckoutSession(request);
+        ApiResponse<PaymentResponse> response =
+                paymentService.createCheckoutSession(request);
 
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/payment/status/{sessionId}")
+    public ApiResponse<String> checkPaymentStatus(@PathVariable String sessionId) {
+
+        try {
+
+            Session session = Session.retrieve(sessionId);
+
+            return new ApiResponse<>("success", session.getPaymentStatus());
+
+        } catch (StripeException e) {
+
+            return new ApiResponse<>("error", "Unable to fetch status");
+        }
     }
 }

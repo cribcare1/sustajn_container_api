@@ -1126,6 +1126,23 @@ public class OrderServiceImpl implements OrderService {
         }
     }
 
+    @Override
+    public ApiResponse<List<BorrowOrder>> getBorrowedOrderByOrderId(Long orderId) {
+        try {
+            List<BorrowOrder> borrowOrders = borrowOrderRepository.findByOrderId(orderId);
+            if (CollectionUtils.isEmpty(borrowOrders)) {
+                return new ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS, "No borrowed orders found", null);
+            }
+            return new  ApiResponse<>(OrderServiceConstant.STATUS_SUCCESS, "Borrowed details fetched successfully", borrowOrders);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>(
+                    OrderServiceConstant.STATUS_ERROR,
+                    "Failed to fetch borrowed details",
+                    null
+            );
+        }
+    }
 
 
     private double round(double value) {

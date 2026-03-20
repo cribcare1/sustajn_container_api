@@ -7,13 +7,17 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "extension_payment")
+@Table(name = "payment",
+        uniqueConstraints = {
+        @UniqueConstraint(columnNames = "stripeSessionId")
+        }
+)
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class ExtensionPayment {
+public class Payment {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +38,14 @@ public class ExtensionPayment {
 
     private LocalDateTime createdAt;
 
+    private LocalDateTime updatedAt;
+
     private LocalDateTime paidAt;
+
+    private Long amount;
+
+    private String paymentReason; // extend ot sold
+
+    private String failureReason;
 
 }
