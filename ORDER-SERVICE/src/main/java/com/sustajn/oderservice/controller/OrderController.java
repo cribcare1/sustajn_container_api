@@ -3,6 +3,7 @@ package com.sustajn.oderservice.controller;
 import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.ContainerChartResponse;
 import com.sustajn.oderservice.request.BorrowRequest;
+import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.service.OrderService;
@@ -21,11 +22,12 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final BorrowOrderRepository borrowOrderRepository;
 
     /**
      * Borrow containers
      */
-        @PostMapping("/borrowContainers")
+    @PostMapping("/borrowContainers")
     public ResponseEntity<Map<String, Object>> borrowContainers(
             @RequestBody BorrowRequest request
     ) {
@@ -69,7 +71,7 @@ public class OrderController {
 
 
     @PostMapping("/approve/{orderId}")
-    public ResponseEntity<Map<String,Object>> approveOrder(@PathVariable Long orderId) {
+    public ResponseEntity<Map<String, Object>> approveOrder(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.approveOrder(orderId));
     }
 
@@ -119,7 +121,7 @@ public class OrderController {
     public ResponseEntity<ApiResponse<Integer>> extendOrder(@PathVariable Long orderId) {
 
         // Returns number of items extended
-         borrowOrderService.extendBorrowOrder(orderId);
+        borrowOrderService.extendBorrowOrder(orderId);
         return ResponseEntity.ok(
                 new ApiResponse<>("success",
                         "Order extended by 5 days successfully",
@@ -138,21 +140,26 @@ public class OrderController {
     @PostMapping("/getBorrowedDetailsByOrderId")
     public ResponseEntity<?> getBorrowedDetailsByOrderId(@RequestParam Long orderId) {
         return ResponseEntity.ok(orderService.getBorrowedOrderByOrderId(orderId));
-  
-    @GetMapping("/restaurantOrders/chart-stats")
-    public ResponseEntity<Map<String, Object>> getContainerChartStats(
-            @RequestParam Long restaurantId,
-            @RequestParam(required = false) Integer month,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Long productId // Acts as container ID
-    ) {
-        ContainerChartResponse stats = orderService.getChartStatistics(restaurantId, month, year, productId);
-
-        return ResponseEntity.ok(Map.of(
-                "status", "SUCCESS",
-                "message", "Chart data fetched successfully",
-                "data", stats
-        ));
-
     }
-}
+        @GetMapping("/restaurantOrders/chart-stats")
+        public ResponseEntity<Map<String, Object>> getContainerChartStats (
+                @RequestParam Long restaurantId,
+                @RequestParam(required = false) Integer month,
+                @RequestParam(required = false) Integer year,
+                @RequestParam(required = false) Long productId // Acts as container ID
+    ){
+            ContainerChartResponse stats = orderService.getChartStatistics(restaurantId, month, year, productId);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "SUCCESS",
+                    "message", "Chart data fetched successfully",
+                    "data", stats
+            ));
+
+        }
+    // Internal API for the Inventory Service Feign Client
+    @GetMapping("/internal/circulation-count/{productId}")
+    public Integer getCirculationCountForAdmin(@PathVariable Long productId) {
+        return borrowOrderRepository.getInCirculationCount(productId);
+    }
+    }

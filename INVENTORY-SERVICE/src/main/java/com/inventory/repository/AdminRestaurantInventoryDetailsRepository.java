@@ -51,4 +51,7 @@ public interface AdminRestaurantInventoryDetailsRepository extends JpaRepository
 """)
     List<RestaurantContainerInventoryResponse> getRestaurantContainerInventoryByRestaurantId(Long restaurantId);
 
+    @Query("SELECT COALESCE(SUM(a.containerCount), 0) FROM AdminRestaurantInventoryDetails a WHERE a.containerTypeId = :containerTypeId AND a.actionType = :actionType")
+    Integer getTotalByActionType(@Param("containerTypeId") Integer containerTypeId, @Param("actionType") String actionType);
+
 }

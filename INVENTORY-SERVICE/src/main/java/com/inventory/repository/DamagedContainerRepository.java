@@ -33,4 +33,7 @@ public interface DamagedContainerRepository extends JpaRepository<DamagedContain
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query("SELECT COUNT(d.id) FROM DamagedContainer d WHERE d.containerTypeId = :containerTypeId")
+    Integer countTotalDamaged(@Param("containerTypeId") Integer containerTypeId);
 }
