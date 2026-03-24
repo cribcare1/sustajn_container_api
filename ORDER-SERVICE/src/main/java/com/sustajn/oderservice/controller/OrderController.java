@@ -7,12 +7,14 @@ import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.service.OrderService;
 import com.sustajn.oderservice.service.impl.OrderNotificationService;
+import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,6 +23,7 @@ import java.util.Map;
 public class OrderController {
 
     private final OrderService orderService;
+    private final BorrowOrderRepository borrowOrderRepository;
 
     /**
      * Borrow containers
@@ -155,5 +158,32 @@ public class OrderController {
                 "data", stats
         ));
 
+    }
+
+    @GetMapping("/internal/bulk-circulation-counts")
+    public Map<Long, Integer> getBulkCirculationCounts() {
+        List<Object[]> results = borrowOrderRepository.getCirculationCountsForAllProducts();
+        Map<Long, Integer> countsMap = new HashMap<>();
+
+        for (Object[] row : results) {
+            Long productId = (Long) row[0];
+            Integer count = ((Number) row[1]).intValue();
+            countsMap.put(productId, count);
+        }
+        return countsMap;
+    }
+
+    // Internal API to get circulation grouped by users
+    @GetMapping("/internal/circulation-by-user/{productId}")
+    public Map<Long, Integer> getCirculationByUser(@PathVariable Long productId) {
+        List<Object[]> results = borrowOrderRepository.getCirculationPerUserForProduct(productId);
+        Map<Long, Integer> userCounts = new HashMap<>();
+
+        for (Object[] row : results) {
+            Long userId = (Long) row[0];
+            Integer count = ((Number) row[1]).intValue();
+            userCounts.put(userId, count);
+        }
+        return userCounts;
     }
 }
