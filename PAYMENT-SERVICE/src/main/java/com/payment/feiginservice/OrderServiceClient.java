@@ -1,11 +1,13 @@
 package com.payment.feiginservice;
 
 import com.payment.configuration.FeignClientConfig;
+import com.payment.request.SoldRequest;
 import com.payment.response.ApiResponse;
 import com.payment.response.BorrowResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -19,4 +21,7 @@ public interface OrderServiceClient {
 
     @PostMapping("/orders/getBorrowedDetailsByOrderId")
     ApiResponse<List<BorrowResponse>> getBorrowedDetailsByOrderId(@RequestParam Long orderId);
+
+    @PostMapping("/orders/markSold")
+    void markOrderAsSold(@RequestBody SoldRequest request);
 }

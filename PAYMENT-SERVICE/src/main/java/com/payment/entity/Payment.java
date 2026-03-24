@@ -48,4 +48,13 @@ public class Payment {
 
     private String failureReason;
 
+    private String stripeCustomerId;
+
+    private String stripePaymentMethodId;
+
+
+    private Integer retryCount = 0;
+
+    private LocalDateTime nextRetryAt;
+
 }
