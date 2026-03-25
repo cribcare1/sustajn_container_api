@@ -190,4 +190,17 @@ GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
     );
     @Query("SELECT COALESCE(SUM(b.quantity - b.returnedQuantity), 0) FROM BorrowOrder b WHERE b.productId = :productId")
     Integer getInCirculationCount(@Param("productId") Long productId);
+
+    // Bulk fetch: Calculates circulation counts grouped by Product ID
+    @Query("SELECT b.productId, COALESCE(SUM(b.quantity - b.returnedQuantity), 0) " +
+            "FROM BorrowOrder b WHERE b.quantity > b.returnedQuantity GROUP BY b.productId")
+    List<Object[]> getCirculationCountsForAllProducts();
+
+
+    // Group active circulation counts by numeric User ID
+    @Query("SELECT b.userId, COALESCE(SUM(b.quantity - b.returnedQuantity), 0) " +
+            "FROM BorrowOrder b " +
+            "WHERE b.productId = :productId AND b.quantity > b.returnedQuantity " +
+            "GROUP BY b.userId")
+    List<Object[]> getCirculationPerUserForProduct(@Param("productId") Long productId);
 }

@@ -203,4 +203,8 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
     @Query("SELECT u FROM User u WHERE u.customerId = :customerId")
     Optional<User> findUserByCustomerId(String customerId);
+
+    // Fetch Customer IDs for a bulk list of numeric User IDs
+    @Query("SELECT u.id, u.customerId FROM User u WHERE u.id IN :userIds")
+    List<Object[]> findCustomerIdsByUserIds(@Param("userIds") List<Long> userIds);
 }
