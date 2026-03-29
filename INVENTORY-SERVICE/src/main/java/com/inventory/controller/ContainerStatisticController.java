@@ -1,8 +1,6 @@
 package com.inventory.controller;
 
-import com.inventory.dto.ContainerDetailsResponse;
-import com.inventory.dto.ContainerInCirculationDetailResponse;
-import com.inventory.dto.ProductCirculationResponse;
+import com.inventory.dto.*;
 import com.inventory.service.impl.ContainerStatisticServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +42,30 @@ public class ContainerStatisticController {
         return ResponseEntity.ok(Map.of(
                 "status", "SUCCESS",
                 "message", "In Circulation details fetched successfully",
+                "data", details
+        ));
+    }
+
+    @GetMapping("/with-partner-list")
+    public ResponseEntity<Map<String, Object>> getWithPartnerList() {
+
+        // Call the service method we just created
+        List<ProductWithPartnerResponse> list = dashboardService.getAllProductsWithPartner();
+
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "With Partner list fetched successfully",
+                "data", list
+        ));
+    }
+
+    @GetMapping("/with-partner/{containerTypeId}")
+    public ResponseEntity<Map<String, Object>> getWithPartnerDetails(@PathVariable Integer containerTypeId) {
+        ProductWithPartnerDetailResponse details = dashboardService.getWithPartnerDetails(containerTypeId);
+
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "message", "With Partner details fetched successfully",
                 "data", details
         ));
     }
