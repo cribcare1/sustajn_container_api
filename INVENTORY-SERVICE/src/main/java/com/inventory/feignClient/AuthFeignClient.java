@@ -5,6 +5,7 @@ import com.inventory.request.SubscriptionRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @FeignClient(
@@ -18,4 +19,7 @@ public interface AuthFeignClient {
 
     @PostMapping(value = "/auth/upgradeSubscription")
     Map<String, Object> upgradeSubscription(@RequestBody SubscriptionRequest request);
+
+    @PostMapping("/auth/internal/customer-ids")
+    Map<Long, String> getCustomerIdsBulk(@RequestBody List<Long> userIds);
 }
