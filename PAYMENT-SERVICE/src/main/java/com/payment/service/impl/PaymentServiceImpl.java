@@ -160,13 +160,17 @@ public class PaymentServiceImpl implements PaymentService {
                     .setClientReferenceId(String.valueOf(request.getOrderId()))
 
                     // ✅ IMPORTANT: attach metadata to PaymentIntent
+                    .setCustomerCreation(SessionCreateParams.CustomerCreation.ALWAYS)
+
                     .setPaymentIntentData(
                             SessionCreateParams.PaymentIntentData.builder()
+                                    .setSetupFutureUsage(
+                                            SessionCreateParams.PaymentIntentData.SetupFutureUsage.OFF_SESSION
+                                    )
                                     .putMetadata("orderId", String.valueOf(request.getOrderId()))
                                     .putMetadata("userId", String.valueOf(request.getUserId()))
                                     .build()
                     )
-
                     .addLineItem(
                             SessionCreateParams.LineItem.builder()
                                     .setQuantity(1L)
@@ -321,6 +325,93 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
 
+//    @Override
+//    @Transactional
+//    public void autoPay(Long orderId, Long userId, int pendingQty, Long unitPrice) {
+//
+//        Long amount = pendingQty * unitPrice;
+//
+//        Payment lastPayment = paymentRepository
+//                .findTopByOrderIdOrderByCreatedAtDesc(orderId)
+//                .orElseThrow(() -> new RuntimeException("No previous payment found"));
+//
+//        // ❗ Safety check
+//        if (lastPayment.getStripeCustomerId() == null ||
+//                lastPayment.getStripePaymentMethodId() == null) {
+//
+//            log.error("No saved card for order {}", orderId);
+//            return;
+//        }
+//
+//        try {
+//
+//            PaymentIntentCreateParams params =
+//                    PaymentIntentCreateParams.builder()
+//                            .setAmount(amount)
+//                            .setCurrency("usd")
+//                            .setCustomer(lastPayment.getStripeCustomerId())
+//                            .setPaymentMethod(lastPayment.getStripePaymentMethodId())
+//                            .setOffSession(true)
+//                            .setConfirm(true)
+//                            .putMetadata("orderId", String.valueOf(orderId))
+//                            .build();
+//
+//            PaymentIntent intent = PaymentIntent.create(params);
+//
+//            if ("succeeded".equals(intent.getStatus())) {
+//
+//                Payment payment = paymentRepository.save(
+//                        Payment.builder()
+//                                .orderId(orderId)
+//                                .userId(userId)
+//                                .amount(amount)
+//                                .status(PaymentStatus.SUCCESS)
+//                                .stripePaymentIntentId(intent.getId())
+//                                .stripeCustomerId(lastPayment.getStripeCustomerId())
+//                                .stripePaymentMethodId(lastPayment.getStripePaymentMethodId())
+//                                .paymentReason("AUTO_SOLD")
+//                                .paidAt(LocalDateTime.now())
+//                                .createdAt(LocalDateTime.now())
+//                                .updatedAt(LocalDateTime.now())
+//                                .build()
+//                );
+//
+//                // 🔥 CALL ORDER SERVICE
+//                orderServiceClient.markOrderAsSold(
+//                        new SoldRequest(orderId, payment.getId(), intent.getId())
+//                );
+//
+//            }
+//
+//        } catch (Exception e) {
+//
+//            String error = e.getMessage();
+//            if (error != null && error.length() > 500) {
+//                error = error.substring(0, 500);
+//            }
+//
+//            paymentRepository.save(
+//                    Payment.builder()
+//                            .orderId(orderId)
+//                            .userId(userId)
+//                            .amount(amount)
+//                            .status(PaymentStatus.FAILED)
+//                            .stripeCustomerId(lastPayment.getStripeCustomerId())
+//                            .stripePaymentMethodId(lastPayment.getStripePaymentMethodId())
+//                            .paymentReason("AUTO_SOLD")
+//                            .failureReason(error)
+//                            .retryCount(0)
+//                            .nextRetryAt(LocalDateTime.now().plusMinutes(5))
+//                            .createdAt(LocalDateTime.now())
+//                            .updatedAt(LocalDateTime.now())
+//                            .build()
+//            );
+//
+//            log.error("AutoPay failed for order {}", orderId, e);
+//        }
+//    }
+
+
     @Override
     @Transactional
     public void autoPay(Long orderId, Long userId, int pendingQty, Long unitPrice) {
@@ -331,24 +422,30 @@ public class PaymentServiceImpl implements PaymentService {
                 .findTopByOrderIdOrderByCreatedAtDesc(orderId)
                 .orElseThrow(() -> new RuntimeException("No previous payment found"));
 
-        try {
+        if (lastPayment.getStripeCustomerId() == null ||
+                lastPayment.getStripePaymentMethodId() == null) {
+            log.error("No saved card for order {}", orderId);
+            return;
+        }
 
-            PaymentIntentCreateParams params =
-                    PaymentIntentCreateParams.builder()
-                            .setAmount(amount)
-                            .setCurrency("usd")
-                            .setCustomer(lastPayment.getStripeCustomerId())
-                            .setPaymentMethod(lastPayment.getStripePaymentMethodId())
-                            .setOffSession(true)
-                            .setConfirm(true)
-                            .putMetadata("orderId", String.valueOf(orderId))
-                            .build();
+        Payment savedPayment = null;
+
+        // ── Stripe block ──────────────────────────────────────────────
+        try {
+            PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
+                    .setAmount(amount)
+                    .setCurrency("usd")
+                    .setCustomer(lastPayment.getStripeCustomerId())
+                    .setPaymentMethod(lastPayment.getStripePaymentMethodId())
+                    .setOffSession(true)
+                    .setConfirm(true)
+                    .putMetadata("orderId", String.valueOf(orderId))
+                    .build();
 
             PaymentIntent intent = PaymentIntent.create(params);
 
             if ("succeeded".equals(intent.getStatus())) {
-
-                Payment payment = paymentRepository.save(
+                savedPayment = paymentRepository.save(
                         Payment.builder()
                                 .orderId(orderId)
                                 .userId(userId)
@@ -363,17 +460,11 @@ public class PaymentServiceImpl implements PaymentService {
                                 .updatedAt(LocalDateTime.now())
                                 .build()
                 );
-
-                // 🔥 CALL ORDER SERVICE
-                orderServiceClient.markOrderAsSold(
-                        new SoldRequest(orderId, payment.getId(), payment.getStripePaymentIntentId())
-                );
-
-            } else {
-                throw new RuntimeException("Payment not successful");
             }
 
         } catch (Exception e) {
+            String error = e.getMessage();
+            if (error != null && error.length() > 500) error = error.substring(0, 500);
 
             paymentRepository.save(
                     Payment.builder()
@@ -384,13 +475,31 @@ public class PaymentServiceImpl implements PaymentService {
                             .stripeCustomerId(lastPayment.getStripeCustomerId())
                             .stripePaymentMethodId(lastPayment.getStripePaymentMethodId())
                             .paymentReason("AUTO_SOLD")
-                            .failureReason(e.getMessage())
+                            .failureReason(error)
                             .retryCount(0)
                             .nextRetryAt(LocalDateTime.now().plusMinutes(5))
                             .createdAt(LocalDateTime.now())
                             .updatedAt(LocalDateTime.now())
                             .build()
             );
+
+            log.error("Stripe charge failed for order {}", orderId, e);
+            return;
+        }
+
+        // ── Order mark-as-sold block (separate, so Stripe errors don't mask this) ──
+        if (savedPayment != null) {
+            try {
+                orderServiceClient.markOrderAsSold(
+                        new SoldRequest(orderId, savedPayment.getId(),
+                                savedPayment.getStripePaymentIntentId())
+                );
+                log.info("markOrderAsSold called successfully for order {}", orderId);
+            } catch (Exception e) {
+                // Payment succeeded but order update failed — needs alerting/retry
+                log.error("CRITICAL: Payment succeeded but markOrderAsSold failed " +
+                        "for order {}. Manual intervention required.", orderId, e);
+            }
         }
     }
 
@@ -428,7 +537,6 @@ public class PaymentServiceImpl implements PaymentService {
                     payment.setStripePaymentIntentId(intent.getId());
                     payment.setPaidAt(LocalDateTime.now());
 
-                    // 🔥 CALL ORDER SERVICE AGAIN
                     orderServiceClient.markOrderAsSold(
                             new SoldRequest(
                                     payment.getOrderId(),
@@ -437,14 +545,15 @@ public class PaymentServiceImpl implements PaymentService {
                             )
                     );
 
-                } else {
-                    throw new RuntimeException();
                 }
 
             } catch (Exception e) {
 
                 payment.setRetryCount(payment.getRetryCount() + 1);
-                payment.setNextRetryAt(LocalDateTime.now().plusMinutes(10));
+
+                payment.setNextRetryAt(
+                        LocalDateTime.now().plusMinutes(5 * payment.getRetryCount())
+                );
             }
 
             paymentRepository.save(payment);

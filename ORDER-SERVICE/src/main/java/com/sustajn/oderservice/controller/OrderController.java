@@ -136,8 +136,8 @@ public class OrderController {
     }
 
     // Get Borrowed details by order id
-    @PostMapping("/getBorrowedDetailsByOrderId")
-    public ResponseEntity<?> getBorrowedDetailsByOrderId(@RequestParam Long orderId) {
+    @PostMapping("/getBorrowedDetailsByOrderId/{orderId}")
+    public ResponseEntity<?> getBorrowedDetailsByOrderId(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.getBorrowedOrderByOrderId(orderId));
     }
   

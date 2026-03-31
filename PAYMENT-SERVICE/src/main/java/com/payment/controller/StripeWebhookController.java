@@ -257,6 +257,7 @@ public class StripeWebhookController {
                             PaymentIntent.retrieve(paymentIntentId);
 
                     String customerId = fullSession.getCustomer();
+                    System.err.println("Customer ID: " + customerId);
                     String paymentMethodId = paymentIntent.getPaymentMethod();
 
                     // ✅ Call service

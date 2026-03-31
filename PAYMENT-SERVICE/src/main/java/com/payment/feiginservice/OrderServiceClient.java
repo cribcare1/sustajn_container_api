@@ -12,15 +12,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "ORDER-SERVICE", configuration = FeignClientConfig.class)
+@FeignClient(name = "ORDER-SERVICE")
 public interface OrderServiceClient {
 
 
     @PostMapping("/orders/{orderId}/extendOrder")
     ApiResponse<Void> extendOrder(@PathVariable("orderId") Long orderId);
 
-    @PostMapping("/orders/getBorrowedDetailsByOrderId")
-    ApiResponse<List<BorrowResponse>> getBorrowedDetailsByOrderId(@RequestParam Long orderId);
+    @PostMapping("/orders/getBorrowedDetailsByOrderId/{orderId}")
+    ApiResponse<List<BorrowResponse>> getBorrowedDetailsByOrderId(@PathVariable Long orderId);
 
     @PostMapping("/orders/markSold")
     void markOrderAsSold(@RequestBody SoldRequest request);

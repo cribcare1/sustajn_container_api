@@ -46,6 +46,7 @@ public class Payment {
 
     private String paymentReason; // extend ot sold
 
+    @Column(columnDefinition = "TEXT")
     private String failureReason;
 
     private String stripeCustomerId;

@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.util.CollectionUtils;
 import com.sustajn.oderservice.dto.DeviceTokenResponse;
 import java.time.LocalDate;
@@ -1490,8 +1491,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public void markAsSold(SoldRequest request) {
 
+        log.info("markAsSold called with orderId={}, paymentId={}",
+                request.getOrderId(), request.getPaymentId());
+
         List<BorrowOrder> orders =
                 borrowOrderRepository.findByOrderId(request.getOrderId());
+
+        log.info("Found {} orders for orderId={}", orders.size(), request.getOrderId());
 
         for (BorrowOrder order : orders) {
 
@@ -1517,11 +1523,12 @@ public class OrderServiceImpl implements OrderService {
             soldOrderRepository.save(sold);
 
             order.setIsSold(true);
+            borrowOrderRepository.save(order);
+            log.info("Setting isSold=true for order {}", order.getOrderId());
         }
     }
 
     @Scheduled(fixedDelay = 60000)
-    @Transactional
     public void processOverdueOrders() {
 
         List<BorrowOrder> overdueOrders =
@@ -1529,21 +1536,37 @@ public class OrderServiceImpl implements OrderService {
 
         for (BorrowOrder order : overdueOrders) {
 
+            if (Boolean.TRUE.equals(order.getAutoPayProcessing())) continue;
+
             int pendingQty = order.getQuantity() - order.getReturnedQuantity();
 
             if (pendingQty <= 0) continue;
 
             try {
+                // ✅ Save the lock in its own isolated transaction
+                setAutoPayLock(order.getId(), true);
+
                 paymentServiceClient.autoPay(
                         order.getOrderId(),
                         order.getUserId(),
                         pendingQty,
-                        400L // unit price
+                        400L
                 );
 
             } catch (Exception e) {
-                log.error("AutoPay trigger failed for order {}", order.getOrderId());
+                // ✅ Unlock in its own isolated transaction
+                setAutoPayLock(order.getId(), false);
+                log.error("AutoPay trigger failed for order {}", order.getOrderId(), e);
             }
         }
+    }
+
+    // ✅ Each lock operation is its own clean transaction — no stale entity held
+    @org.springframework.transaction.annotation.Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void setAutoPayLock(Long id, boolean locked) {
+        borrowOrderRepository.findById(id).ifPresent(order -> {
+            order.setAutoPayProcessing(locked);
+            borrowOrderRepository.save(order);
+        });
     }
 }

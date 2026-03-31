@@ -40,6 +40,8 @@ public class SoldOrder extends BaseEntity{
 
     @PrePersist
     public void prePersist() {
+        this.createdAt = DateTimeUtil.nowDubai();
+        this.updatedAt = DateTimeUtil.nowDubai();
         this.soldAt = DateTimeUtil.nowDubai();
     }
 }
