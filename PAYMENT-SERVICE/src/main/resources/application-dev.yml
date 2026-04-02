@@ -49,3 +49,6 @@ stripe:
 
 
 # postgresql://neondb_owner:npg_7YOJ1gIPXCcB@ep-lingering-moon-a1r0p1ab-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+
+
+#  stripe listen --forward-to http://localhost:8086/payments/webhook/stripe

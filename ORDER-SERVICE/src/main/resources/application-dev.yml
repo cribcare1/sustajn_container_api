@@ -4,10 +4,12 @@ spring:
 
   datasource:
 #    url: jdbc:postgresql://ep-autumn-frog-a1kpsarq-pooler.ap-southeast-1.aws.neon.tech:5432/order_service?sslmode=require
-    url: jdbc:postgresql://ep-red-glade-a1rfoaov-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+#    url: jdbc:postgresql://ep-red-glade-a1rfoaov-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+    url: jdbc:postgresql://ep-dry-haze-a1nbkylp-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
     username: neondb_owner
 #    password: npg_Tzxn1GRg6ESp
-    password: npg_QIbTYVnql3i7
+#    password: npg_QIbTYVnql3i7
+    password: npg_qjbYOP9c3BsX
     driver-class-name: org.postgresql.Driver
 
   jpa:
