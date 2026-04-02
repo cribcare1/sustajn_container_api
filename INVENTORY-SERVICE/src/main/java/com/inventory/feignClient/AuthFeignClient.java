@@ -1,6 +1,7 @@
 package com.inventory.feignClient;
 
 import com.inventory.config.FeignMultipartConfig;
+import com.inventory.dto.PartnerInfoDto;
 import com.inventory.request.SubscriptionRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
@@ -22,4 +23,7 @@ public interface AuthFeignClient {
 
     @PostMapping("/auth/internal/customer-ids")
     Map<Long, String> getCustomerIdsBulk(@RequestBody List<Long> userIds);
+
+    @PostMapping("/auth/internal/partner-details")
+    Map<Long, PartnerInfoDto> getPartnerDetailsBulk(@RequestBody List<Long> userIds);
 }
