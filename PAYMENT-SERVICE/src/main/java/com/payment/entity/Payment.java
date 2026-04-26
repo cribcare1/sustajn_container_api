@@ -46,6 +46,16 @@ public class Payment {
 
     private String paymentReason; // extend ot sold
 
+    @Column(columnDefinition = "TEXT")
     private String failureReason;
+
+    private String stripeCustomerId;
+
+    private String stripePaymentMethodId;
+
+
+    private Integer retryCount = 0;
+
+    private LocalDateTime nextRetryAt;
 
 }

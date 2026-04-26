@@ -221,7 +221,6 @@ public class StripeWebhookController {
                     stripeConfig.getWebhookSecret());
 
         } catch (SignatureVerificationException e) {
-
             log.error("Invalid webhook signature");
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid signature");
         }
@@ -230,32 +229,55 @@ public class StripeWebhookController {
 
         switch (event.getType()) {
 
+            // ✅ PAYMENT SUCCESS
             case "checkout.session.completed" -> {
 
                 Session session = deserializeSession(event);
                 if (session == null) break;
 
-                String orderIdStr = session.getClientReferenceId();
+                try {
 
-                if (orderIdStr == null) {
-                    log.error("Missing orderId in session");
-                    break;
+                    // ✅ Get latest session
+                    Session fullSession = Session.retrieve(session.getId());
+
+                    String orderIdStr = fullSession.getClientReferenceId();
+
+                    if (orderIdStr == null) {
+                        log.error("Missing orderId in session");
+                        break;
+                    }
+
+                    Integer orderId = Integer.valueOf(orderIdStr);
+
+                    // ✅ Get PaymentIntent ID
+                    String paymentIntentId = fullSession.getPaymentIntent();
+
+                    // ✅ IMPORTANT FIX (no casting)
+                    PaymentIntent paymentIntent =
+                            PaymentIntent.retrieve(paymentIntentId);
+
+                    String customerId = fullSession.getCustomer();
+                    System.err.println("Customer ID: " + customerId);
+                    String paymentMethodId = paymentIntent.getPaymentMethod();
+
+                    // ✅ Call service
+                    paymentService.handlePaymentSuccess(
+                            orderId,
+                            paymentIntentId,
+                            customerId,
+                            paymentMethodId
+                    );
+
+                } catch (Exception e) {
+                    log.error("Error processing success webhook", e);
                 }
-
-                Integer orderId = Integer.valueOf(orderIdStr);
-
-                paymentService.handlePaymentSuccess(
-                        orderId,
-                        session.getPaymentIntent()
-                );
             }
 
+            // ❌ SESSION EXPIRED
             case "checkout.session.expired" -> {
 
                 Session session = deserializeSession(event);
                 if (session == null) break;
-
-                log.warn("Checkout session expired: {}", session.getId());
 
                 paymentService.handlePaymentFailure(
                         session.getId(),
@@ -264,6 +286,7 @@ public class StripeWebhookController {
                 );
             }
 
+            // ❌ PAYMENT FAILED
             case "payment_intent.payment_failed" -> {
 
                 PaymentIntent paymentIntent =
@@ -276,7 +299,7 @@ public class StripeWebhookController {
                 String orderIdStr = paymentIntent.getMetadata().get("orderId");
 
                 if (orderIdStr == null) {
-                    log.error("orderId metadata missing for paymentIntent={}", paymentIntent.getId());
+                    log.error("Missing orderId metadata");
                     break;
                 }
 
