@@ -166,6 +166,7 @@ public class OrderController {
     public ResponseEntity<Void> markSold(@RequestBody SoldRequest request) {
         orderService.markAsSold(request);
         return ResponseEntity.ok().build();
+    }
 
     @GetMapping("/internal/bulk-circulation-counts")
     public Map<Long, Integer> getBulkCirculationCounts() {
