@@ -3,14 +3,15 @@ spring:
     name: NOTIFICATION-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-super-cake-a1j1ut2g-pooler.ap-southeast-1.aws.neon.tech:5432/auth_service?sslmode=require
-#    url: jdbc:postgresql://ep-shiny-hat-a1z06pls-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-
+    url: jdbc:postgresql://ep-gentle-block-aoifiomz-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb??sslmode=require
     username: neondb_owner
-    password: npg_LhDJWq4C0ANH
-#    password: npg_c1NYetKqXkd3
-
+    password: npg_pW7izeTrDs3H
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      idle-timeout: 30000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
@@ -56,6 +57,6 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://35.154.182.218:8761/eureka/
+      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
   instance:
     prefer-ip-address: true

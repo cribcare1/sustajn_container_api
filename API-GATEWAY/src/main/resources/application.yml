@@ -6,7 +6,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://35.154.182.218:8761/eureka
+      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
 spring:
   cloud:
     gateway:
@@ -28,6 +28,7 @@ spring:
           uri: lb://NOTIFICATION-SERVICE
           predicates:
             - Path=/notification/**
+            - path=/notifications/**
 #          filters:
 #            - StripPrefix=1
 #            - name: AuthFilter
