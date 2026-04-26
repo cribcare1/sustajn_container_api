@@ -20,7 +20,7 @@ spring:
         - id: NOTIFICATION-SERVICE
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/notification/**,/images/**
+            - Path=/notification/**,/images/**,/notifications/**
 
 
         - id: ORDER-SERVICE

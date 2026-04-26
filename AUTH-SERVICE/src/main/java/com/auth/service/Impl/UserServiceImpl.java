@@ -1614,6 +1614,8 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse<User> getUserByCustomerId(String customerId) {
         Optional<User> userOptional = userRepository.findUserByCustomerId(customerId);
+        System.err.println(customerId);
+        System.err.println(userOptional);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
             return new ApiResponse<>(AuthConstant.SUCCESS, "User found with customer ID", user);

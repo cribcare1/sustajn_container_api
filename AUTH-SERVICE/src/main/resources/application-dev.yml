@@ -3,12 +3,15 @@ spring:
     name: AUTH-SERVICE
 
   datasource:
-#    url: jdbc:postgresql://ep-super-cake-a1j1ut2g-pooler.ap-southeast-1.aws.neon.tech:5432/auth_service?sslmode=require
-    url: jdbc:postgresql://ep-shiny-hat-a1z06pls-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require&channel_binding=require'
+    url: jdbc:postgresql://ep-gentle-block-aoifiomz-pooler.c-2.ap-southeast-1.aws.neon.tech/auth_db_1?sslmode=require&channel_binding=require'
     username: neondb_owner
-#    password: npg_LhDJWq4C0ANH
-    password: npg_c1NYetKqXkd3
+    password: npg_pW7izeTrDs3H
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      idle-timeout: 30000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:

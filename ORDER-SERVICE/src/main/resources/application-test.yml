@@ -3,14 +3,15 @@ spring:
     name: ORDER-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-dry-haze-a1nbkylp-pooler.ap-southeast-1.aws.neon.tech:5432/neondb?sslmode=require
-#    url: jdbc:postgresql://ep-red-glade-a1rfoaov-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-
+    url: jdbc:postgresql://ep-solitary-sunset-ao3lnirw-pooler.c-2.ap-southeast-1.aws.neon.tech/order_db_1?sslmode=require&channel_binding=require'
     username: neondb_owner
-    password: npg_qjbYOP9c3BsX
-#    password: npg_QIbTYVnql3i7
-
+    password: npg_4cLW8brkUJvt
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      idle-timeout: 30000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:
@@ -33,7 +34,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://35.154.182.218:8761/eureka/
+      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
   instance:
     prefer-ip-address: true
 

@@ -20,7 +20,7 @@ spring:
         - id: NOTIFICATION-SERVICE
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/notification/**
+            - Path=/notification/**,/images/**,/notifications/**
         - id: ORDER-SERVICE
           uri: lb://ORDER-SERVICE
           predicates:
@@ -51,7 +51,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://35.154.182.218:8761/eureka/
+      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
 
 logging:
   level:
