@@ -55,4 +55,9 @@ public class BorrowOrder extends BaseEntity {
     private Boolean isExtended = false;      // default false
     private LocalDateTime extendedAt;        // when extension applied
     private LocalDateTime effectiveDueDate;  // actual due date (after extension)
+
+    @Column(name = "is_sold")
+    private Boolean isSold = false;
+
+    private Boolean autoPayProcessing = false; // 🔥 LOCK
 }

@@ -10,9 +10,11 @@ public interface PaymentService {
 
     ApiResponse<PaymentResponse> createCheckoutSession(CreateExtensionPaymentRequest request);
 
-    void handlePaymentSuccess(Integer orderId, String paymentIntentId);
+    void handlePaymentSuccess(Integer orderId, String paymentIntentId, String customerId, String paymentMethodId);
 
     void handlePaymentFailure(String stripeSessionId, String paymentIntentId, String failureReason);
 
     void handlePaymentFailureByOrderId(Integer orderId, String paymentIntentId, String reason);
+
+    void autoPay(Long orderId, Long userId, int pendingQty, Long unitPrice);
 }

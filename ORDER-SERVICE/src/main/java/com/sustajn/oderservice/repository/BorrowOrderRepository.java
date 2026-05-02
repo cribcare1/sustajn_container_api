@@ -188,6 +188,17 @@ GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query("""
+    SELECT b FROM BorrowOrder b
+    WHERE 
+        (b.effectiveDueDate IS NOT NULL AND b.effectiveDueDate < :currentTime
+            OR b.effectiveDueDate IS NULL AND b.dueDate < :currentTime)
+        AND b.returnedQuantity < b.quantity
+        AND (b.isSold = false OR b.isSold IS NULL)
+""")
+    List<BorrowOrder> findOverdueOrders(@Param("currentTime") LocalDateTime currentTime);
+
     @Query("SELECT COALESCE(SUM(b.quantity - b.returnedQuantity), 0) FROM BorrowOrder b WHERE b.productId = :productId")
     Integer getInCirculationCount(@Param("productId") Long productId);
 
