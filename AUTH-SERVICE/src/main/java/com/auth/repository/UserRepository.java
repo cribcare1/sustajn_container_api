@@ -46,7 +46,6 @@ public interface UserRepository extends JpaRepository<User,Long> {
             "WHERE r.userType = 'RESTAURANT' " +
             "AND (" +
             "LOWER(REPLACE(r.fullName, ' ', '')) LIKE LOWER(CONCAT('%', REPLACE(:keyword, ' ', ''), '%')) " +
-            "OR LOWER(REPLACE(r.address, ' ', '')) LIKE LOWER(CONCAT('%', REPLACE(:keyword, ' ', ''), '%'))" +
             ")" +
             "AND r.accountStatus = 'active'")
     List<User> searchRestaurantsByKeyword(@Param("keyword") String keyword);
@@ -58,7 +57,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
     @Query(value = """
     SELECT 
         u.user_id,
-        u.full_name,
+        u.name,
         u.phone_number,
         u.customer_id,
         u.email,
@@ -168,7 +167,7 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
     @Query("SELECT u.id, u.fullName, u.profilePictureUrl, a.areaStreetCityBlockDetails, a.poBoxOrPostalCode  " +
             "FROM User u " +
-            "JOIN Address a on a.userId = u.id " +
+            "JOIN Address a on a.user.id = u.id " +
             "WHERE u.userType = :userType " +
             "AND u.accountStatus = :accountStatus")
     List<Object[]> findAllActiveRestaurants(UserType userType, AccountStatus accountStatus);

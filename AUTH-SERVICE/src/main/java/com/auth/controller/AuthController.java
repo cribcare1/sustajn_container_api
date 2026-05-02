@@ -236,7 +236,7 @@ public class AuthController {
     }
 
     @PostMapping("/upgradeSubscription")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> upgradeUserSubscription(
+    public ResponseEntity<ApiResponse<UserProfileResponse>> upgradeUserSubscription(
             @RequestBody @Validated({CreateGroup.class, UpdateGroup.class}) SubscriptionRequest subscriptionRequest
     ) {
         return ResponseEntity.ok(userService.upgradeUserSubscription(subscriptionRequest));
@@ -261,17 +261,17 @@ public class AuthController {
     }
 
     @PostMapping("/createBankDetails")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
+    public ResponseEntity<ApiResponse<UserProfileResponse>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
         return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
     }
 
     @PostMapping("/deleteBankDetails/{id}")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
+    public ResponseEntity<ApiResponse<UserProfileResponse>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
         return ResponseEntity.ok(userService.deleteBankDetails(id));
     }
 
     @PostMapping("/updateBankDetails")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
             return ResponseEntity.ok(userService.updateBankDetails(request));
     }
     @PostMapping("/updateBusinessInfo")
@@ -281,31 +281,31 @@ public class AuthController {
 
     // save new address
     @PostMapping("/saveAddress")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.saveNewAddress(request));
     }
 
     //update address
     @PostMapping("/updateAddress")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.updateAddress(request));
     }
 
     //Delete address
     @PostMapping("/deleteAddress")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.deleteAddress(request));
     }
 
     //Get Profile details
     @GetMapping("/getProfileDetails/{userId}")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
         return ResponseEntity.ok(userService.getCustomerProfileDetails(userId));
     }
 
     //Update profile details
     @PostMapping("/updateProfileDetails")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
         return ResponseEntity.ok(userService.updateUserProfile(userData, profileImage));
     }
 
@@ -339,12 +339,20 @@ public class AuthController {
     }
 
     @PostMapping("/addBusinessInfo")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> addBusinessInfo(@RequestBody RegistrationRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> addBusinessInfo(@RequestBody RegistrationRequest request) {
         return ResponseEntity.ok(userService.addBusinessInfo(request));
     }
 
     @GetMapping("/getUserByCustomerId")
-    public ResponseEntity<ApiResponse<User>> getUserIdByCustomerId(@RequestParam String customerId) {
+    public ResponseEntity<ApiResponse<UserResponse>> getUserIdByCustomerId(@RequestParam String customerId) {
         return ResponseEntity.ok(userService.getUserByCustomerId(customerId));
+    }
+
+    @PostMapping("/updateBankDetailsByUser")
+    public ResponseEntity<ApiResponse<?>> updateBankDetails(
+            @RequestParam Long customerId,
+            @RequestBody RegistrationRequest request) {
+
+        return ResponseEntity.ok(userService.updateBankDetails(customerId, request));
     }
 }

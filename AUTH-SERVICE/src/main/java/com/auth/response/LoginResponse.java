@@ -14,7 +14,6 @@ public class LoginResponse {
     private String image;
     private String role;
     private String userName;
-    private String address;
     private String fullName;
     private String jwtToken;
     private String tokenType;

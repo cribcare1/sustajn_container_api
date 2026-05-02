@@ -157,7 +157,6 @@ public class OrderServiceImpl implements OrderService {
             }
 
             ApiResponse<UserResponse> userResponse = authClient.getUserByCustomerId(request.getCustomerId());
-
             if (userResponse == null || userResponse.getData() == null) {
                 throw new ResourceNotFoundException("User not found for customerId: " + request.getCustomerId());
             }

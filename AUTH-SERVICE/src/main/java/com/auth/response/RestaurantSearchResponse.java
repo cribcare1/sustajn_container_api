@@ -14,7 +14,6 @@ import java.math.BigDecimal;
 public class RestaurantSearchResponse {
     private Long id;
     private String name;
-    private String address;
     private BigDecimal latitude;
     private BigDecimal longitude;
     private double distanceKm;

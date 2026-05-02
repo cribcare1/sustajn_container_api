@@ -18,14 +18,20 @@ public class BankDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long userId;
-
     @Column(name = "bank_name", length = 1000)
     private String bankName;
     @Column(name = "account_holder_name", length = 1000)
     private String accountHolderName;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
+
+
     private String iBanNumber;
+
+    @Column(name = "account_number", length = 200)
+    private String accountNumber;
 
     @Column(name = "bic_number", length = 200)
     private String bicNumber;
@@ -38,9 +44,6 @@ public class BankDetails {
 
     @Column(name = "expiry_date", length = 100)
     private String expiryDate;
-
-    @Column(name = "cvv", length = 100)
-    private String cvv;
 
     @Column(name = "payment_gateway_id", length = 100)
     private String paymentGatewayId;
