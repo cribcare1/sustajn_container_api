@@ -7,6 +7,7 @@ import com.sustajn.oderservice.dto.RestaurantContainerInventoryResponse;
 import com.sustajn.oderservice.dto.RestaurantOrderedResponse;
 import com.sustajn.oderservice.request.ReduceInventoryRequest;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -50,5 +51,10 @@ public interface InventoryFeignClient {
             @RequestParam(value = "containerTypeId", required = false) Integer containerTypeId,
             @RequestParam(value = "month", required = false) Integer month,
             @RequestParam(value = "year", required = false) Integer year
+    );
+
+    @GetMapping("/inventory/subscription-plans/getSubscriptionPlan/{id}")
+    ResponseEntity<Map<String, Object>> getSubscriptionPlanById(
+            @PathVariable("id") Integer id
     );
 }

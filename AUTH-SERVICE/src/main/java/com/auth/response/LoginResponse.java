@@ -17,4 +17,5 @@ public class LoginResponse {
     private String fullName;
     private String jwtToken;
     private String tokenType;
+    private Integer planId;
 }

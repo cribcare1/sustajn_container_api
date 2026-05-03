@@ -39,6 +39,6 @@ public interface OrderService {
 
     ApiResponse<List<BorrowOrder>> getBorrowedOrderByOrderId(Long orderId);
 
-    ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId);
+    ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId,Integer planId);
 
 }

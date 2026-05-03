@@ -4,6 +4,7 @@ import com.sustajn.oderservice.constant.OrderEnumType;
 import com.sustajn.oderservice.constant.OrderServiceConstant;
 import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
+import com.sustajn.oderservice.entity.Notification;
 import com.sustajn.oderservice.entity.Order;
 import com.sustajn.oderservice.entity.ReturnOrder;
 import com.sustajn.oderservice.exception.ResourceNotFoundException;
@@ -20,6 +21,7 @@ import com.sustajn.oderservice.util.ApiResponseUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import com.sustajn.oderservice.dto.DeviceTokenResponse;
@@ -202,13 +204,18 @@ public class OrderServiceImpl implements OrderService {
                                     ProductResponse::getProductName
                             ));
 
+            System.err.println("Product name map: " + productNameMap);
+
             // ===============================
             // 8️⃣ Notification
             // ===============================
 
             DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(userId);
-
+            System.err.println("Device token response for userId " + userId + ": " + deviceTokenResponse);
             if (deviceTokenResponse != null){
+
+                System.err.println("Device token response for userId " + userId + ": " + deviceTokenResponse.getDeviceToken());
+
                 String title = "Containers Borrowed Successfully";
                 StringBuilder body = new StringBuilder();
                 body.append("Hi ")
@@ -236,6 +243,8 @@ public class OrderServiceImpl implements OrderService {
                         .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
                         .data(OrderServiceConstant.ACTION_BORROW)
                         .build();
+
+                Notification notificationEntity = new Notification();
 
                 notificationFeignClient.sendNotificationToMultipleDevices(notification);
             }
@@ -371,6 +380,33 @@ public class OrderServiceImpl implements OrderService {
             // Commit DB only if inventory OK
             returnOrderRepository.saveAll(returnOrdersToSave);
             borrowOrderRepository.saveAll(pendingBorrows);
+
+            DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(request.getUserId());
+                if (deviceTokenResponse != null){
+
+                    String title = "Containers Returned Successfully";
+                    StringBuilder body = new StringBuilder();
+                    body.append("Hi,\n\n")
+                            .append("You have successfully returned the following containers:\n");
+
+                    for (ReturnItemRequest item : request.getItems()) {
+
+                        body.append("- Product ID: ")
+                                .append(item.getProductId())
+                                .append(", Quantity: ")
+                                .append(item.getQuantity())
+                                .append("\n");
+                    }
+                    NotificationResponse notification = NotificationResponse.builder()
+                            .title(title)
+                            .body(body.toString())
+                            .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
+                            .data(OrderServiceConstant.ACTION_RETURN)
+                            .build();
+
+                    notificationFeignClient.sendNotificationToMultipleDevices(notification);
+                }
+
 
             return ApiResponseUtil.success(
                     "Containers returned successfully");
@@ -1653,7 +1689,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
     @Override
-    public ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId) {
+    public ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId,Integer planId) {
 
         LocalDateTime startDate = null;
         LocalDateTime endDate = null;
@@ -1682,7 +1718,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 4. Calculate Available Capacity
         // NOTE: Hardcoded to 1000 for now. Replace with real subscription limit if needed.
-        Integer totalCapacity = 1000;
+        Integer totalCapacity = getTotalContainers(planId);
 
         Integer currentlyLeasedOut = leaseCount - receiveCount;
         if (currentlyLeasedOut < 0) currentlyLeasedOut = 0;
@@ -1700,4 +1736,27 @@ public class OrderServiceImpl implements OrderService {
                 .monthYear(monthYearStr)
                 .build();
     }
+
+    private Integer getTotalContainers(Integer planId) {
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    inventoryFeignClient.getSubscriptionPlanById(planId);
+
+            Map<String, Object> body = response.getBody();
+
+            if (body != null && "success".equals(body.get("status"))) {
+                Map<String, Object> data = (Map<String, Object>) body.get("data");
+
+                if (data != null && data.get("totalContainers") != null) {
+                    return ((Number) data.get("totalContainers")).intValue();
+                }
+            }
+
+        } catch (Exception e) {
+            log.error("Error fetching subscription plan: {}", e.getMessage());
+        }
+
+        return 0; // fallback
+    }
+
 }

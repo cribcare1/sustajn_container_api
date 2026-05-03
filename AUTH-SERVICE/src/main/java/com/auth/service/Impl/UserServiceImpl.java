@@ -7,6 +7,7 @@ import com.auth.enumDetails.UserType;
 import com.auth.exception.GenericException;
 import com.auth.exception.ResourceNotFoundException;
 import com.auth.feignClient.InventoryFeignClient;
+import com.auth.feignClient.NotificationFeignClient;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.*;
@@ -50,6 +51,7 @@ public class UserServiceImpl implements UserService {
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
+    private final NotificationFeignClient notificationFeignClient;
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
     private final InventoryFeignClient inventoryFeignClient;
@@ -96,7 +98,8 @@ public class UserServiceImpl implements UserService {
                 user.getEmail(),
                 user.getFullName(),
                 token,
-                "Bearer"   // token type
+                "Bearer",
+                user.getSubscriptionPlanId()
         );
     }
 
@@ -111,7 +114,8 @@ public class UserServiceImpl implements UserService {
                 user.getEmail(),
                 user.getFullName(),
                 token,
-                "Bearer"   // token type
+                "Bearer",
+                user.getSubscriptionPlanId()// token type
         );
     }
 
@@ -355,8 +359,8 @@ public class UserServiceImpl implements UserService {
                 bankDetails = bankRepo.save(payRow);
             }
 
-            UserProfileResponse userProfileResponse = getCustomerProfileDetails(  bankDetails.getUser() != null ? bankDetails.getUser().getId() : null
-).getData();
+            UserProfileResponse userProfileResponse = getCustomerProfileDetails(bankDetails.getUser() != null ? bankDetails.getUser().getId() : null
+            ).getData();
 
 
             return new ApiResponse<>(AuthConstant.SUCCESS, "Bank Details updated successfully", userProfileResponse);
@@ -455,14 +459,16 @@ public class UserServiceImpl implements UserService {
             ObjectMapper mapper = new ObjectMapper();
             List<AddressResponse> addresses =
                     mapper.readValue(addressJson,
-                            new TypeReference<List<AddressResponse>>() {});
+                            new TypeReference<List<AddressResponse>>() {
+                            });
             response.setAddressResponses(addresses);
 
             //Social Media Details (JSON)
             String socialMediaJson = row[29].toString();
             List<SocialMediaResponse> socialMediaResponses =
                     mapper.readValue(socialMediaJson,
-                            new TypeReference<List<SocialMediaResponse>>() {});
+                            new TypeReference<List<SocialMediaResponse>>() {
+                            });
             response.setSocialMediaResponse(socialMediaResponses);
 
             //Business Details
@@ -527,9 +533,9 @@ public class UserServiceImpl implements UserService {
     @Override
     public ApiResponse<UserProfileResponse> updateBusinessInfo(RegistrationRequest request) {
         try {
-            if (request.getContactAndRegistrationDetails() != null){
+            if (request.getContactAndRegistrationDetails() != null) {
                 Optional<ContactRegistrationDetails> contactRegistrationDetailsOpt = contactAndRegistrationDetailsRepository.findById(request.getContactAndRegistrationDetails().getId());
-                if (contactRegistrationDetailsOpt.isPresent()){
+                if (contactRegistrationDetailsOpt.isPresent()) {
                     ContactRegistrationDetails contactDetails = contactRegistrationDetailsOpt.get();
                     contactDetails.setContactPersonName(request.getContactAndRegistrationDetails().getContactPersonName());
                     contactDetails.setContactNumber(request.getContactAndRegistrationDetails().getContactNumber());
@@ -541,10 +547,10 @@ public class UserServiceImpl implements UserService {
                 }
             }
 
-            if (!CollectionUtils.isEmpty(request.getSocialMediaList())){
+            if (!CollectionUtils.isEmpty(request.getSocialMediaList())) {
                 for (RegistrationRequest.SocialMediaRequest socialMediaRequest : request.getSocialMediaList()) {
                     Optional<SocialMediaDetails> socialMediaDetailsOpt = socialMediaDetailsRepository.findById(socialMediaRequest.getId());
-                    if (socialMediaDetailsOpt.isPresent()){
+                    if (socialMediaDetailsOpt.isPresent()) {
                         SocialMediaDetails socialMediaDetails = socialMediaDetailsOpt.get();
                         socialMediaDetails.setSocialMediaType(socialMediaRequest.getSocialMediaType());
                         socialMediaDetails.setLink(socialMediaRequest.getLink());
@@ -553,9 +559,9 @@ public class UserServiceImpl implements UserService {
                 }
             }
 
-            if (request.getBasicDetails() != null){
+            if (request.getBasicDetails() != null) {
                 Optional<BasicRestaurantDetails> basicDetailsOpt = basicRepo.findById(request.getBasicDetails().getId());
-                if (basicDetailsOpt.isPresent()){
+                if (basicDetailsOpt.isPresent()) {
                     BasicRestaurantDetails basicDetails = basicDetailsOpt.get();
                     basicDetails.setBusinessType(request.getBasicDetails().getBusinessType());
                     basicDetails.setWebsiteDetails(request.getBasicDetails().getWebsiteDetails());
@@ -566,7 +572,7 @@ public class UserServiceImpl implements UserService {
 
             return new ApiResponse<>(AuthConstant.ERROR, "Business info updated successfully.", userProfileResponse);
 
-        }catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error updating business info: {}", e.getMessage(), e);
             return new ApiResponse<>(AuthConstant.ERROR, "Error on updating business info", null);
         }
@@ -853,7 +859,6 @@ public class UserServiceImpl implements UserService {
     }
 
 
-
     public Map<String, Object> changePassword(Long userId, String newPassword) {
         try {
             User user = userRepository.findById(userId)
@@ -968,7 +973,7 @@ public class UserServiceImpl implements UserService {
                     builder.cardHolderName(card.getCardHolderName())
                             .cardNumber(card.getCardNumber())
                             .expiryDate(card.getExpiryDate())
-                            ;
+                    ;
                 }
 
                 // PAYMENT
@@ -990,6 +995,8 @@ public class UserServiceImpl implements UserService {
 
             // ---------------- SINGLE SAVE ----------------
             User savedUser = userRepository.save(user);
+
+
 
             // ---------------- OTHER TABLES ----------------
             if (request.getBasicDetails() != null) {
@@ -1043,8 +1050,6 @@ public class UserServiceImpl implements UserService {
             throw new GenericException("Something went wrong: " + e.getMessage());
         }
     }
-
-
 
 
     @Transactional
@@ -1111,7 +1116,6 @@ public class UserServiceImpl implements UserService {
             User user = userBuilder.build();
             User savedUser = userRepository.save(user);
 
-
             // ---------------- CREATE ADDRESS DETAILS ----------------
             if (request.getAddress() != null) {
                 RegistrationRequest.AddressRequest addressReq = request.getAddress();
@@ -1149,7 +1153,7 @@ public class UserServiceImpl implements UserService {
                 RegistrationRequest.CardDetailsRequest cardReq =
                         request.getCardDetails();
                 BankDetails bankDetails = BankDetails.builder()
-                        .user(savedUser)                        .cardHolderName(cardReq.getCardHolderName())
+                        .user(savedUser).cardHolderName(cardReq.getCardHolderName())
                         .cardNumber(cardReq.getCardNumber())
                         .expiryDate(cardReq.getExpiryDate())
                         .status(AuthConstant.ACTIVE)
@@ -1298,11 +1302,92 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon) {
+//    public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon) {
+//        Map<String, Object> response = new HashMap<>();
+//
+//        try {
+//            // Input validation
+//            if (keyword == null || keyword.trim().isEmpty()) {
+//                response.put("status", "error");
+//                response.put("message", "Search keyword cannot be empty");
+//                response.put("searchData", Collections.emptyList());
+//                return response;
+//            }
+//
+//            // Fetch restaurants from repository
+//            List<User> restaurants = userRepository.searchRestaurantsByKeyword(keyword);
+//
+//            if (restaurants.isEmpty()) {
+//                response.put("status", "success");
+//                response.put("message", "No restaurants found for the given keyword");
+//                response.put("searchData", Collections.emptyList());
+//                return response;
+//            }
+//
+//            // Map restaurants to response DTO with distance
+//            List<RestaurantSearchResponse> restaurantList = restaurants.stream()
+//                    .map(r -> {
+//                        double distanceKm = 0.0;
+//                        BigDecimal lat = r.getLatitude();
+//                        BigDecimal lon = r.getLongitude();
+//
+//                        if (lat != null && lon != null) {
+//                            try {
+//                                distanceKm = DistanceUtil.calculateDistance(
+//                                        currentLat, currentLon, lat.doubleValue(), lon.doubleValue()
+//                                );
+//                            } catch (Exception e) {
+//                                // Ignore distance calculation errors, distance will remain 0
+//                            }
+//                        }
+//                        // If lat/lon is null, distance will remain 0 (or you can set to -1 if you want)
+//                        Address address = r.getAddresses() != null && !r.getAddresses().isEmpty()
+//                                ? r.getAddresses().get(0)
+//                                : null;
+//
+//
+//                        return new RestaurantSearchResponse(
+//                                r.getId(),
+//                                r.getFullName(),
+//                                r.getLatitude(),
+//                                r.getLongitude(),
+//                                distanceKm,
+//                                r.getProfilePictureUrl(),
+//
+//                                // 🔥 ADDRESS MAPPING
+//                                address != null ? address.getId() : null,
+//                                address != null ? address.getAddressType() : null,
+//                                address != null ? address.getFlatDoorHouseDetails() : null,
+//                                address != null ? address.getAreaStreetCityBlockDetails() : null,
+//                                address != null ? address.getPoBoxOrPostalCode() : null
+//                        );
+//                    })
+//                    .sorted(Comparator.comparingDouble(RestaurantSearchResponse::getDistanceKm))
+//                    .toList();
+//
+//
+//            // Prepare map response
+//            response.put("status", "success");
+//            response.put("message", "Restaurants fetched successfully");
+//            response.put("searchData", restaurantList);
+//            return response;
+//
+//        } catch (Exception ex) {
+//            response.put("status", "error");
+//            response.put("message", "Unable to search restaurants at the moment. Please try again later.");
+//            response.put("searchData", Collections.emptyList());
+//            return response;
+//        }
+//    }
+
+    public Map<String, Object> searchRestaurants(String keyword,
+                                                 double currentLat,
+                                                 double currentLon) {
+
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Input validation
+            // 🔹 Validation
             if (keyword == null || keyword.trim().isEmpty()) {
                 response.put("status", "error");
                 response.put("message", "Search keyword cannot be empty");
@@ -1310,56 +1395,50 @@ public class UserServiceImpl implements UserService {
                 return response;
             }
 
-            // Fetch restaurants from repository
-            List<User> restaurants = userRepository.searchRestaurantsByKeyword(keyword);
+            // 🔹 Fetch directly DTO (NO ENTITY → NO N+1)
+            List<RestaurantSearchResponse> restaurants =
+                    userRepository.searchRestaurants(keyword);
 
             if (restaurants.isEmpty()) {
                 response.put("status", "success");
-                response.put("message", "No restaurants found for the given keyword");
+                response.put("message", "No restaurants found");
                 response.put("searchData", Collections.emptyList());
                 return response;
             }
 
-            // Map restaurants to response DTO with distance
-            List<RestaurantSearchResponse> restaurantList = restaurants.stream()
+            // 🔹 Calculate distance
+            List<RestaurantSearchResponse> updatedList = restaurants.stream()
                     .map(r -> {
                         double distanceKm = 0.0;
-                        BigDecimal lat = r.getLatitude();
-                        BigDecimal lon = r.getLongitude();
 
-                        if (lat != null && lon != null) {
+                        if (r.getLatitude() != null && r.getLongitude() != null) {
                             try {
                                 distanceKm = DistanceUtil.calculateDistance(
-                                        currentLat, currentLon, lat.doubleValue(), lon.doubleValue()
+                                        currentLat,
+                                        currentLon,
+                                        r.getLatitude().doubleValue(),
+                                        r.getLongitude().doubleValue()
                                 );
-                            } catch (Exception e) {
-                                // Ignore distance calculation errors, distance will remain 0
+                            } catch (Exception ignored) {
                             }
                         }
-                        // If lat/lon is null, distance will remain 0 (or you can set to -1 if you want)
 
-                        return new RestaurantSearchResponse(
-                                r.getId(),
-                                r.getFullName(),
-                                r.getLatitude(),
-                                r.getLongitude(),
-                                distanceKm,
-                                r.getProfilePictureUrl()
-                        );
+                        r.setDistanceKm(distanceKm);
+                        return r;
                     })
                     .sorted(Comparator.comparingDouble(RestaurantSearchResponse::getDistanceKm))
-                    .collect(Collectors.toList());
+                    .toList();
 
-
-            // Prepare map response
+            // 🔹 Response
             response.put("status", "success");
             response.put("message", "Restaurants fetched successfully");
-            response.put("searchData", restaurantList);
+            response.put("searchData", updatedList);
+
             return response;
 
         } catch (Exception ex) {
             response.put("status", "error");
-            response.put("message", "Unable to search restaurants at the moment. Please try again later.");
+            response.put("message", "Unable to search restaurants at the moment");
             response.put("searchData", Collections.emptyList());
             return response;
         }
@@ -1432,7 +1511,7 @@ public class UserServiceImpl implements UserService {
         );
 
         // Base ID
-        String baseId = namePart+ "-" + datePart;
+        String baseId = namePart + "-" + datePart;
 
         // Fetch existing IDs from DB
         List<String> existingIds = userRepository.findCustomerIdStartingWith(baseId);
@@ -1491,7 +1570,7 @@ public class UserServiceImpl implements UserService {
     public ApiResponse<List<RestaurantListResponse>> getAllActiveRestaurants() {
 
         List<Object[]> response = userRepository.findAllActiveRestaurants(UserType.RESTAURANT, AccountStatus.active);
-        if (CollectionUtils.isEmpty(response)){
+        if (CollectionUtils.isEmpty(response)) {
             return new ApiResponse<>(AuthConstant.ERROR, "No active restaurants found", null);
         }
         List<RestaurantListResponse> restaurantListResponses = new ArrayList<>();
@@ -1500,7 +1579,7 @@ public class UserServiceImpl implements UserService {
             restaurant.setId(((Number) obj[0]).longValue());
             restaurant.setName((String) obj[1]);
             restaurant.setProfileImageUrl((String) obj[2]);
-            restaurant.setAddress(obj[3]+", "+ obj[4]);
+            restaurant.setAddress(obj[3] + ", " + obj[4]);
             restaurantListResponses.add(restaurant);
         }
         return new ApiResponse<>(AuthConstant.SUCCESS, "Active restaurants fetched successfully", restaurantListResponses);
@@ -1607,7 +1686,7 @@ public class UserServiceImpl implements UserService {
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
 
-                if (request.getContactAndRegistrationDetails() != null){
+                if (request.getContactAndRegistrationDetails() != null) {
                     RegistrationRequest.ContactAndRegistrationDetailsRequest contactReq =
                             request.getContactAndRegistrationDetails();
                     ContactRegistrationDetails contactDetails = ContactRegistrationDetails.builder()
@@ -1748,7 +1827,6 @@ public class UserServiceImpl implements UserService {
                 BankDetails bankDetails = user.getBankDetails();
 
 
-
                 // ---------------- UPDATE BANK ----------------
                 if (request.getBankDetails() != null) {
                     var bank = request.getBankDetails();
@@ -1795,7 +1873,6 @@ public class UserServiceImpl implements UserService {
                 }
 
 
-
                 // 👉 attach to user (important)
                 user.setBankDetails(bankDetails);
             }
@@ -1803,7 +1880,7 @@ public class UserServiceImpl implements UserService {
             // ---------------- SAVE (CASCADE WILL HANDLE BANK) ----------------
             userRepository.save(user);
 
-             // Refresh cache after update
+            // Refresh cache after update
 
             return new ApiResponse<>(AuthConstant.SUCCESS,
                     "Bank details updated successfully",

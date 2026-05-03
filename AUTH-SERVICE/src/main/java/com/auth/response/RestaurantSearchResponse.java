@@ -1,5 +1,6 @@
 package com.auth.response;
 
+import jakarta.persistence.Column;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,4 +19,8 @@ public class RestaurantSearchResponse {
     private BigDecimal longitude;
     private double distanceKm;
     private String imageUrl;
-}
+    private Long addressId;
+    private String addressType;
+    private String flatDoorHouseDetails;
+    private String areaStreetCityBlockDetails;
+    private String poBoxOrPostalCode;}

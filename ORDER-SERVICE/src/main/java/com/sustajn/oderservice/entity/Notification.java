@@ -21,20 +21,30 @@ public class Notification extends BaseEntity{
     private Long id;
 
     private Long userId;
+
     @Column(nullable = false)
     private Long orderId;
+
     private Long borrowOrderId;
+
     private Long productId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationStatus type;
+
     // BEFORE_3_DAYS, OVERDUE, EXTENDED_BEFORE_3_DAYS
+
+    @Column(name = "order_title")
+    private String orderTitle;
 
     @Column(length = 3500)
     private String message;
 
+    @Column(name = "sent_date")
     private LocalDateTime sentDate;
 
+    @Column(name = "is_read")
     private Boolean isRead = false;
+
 }

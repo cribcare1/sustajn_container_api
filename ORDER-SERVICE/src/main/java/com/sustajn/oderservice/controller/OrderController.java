@@ -148,9 +148,10 @@ public class OrderController {
             @RequestParam Long restaurantId,
             @RequestParam(required = false) Integer month,
             @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Long productId // Acts as container ID
+            @RequestParam(required = false) Long productId ,// Acts as container ID
+            @RequestParam(required = false) Integer planId
     ) {
-        ContainerChartResponse stats = orderService.getChartStatistics(restaurantId, month, year, productId);
+        ContainerChartResponse stats = orderService.getChartStatistics(restaurantId, month, year, productId,planId);
 
         return ResponseEntity.ok(Map.of(
                 "status", "SUCCESS",
@@ -186,4 +187,6 @@ public class OrderController {
         }
         return userCounts;
     }
+
+
 }

@@ -36,7 +36,7 @@ public class SubscriptionPlanController {
         return new ResponseEntity<>(resp, code);
     }
 
-    @GetMapping("getSubscriptionPlan/{id}")
+    @GetMapping("/getSubscriptionPlan/{id}")
     public ResponseEntity<Map<String, Object>> getById(@PathVariable Integer id) {
         Map<String, Object> resp = subscriptionPlanService.getSubscriptionPlanById(id);
         String status = (String) resp.getOrDefault("status", "error");

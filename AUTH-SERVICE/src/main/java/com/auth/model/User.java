@@ -111,7 +111,7 @@ public class User {
     @Column(name = "subscription_plan_id")
     private Integer subscriptionPlanId;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
     private BankDetails bankDetails;
 
     @PrePersist

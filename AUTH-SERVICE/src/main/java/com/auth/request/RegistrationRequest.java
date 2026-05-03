@@ -28,6 +28,8 @@ public class RegistrationRequest {
     private Double latitude;
     private Double longitude;
     private Integer subscriptionPlanId;
+    private String pushNotificationToken;
+    private String deviceType;
 
     // ========== BASIC RESTAURANT DETAILS ==========
     private BasicDetails basicDetails;

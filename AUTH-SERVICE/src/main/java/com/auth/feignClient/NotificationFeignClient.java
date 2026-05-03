@@ -1,8 +1,11 @@
 package com.auth.feignClient;
 
-import com.auth.config.FeignMultipartConfig;
+//import com.auth.config.FeignMultipartConfig;
+import com.auth.request.DeviceTokenRequest;
+import com.auth.response.DeviceToken;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -10,8 +13,7 @@ import java.util.Map;
 
 
 @FeignClient(
-        name = "NOTIFICATION-SERVICE",
-        configuration = FeignMultipartConfig.class
+        name = "NOTIFICATION-SERVICE"
 )public interface NotificationFeignClient {
 
     /* ---------- PASSWORD / TOKEN ---------- */
@@ -53,6 +55,14 @@ import java.util.Map;
     byte[] fetchImage(
             @PathVariable("type") String type,
             @PathVariable("fileName") String fileName
+    );
+
+    @PostMapping(
+            value = "/notification/registerOrUpdateDeviceToken",
+            consumes = "application/json"
+    )
+    ResponseEntity<DeviceToken> registerOrUpdateDeviceToken(
+            @RequestBody DeviceTokenRequest request
     );
 }
 
