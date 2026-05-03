@@ -9,6 +9,7 @@ import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
+import com.sustajn.oderservice.request.SoldRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -40,5 +41,7 @@ public interface OrderService {
     ApiResponse<List<BorrowOrder>> getBorrowedOrderByOrderId(Long orderId);
 
     ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId,Integer planId);
+
+    public void markAsSold(SoldRequest request);
 
 }

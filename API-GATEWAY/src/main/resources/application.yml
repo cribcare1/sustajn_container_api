@@ -1,13 +1,13 @@
-eureka:
-  instance:
-    prefer-ip-address: true
+server:
+  port: 9090
 
-  client:
-    register-with-eureka: true
-    fetch-registry: true
-    service-url:
-      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
 spring:
+  application:
+    name: API-GATEWAY
+
+  profiles:
+    active: test
+
   cloud:
     gateway:
       discovery:
@@ -21,14 +21,13 @@ spring:
           predicates:
             - Path=/auth/**
           filters:
-              -name: AuthFilter
+              - name: AuthFilter
         #          filters:
 #            - StripPrefix=1
         - id: NOTIFICATION-SERVICE
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/notification/**
-            - path=/notifications/**
+            - Path=/notification/**,/notifications/**
 #          filters:
 #            - StripPrefix=1
 #            - name: AuthFilter
@@ -42,7 +41,7 @@ spring:
         - id: ORDER-SERVICE
           uri: lb://ORDER-SERVICE
           predicates:
-            - Path=/oderservice/**
+            - Path=/orders/**
           filters:
             - name: AuthFilter
 

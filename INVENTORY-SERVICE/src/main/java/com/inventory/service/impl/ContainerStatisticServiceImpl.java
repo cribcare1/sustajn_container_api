@@ -1,6 +1,6 @@
 package com.inventory.service.impl;
 
-import com.inventory.dto.ContainerDetailsResponse;
+import com.inventory.dto.*;
 import com.inventory.entity.AdminInventoryMaster;
 import com.inventory.entity.ContainerType;
 import com.inventory.feignClient.AuthFeignClient;
@@ -9,9 +9,8 @@ import com.inventory.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import com.inventory.dto.ProductCirculationResponse;
-import com.inventory.dto.ContainerInCirculationDetailResponse;
-import com.inventory.dto.UserHoldingDto;
+import com.inventory.dto.ProductWithPartnerDetailResponse;
+import com.inventory.dto.PartnerHoldingDto;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +29,6 @@ public class ContainerStatisticServiceImpl {
     private final DamagedContainerRepository damagedContainerRepository;
     private final OrderFeignClient orderFeignClient;
     private final AuthFeignClient authFeignClient;
-
     public ContainerDetailsResponse getContainerDetails(Integer containerTypeId) {
 
         // 1. Base Info
@@ -168,6 +166,103 @@ public class ContainerStatisticServiceImpl {
                 .imageUrl(container.getImageUrl())
                 .totalInCirculation(totalInCirculation)
                 .users(userList)
+                .build();
+    }
+
+    // ... Inside ContainerStatisticServiceImpl ...
+
+    public List<ProductWithPartnerResponse> getAllProductsWithPartner() {
+
+        // 1. Fetch all active container types (The base products)
+        List<ContainerType> activeContainers = containerTypeRepository.findAll()
+                .stream()
+                .filter(c -> "active".equalsIgnoreCase(c.getStatus()))
+                .collect(Collectors.toList());
+
+        // 2. Fetch the grouped counts from the database
+        List<Object[]> results = restaurantInventoryRepository.getWithPartnerCountsForAllProducts();
+
+        // Convert to a fast lookup map: { containerTypeId : count }
+        Map<Integer, Integer> countsMap = new HashMap<>();
+        for (Object[] row : results) {
+            Integer cId = (Integer) row[0];
+            Integer count = ((Number) row[1]).intValue();
+            countsMap.put(cId, count);
+        }
+
+        // 3. Map the counts to the containers
+        return activeContainers.stream().map(container -> {
+
+            // Look up the count, default to 0 if no partner has it
+            Integer count = countsMap.getOrDefault(container.getId(), 0);
+
+            return ProductWithPartnerResponse.builder()
+                    .containerTypeId(container.getId())
+                    .name(container.getName())
+                    .productId(container.getProductId())
+                    .capacity(container.getCapacityMl() != null ? container.getCapacityMl() + "ml" : "")
+                    .imageUrl(container.getImageUrl())
+                    .withPartnerCount(count)
+                    .build();
+
+        }).collect(Collectors.toList());
+    }
+    public ProductWithPartnerDetailResponse getWithPartnerDetails(Integer containerTypeId) {
+        ContainerType container = containerTypeRepository.findById(containerTypeId)
+                .orElseThrow(() -> new RuntimeException("Container not found"));
+
+        List<Object[]> results = restaurantInventoryRepository.getPartnerHoldingsByContainerType(containerTypeId);
+
+        Integer totalWithPartner = 0;
+        List<Long> restaurantIdsToFetch = new ArrayList<>();
+        Map<Long, Integer> countsMap = new HashMap<>();
+
+        for (Object[] row : results) {
+            Long restaurantId = (Long) row[0];
+            Integer count = ((Number) row[1]).intValue();
+
+            totalWithPartner += count;
+            restaurantIdsToFetch.add(restaurantId);
+            countsMap.put(restaurantId, count);
+        }
+
+        // 4. Fetch Real Names and Addresses from Auth Service via Feign
+        Map<Long, PartnerInfoDto> partnerInfoMap = new HashMap<>();
+        if (!restaurantIdsToFetch.isEmpty()) {
+            try {
+                partnerInfoMap = authFeignClient.getPartnerDetailsBulk(restaurantIdsToFetch);
+            } catch (Exception e) {
+                log.error("Failed to fetch partner details from Auth Service: {}", e.getMessage());
+            }
+        }
+
+        // 5. Build the final list using the real Auth data
+        List<PartnerHoldingDto> partnerList = new ArrayList<>();
+        for (Long restaurantId : restaurantIdsToFetch) {
+            PartnerInfoDto info = partnerInfoMap.get(restaurantId);
+
+            // Apply the real name and address!
+            String partnerName = (info != null && info.getName() != null) ? info.getName() : "Partner " + restaurantId;
+            String address = (info != null && info.getAddress() != null) ? info.getAddress() : "Address unavailable";
+
+            partnerList.add(PartnerHoldingDto.builder()
+                    .restaurantId(restaurantId)
+                    .partnerName(partnerName)
+                    .address(address)
+                    .count(countsMap.get(restaurantId))
+                    .build());
+        }
+
+        partnerList.sort((a, b) -> b.getCount().compareTo(a.getCount()));
+
+        return ProductWithPartnerDetailResponse.builder()
+                .containerTypeId(containerTypeId)
+                .name(container.getName())
+                .productId(container.getProductId())
+                .capacity(container.getCapacityMl() != null ? container.getCapacityMl() + "ml" : "")
+                .imageUrl(container.getImageUrl())
+                .totalWithPartner(totalWithPartner)
+                .partners(partnerList)
                 .build();
     }
 }

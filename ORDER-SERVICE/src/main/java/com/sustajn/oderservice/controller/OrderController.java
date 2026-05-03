@@ -5,6 +5,7 @@ import com.sustajn.oderservice.dto.ContainerChartResponse;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
+import com.sustajn.oderservice.request.SoldRequest;
 import com.sustajn.oderservice.service.OrderService;
 import com.sustajn.oderservice.service.impl.OrderNotificationService;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
@@ -90,7 +91,7 @@ public class OrderController {
     }
 
     @GetMapping("/orderHistory/{restaurantId}")
-    public ResponseEntity<?> getOrderHistory(@PathVariable @NotNull(message = "please provide resturant id") Long restaurantId) {
+    public ResponseEntity<?> getOrderHistory(@PathVariable @NotNull(message = "please provide restaurant id") Long restaurantId) {
         return ResponseEntity.ok(orderService.getOrderHistory(restaurantId));
     }
 
@@ -138,8 +139,8 @@ public class OrderController {
     }
 
     // Get Borrowed details by order id
-    @PostMapping("/getBorrowedDetailsByOrderId")
-    public ResponseEntity<?> getBorrowedDetailsByOrderId(@RequestParam Long orderId) {
+    @PostMapping("/getBorrowedDetailsByOrderId/{orderId}")
+    public ResponseEntity<?> getBorrowedDetailsByOrderId(@PathVariable Long orderId) {
         return ResponseEntity.ok(orderService.getBorrowedOrderByOrderId(orderId));
     }
   
@@ -159,6 +160,13 @@ public class OrderController {
                 "data", stats
         ));
 
+    }
+
+
+    @PostMapping("/markSold")
+    public ResponseEntity<Void> markSold(@RequestBody SoldRequest request) {
+        orderService.markAsSold(request);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/internal/bulk-circulation-counts")
