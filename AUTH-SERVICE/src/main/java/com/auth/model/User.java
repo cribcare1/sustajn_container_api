@@ -14,6 +14,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -37,7 +38,7 @@ public class User {
     @Column(name = "user_type", length = 50)
     private UserType userType;
 
-    @Column(name = "full_name", length = 100)
+    @Column(name = "name", length = 100)
     private String fullName;
 
     @Column(name = "customer_id", length = 100, unique = true)
@@ -75,11 +76,6 @@ public class User {
     @Column(name = "account_status", length = 50)
     private AccountStatus accountStatus;
 
-    @Column(name = "address", length = 500)
-    private String address;
-
-//    @Column(name = "city_id")
-//    private Integer cityId;
 
     @Column(name = "latitude", precision = 10, scale = 8)
     private BigDecimal latitude;
@@ -100,8 +96,8 @@ public class User {
     @Column(name = "device_os", length = 25)
     private DeviceOS deviceOs;
 
-    @Column(name = "push_notification")
-    private Boolean pushNotification;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Address> addresses;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -114,6 +110,9 @@ public class User {
 
     @Column(name = "subscription_plan_id")
     private Integer subscriptionPlanId;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
+    private BankDetails bankDetails;
 
     @PrePersist
     protected void onCreate() {

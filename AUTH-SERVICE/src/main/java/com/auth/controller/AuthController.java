@@ -3,12 +3,9 @@ package com.auth.controller;
 import com.auth.constant.AuthConstant;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.User;
-import com.auth.request.UserDto;
 import com.auth.repository.UserRepository;
 import com.auth.request.*;
 import com.auth.response.*;
-import com.auth.request.FeedbackRequest;
-import com.auth.request.BankCardPaymentGetWayDetailsRequest;
 import com.auth.service.UserService;
 import com.auth.validation.CreateGroup;
 import com.auth.validation.UpdateGroup;
@@ -27,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,7 +39,7 @@ public class AuthController {
     private final NotificationFeignClientService notificationFeignClientService;
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
-    
+
     @PostMapping("/register-user")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
 
@@ -72,7 +70,7 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.OK).body(
                     Map.of(
                             "status", "success",
-                            "message", "Something went wrong"+ ex.getMessage()
+                            "message", "Something went wrong" + ex.getMessage()
                     )
             );
         }
@@ -94,7 +92,7 @@ public class AuthController {
 
             User user = userOpt.get();
 
-            if(!user.getUserType().equals(loginRequest.getRole())){
+            if (!user.getUserType().equals(loginRequest.getRole())) {
                 System.err.println("User role mismatch: expected " + user.getUserType() + " but got " + loginRequest.getRole());
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
                         new ApiResponse<>(AuthConstant.ERROR, "User role mismatch")
@@ -138,8 +136,8 @@ public class AuthController {
 
 
     @PostMapping("/change-password")
-    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest passwordRequest){
-        Map<String,Object> response = userService.changePassword(passwordRequest.getEmail(),passwordRequest.getNewPassword());
+    public ResponseEntity<?> changePassword(@RequestBody ChangePasswordRequest passwordRequest) {
+        Map<String, Object> response = userService.changePassword(passwordRequest.getEmail(), passwordRequest.getNewPassword());
         return ResponseEntity.ok(response);
     }
 
@@ -149,7 +147,7 @@ public class AuthController {
             consumes = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<?> registerRestaurant(
-            @RequestBody @Valid RegistrationRequest data)  {
+            @RequestBody @Valid RegistrationRequest data) {
         return ResponseEntity.ok(
                 userService.registerRestaurant(data)
         );
@@ -162,7 +160,7 @@ public class AuthController {
     )
     public ResponseEntity<?> registerUserWithBankDetails(
             @RequestBody @Valid RegistrationRequest request
-    )  {
+    ) {
         return ResponseEntity.ok(
                 userService.registerUserWithBankDetails(request)
         );
@@ -176,7 +174,6 @@ public class AuthController {
         Map<String, Object> response = userService.getActiveRestaurantsMap(PageRequest.of(page, size));
         return ResponseEntity.ok(response);
     }
-
 
 
     @GetMapping("/activeCustomersDetails")
@@ -201,12 +198,14 @@ public class AuthController {
                 .contentType(MediaType.IMAGE_JPEG) // You can dynamically detect type if needed
                 .body(imageBytes);
     }
+
     @GetMapping("/{restaurantId}/getProfile")
     public ProfileResponse getRestaurantProfileById(
             @PathVariable Long restaurantId
     ) {
         return userService.getRestaurantProfileById(restaurantId);
     }
+
     @PutMapping("/{restaurantId}/profile")
     public ProfileResponse updateRestaurantProfileById(
             @PathVariable Long restaurantId,
@@ -222,10 +221,10 @@ public class AuthController {
     }
 
     @GetMapping("/searchRestaurant")
-    public ResponseEntity<?> searchRestaurant(  @RequestParam String keyword,
-                                                @RequestParam double lat,
-                                                @RequestParam double lon) {
-        Map<String,Object> response= userService.searchRestaurants(keyword,lat,lon);
+    public ResponseEntity<?> searchRestaurant(@RequestParam String keyword,
+                                              @RequestParam double lat,
+                                              @RequestParam double lon) {
+        Map<String, Object> response = userService.searchRestaurants(keyword, lat, lon);
         return ResponseEntity.ok(response);
     }
 
@@ -236,7 +235,7 @@ public class AuthController {
     }
 
     @PostMapping("/upgradeSubscription")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> upgradeUserSubscription(
+    public ResponseEntity<ApiResponse<UserProfileResponse>> upgradeUserSubscription(
             @RequestBody @Validated({CreateGroup.class, UpdateGroup.class}) SubscriptionRequest subscriptionRequest
     ) {
         return ResponseEntity.ok(userService.upgradeUserSubscription(subscriptionRequest));
@@ -261,19 +260,20 @@ public class AuthController {
     }
 
     @PostMapping("/createBankDetails")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest){
+    public ResponseEntity<ApiResponse<UserProfileResponse>> createBankDetails(@RequestBody @Validated(CreateGroup.class) BankCardPaymentGetWayDetailsRequest bankCardPaymentGetWayDetailsRequest) {
         return ResponseEntity.ok(userService.createBankDetails(bankCardPaymentGetWayDetailsRequest));
     }
 
     @PostMapping("/deleteBankDetails/{id}")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id){
+    public ResponseEntity<ApiResponse<UserProfileResponse>> deleteBankDetails(@PathVariable @NotNull(message = "Please provide user id") Long id) {
         return ResponseEntity.ok(userService.deleteBankDetails(id));
     }
 
     @PostMapping("/updateBankDetails")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
-            return ResponseEntity.ok(userService.updateBankDetails(request));
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateBankDetails(@RequestBody @Validated(UpdateGroup.class) BankCardPaymentGetWayDetailsRequest request) {
+        return ResponseEntity.ok(userService.updateBankDetails(request));
     }
+
     @PostMapping("/updateBusinessInfo")
     public ResponseEntity<?> updateBusinessInfo(@RequestBody RegistrationRequest request) {
         return ResponseEntity.ok(userService.updateBusinessInfo(request));
@@ -281,45 +281,56 @@ public class AuthController {
 
     // save new address
     @PostMapping("/saveAddress")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> saveNewAddress(@RequestBody @Validated(CreateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.saveNewAddress(request));
     }
 
     //update address
     @PostMapping("/updateAddress")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.updateAddress(request));
     }
 
     //Delete address
     @PostMapping("/deleteAddress")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> deleteAddress(@RequestBody @Validated(UpdateGroup.class) AddressRequest request) {
         return ResponseEntity.ok(userService.deleteAddress(request));
     }
 
     //Get Profile details
     @GetMapping("/getProfileDetails/{userId}")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> getProfileDetails(@PathVariable @NotNull(message = "Please provide user id") Long userId) {
         return ResponseEntity.ok(userService.getCustomerProfileDetails(userId));
     }
 
     //Update profile details
     @PostMapping("/updateProfileDetails")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfileDetails(@RequestPart @Validated(UpdateGroup.class) String userData, @RequestPart(required = false) MultipartFile profileImage) {
         return ResponseEntity.ok(userService.updateUserProfile(userData, profileImage));
     }
 
 
     @PostMapping("/uploadImage/{userId}")
-    public ResponseEntity<?> uploadImage(@RequestPart MultipartFile image,@PathVariable Long userId) {
-      ApiResponse apiResponse=  userService.uploadImage(image,userId);
+    public ResponseEntity<?> uploadImage(@RequestPart MultipartFile image, @PathVariable Long userId) {
+        ApiResponse apiResponse = userService.uploadImage(image, userId);
         return ResponseEntity.ok(apiResponse);
     }
 
     @GetMapping("/getUserByEmail/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email){
-        User user=userService.getUserByEmail(email);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<NotificationUserResponse> getUserByEmail(@PathVariable String email) {
+        User user = userService.getUserByEmail(email);
+        if (user != null) {
+            NotificationUserResponse userResponse = new NotificationUserResponse();
+            userResponse.setId(user.getId());
+            userResponse.setUserType(user.getUserType());
+            userResponse.setEmail(user.getEmail());
+            userResponse.setAccountStatus(user.getAccountStatus());
+            userResponse.setFullName(user.getFullName());
+            userResponse.setPhoneNumber(user.getPhoneNumber());
+            userResponse.setPushNotification(null);
+            return ResponseEntity.ok(userResponse);
+        }
+        return ResponseEntity.ok(null);
     }
 
     // Get All Active Restaurants list
@@ -339,12 +350,20 @@ public class AuthController {
     }
 
     @PostMapping("/addBusinessInfo")
-    public ResponseEntity<ApiResponse<CustomerProfileResponse>> addBusinessInfo(@RequestBody RegistrationRequest request) {
+    public ResponseEntity<ApiResponse<UserProfileResponse>> addBusinessInfo(@RequestBody RegistrationRequest request) {
         return ResponseEntity.ok(userService.addBusinessInfo(request));
     }
 
     @GetMapping("/getUserByCustomerId")
-    public ResponseEntity<ApiResponse<User>> getUserIdByCustomerId(@RequestParam String customerId) {
+    public ResponseEntity<ApiResponse<UserResponse>> getUserIdByCustomerId(@RequestParam String customerId) {
         return ResponseEntity.ok(userService.getUserByCustomerId(customerId));
+    }
+
+    @PostMapping("/updateBankDetailsByUser")
+    public ResponseEntity<ApiResponse<?>> updateBankDetails(
+            @RequestParam Long customerId,
+            @RequestBody RegistrationRequest request) {
+
+        return ResponseEntity.ok(userService.updateBankDetails(customerId, request));
     }
 }

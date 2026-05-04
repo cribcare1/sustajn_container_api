@@ -92,6 +92,7 @@ JOIN orders o ON b.order_id = o.id
 LEFT JOIN return_orders r ON r.borrow_order_id = b.id
 WHERE b.user_id = :userId
 GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
+HAVING (b.quantity - COALESCE(SUM(r.returned_quantity), 0)) > 0
 """, nativeQuery = true)
     List<BorrowOrderResponse> getProductBorrowReturnSummary(@Param("userId") Long userId);
 
@@ -214,4 +215,6 @@ GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
             "WHERE b.productId = :productId AND b.quantity > b.returnedQuantity " +
             "GROUP BY b.userId")
     List<Object[]> getCirculationPerUserForProduct(@Param("productId") Long productId);
+
+    Long findUserIdByOrderId(Long orderId);
 }

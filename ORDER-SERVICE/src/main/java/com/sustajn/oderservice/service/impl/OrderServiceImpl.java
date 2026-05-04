@@ -4,28 +4,25 @@ import com.sustajn.oderservice.constant.OrderEnumType;
 import com.sustajn.oderservice.constant.OrderServiceConstant;
 import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.entity.BorrowOrder;
+import com.sustajn.oderservice.entity.Notification;
 import com.sustajn.oderservice.entity.Order;
 import com.sustajn.oderservice.entity.ReturnOrder;
-import com.sustajn.oderservice.entity.SoldOrder;
 import com.sustajn.oderservice.exception.ResourceNotFoundException;
 import com.sustajn.oderservice.feign.service.AuthClient;
 import com.sustajn.oderservice.feign.service.InventoryFeignClient;
 import com.sustajn.oderservice.feign.service.NotificationFeignClient;
-import com.sustajn.oderservice.feign.service.PaymentServiceClient;
 import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjection;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.OrderRepository;
 import com.sustajn.oderservice.repository.ReturnOrderRepository;
-import com.sustajn.oderservice.repository.SoldOrderRepository;
 import com.sustajn.oderservice.request.*;
 import com.sustajn.oderservice.service.OrderService;
 import com.sustajn.oderservice.util.ApiResponseUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.util.CollectionUtils;
 import com.sustajn.oderservice.dto.DeviceTokenResponse;
 import java.time.LocalDate;
@@ -48,8 +45,70 @@ public class OrderServiceImpl implements OrderService {
     private final AuthClient authClient;
     private final InventoryFeignClient inventoryFeignClient;
     private final NotificationFeignClient notificationFeignClient;
-    private final SoldOrderRepository soldOrderRepository;
-    private final PaymentServiceClient paymentServiceClient;
+
+//    @Override
+//    @Transactional
+//    public Map<String, Object> borrowContainers(BorrowRequest request) {
+//        try {
+//
+//            validateBorrowRequest(request);
+//
+//            // 1. Build qty map
+//            Map<Integer, Integer> qtyMap =
+//                    request.getItems().stream()
+//                            .collect(Collectors.groupingBy(
+//                                    item -> item.getProductId().intValue(),
+//                                    Collectors.summingInt(
+//                                            BorrowItemRequest::getQuantity)
+//                            ));
+//
+//            ReduceInventoryRequest inventoryRequest =
+//                    new ReduceInventoryRequest();
+//            inventoryRequest.setRestaurantId(request.getRestaurantId());
+//            inventoryRequest.setContainerQtyMap(qtyMap);
+//
+//            // 🔥 CALL INVENTORY FIRST
+//            Map<String, Object> response = inventoryFeignClient.checkAvailability(inventoryRequest);
+//
+//            if (response.get(OrderServiceConstant.STATUS).equals(OrderServiceConstant.STATUS_ERROR)){
+//                System.err.println("Inventory check failed: " + response);
+//                return ApiResponseUtil.error(
+//                        response.get(OrderServiceConstant.MESSAGE) != null
+//                                ? response.get(OrderServiceConstant.MESSAGE).toString()
+//                                : "Inventory check failed"
+//                );
+//            }
+//
+//            // 2. Only if inventory is OK → create order
+//            Order order = new Order();
+//            order.setUserId(request.getUserId());
+//            order.setOrderDate(LocalDateTime.now());
+//            order.setTransactionId(UUID.randomUUID().toString());
+//            order.setOrderStatus(OrderServiceConstant.PENDING);
+//            orderRepository.save(order);
+//
+//            // 3. Create borrow rows
+//            for (BorrowItemRequest item : request.getItems()) {
+//
+//                BorrowOrder borrowOrder = new BorrowOrder();
+//                borrowOrder.setOrderId(order.getId());
+//                borrowOrder.setRestaurantId(request.getRestaurantId());
+//                borrowOrder.setUserId(request.getUserId());
+//                borrowOrder.setProductId(item.getProductId());
+//                borrowOrder.setQuantity(item.getQuantity());
+//                borrowOrder.setReturnedQuantity(0);
+//                borrowOrder.setBorrowedAt(LocalDateTime.now());
+//                borrowOrder.setDueDate(LocalDateTime.now().plusDays(7));
+//
+//                borrowOrderRepository.save(borrowOrder);
+//            }
+//
+//            return ApiResponseUtil.success("Containers borrowed successfully");
+//
+//        } catch (Exception ex) {
+//            return handleBorrowError(ex);
+//        }
+//    }
 
 
     @Override
@@ -100,7 +159,6 @@ public class OrderServiceImpl implements OrderService {
             }
 
             ApiResponse<UserResponse> userResponse = authClient.getUserByCustomerId(request.getCustomerId());
-
             if (userResponse == null || userResponse.getData() == null) {
                 throw new ResourceNotFoundException("User not found for customerId: " + request.getCustomerId());
             }
@@ -146,13 +204,18 @@ public class OrderServiceImpl implements OrderService {
                                     ProductResponse::getProductName
                             ));
 
+            System.err.println("Product name map: " + productNameMap);
+
             // ===============================
             // 8️⃣ Notification
             // ===============================
 
             DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(userId);
-
+            System.err.println("Device token response for userId " + userId + ": " + deviceTokenResponse);
             if (deviceTokenResponse != null){
+
+                System.err.println("Device token response for userId " + userId + ": " + deviceTokenResponse.getDeviceToken());
+
                 String title = "Containers Borrowed Successfully";
                 StringBuilder body = new StringBuilder();
                 body.append("Hi ")
@@ -180,6 +243,8 @@ public class OrderServiceImpl implements OrderService {
                         .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
                         .data(OrderServiceConstant.ACTION_BORROW)
                         .build();
+
+                Notification notificationEntity = new Notification();
 
                 notificationFeignClient.sendNotificationToMultipleDevices(notification);
             }
@@ -316,6 +381,33 @@ public class OrderServiceImpl implements OrderService {
             returnOrderRepository.saveAll(returnOrdersToSave);
             borrowOrderRepository.saveAll(pendingBorrows);
 
+            DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(request.getUserId());
+                if (deviceTokenResponse != null){
+
+                    String title = "Containers Returned Successfully";
+                    StringBuilder body = new StringBuilder();
+                    body.append("Hi,\n\n")
+                            .append("You have successfully returned the following containers:\n");
+
+                    for (ReturnItemRequest item : request.getItems()) {
+
+                        body.append("- Product ID: ")
+                                .append(item.getProductId())
+                                .append(", Quantity: ")
+                                .append(item.getQuantity())
+                                .append("\n");
+                    }
+                    NotificationResponse notification = NotificationResponse.builder()
+                            .title(title)
+                            .body(body.toString())
+                            .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
+                            .data(OrderServiceConstant.ACTION_RETURN)
+                            .build();
+
+                    notificationFeignClient.sendNotificationToMultipleDevices(notification);
+                }
+
+
             return ApiResponseUtil.success(
                     "Containers returned successfully");
 
@@ -437,6 +529,165 @@ public class OrderServiceImpl implements OrderService {
             return response;
         }
     }
+
+//    @Override
+//    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
+//        try {
+//
+//            // ================= FETCH LOCAL DATA =================
+//            List<BorrowOrder> borrowOrders = borrowOrderRepository.findByRestaurantId(restaurantId);
+//            List<ReturnOrder> returnOrders = returnOrderRepository.findByRestaurantId(restaurantId);
+//
+//            // ================= FETCH ORDERED DATA FROM INVENTORY =================
+//            ApiResponse<List<RestaurantOrderedResponse>> orderedApiResponse =
+//                    inventoryFeignClient.getOrderHistory(restaurantId);
+//
+//            List<RestaurantOrderedResponse> orderedResponses =
+//                    orderedApiResponse != null && orderedApiResponse.getData() != null
+//                            ? orderedApiResponse.getData()
+//                            : new ArrayList<>();
+//
+//            // ================= FETCH ORDER ENTITIES =================
+//            Set<Long> orderIds = borrowOrders.stream()
+//                    .map(BorrowOrder::getOrderId)
+//                    .collect(Collectors.toSet());
+//
+//            List<Order> orders = orderRepository.findAllById(orderIds);
+//
+//            Map<Long, String> orderTransactionMap = orders.stream()
+//                    .collect(Collectors.toMap(Order::getId, Order::getTransactionId));
+//
+//            // ================= BUILD LOOKUP MAPS =================
+//            Map<Long, BorrowOrder> borrowById = borrowOrders.stream()
+//                    .collect(Collectors.toMap(BorrowOrder::getId, b -> b));
+//
+//            Set<Integer> productIds = borrowOrders.stream()
+//                    .map(b -> b.getProductId().intValue())
+//                    .collect(Collectors.toSet());
+//
+//            Map<Long, String> productNameMap = inventoryFeignClient
+//                    .getProductsByIds(new ArrayList<>(productIds)).getData()
+//                    .stream()
+//                    .collect(Collectors.toMap(
+//                            p -> p.getProductId().longValue(),
+//                            ProductResponse::getProductName
+//                    ));
+//
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy|hh:mm a");
+//
+//            // ================= LEASED SECTION =================
+//            Map<Long, List<BorrowOrder>> leasedGrouped =
+//                    borrowOrders.stream().collect(Collectors.groupingBy(BorrowOrder::getOrderId));
+//
+//            List<LeasedResponse> leasedResponses = new ArrayList<>();
+//
+//            for (Map.Entry<Long, List<BorrowOrder>> entry : leasedGrouped.entrySet()) {
+//
+//                Long orderId = entry.getKey();
+//                String transactionId = orderTransactionMap.get(orderId);
+//                List<BorrowOrder> list = entry.getValue();
+//
+//
+//                String products = list.stream()
+//                        .map(b -> productNameMap.get(b.getProductId()))
+//                        .distinct()
+//                        .collect(Collectors.joining("|"));
+//
+//                int totalQty = list.stream().mapToInt(BorrowOrder::getQuantity).sum();
+//
+//                String dateTime = list.get(0).getBorrowedAt().format(formatter);
+//
+//                List<ProductOrderListResponse> productOrderListResponses = list.stream()
+//                        .map(b -> {
+//                            ProductResponse p = inventoryFeignClient
+//                                    .getProductsByIds(List.of(b.getProductId().intValue())).getData()
+//                                    .get(0);
+//
+//                            return new ProductOrderListResponse(
+//                                    p.getProductId(),
+//                                    p.getProductName(),
+//                                    p.getCapacity(),
+//                                    b.getQuantity(),                 // containerCount
+//                                    p.getProductImageUrl(),
+//                                    p.getProductUniqueId()
+//                            );
+//                        })
+//                        .collect(Collectors.toList());
+//
+//
+//                leasedResponses.add(
+//                        new LeasedResponse(products, orderId, transactionId, dateTime, totalQty, productOrderListResponses)
+//                );
+//            }
+//
+//            // ================= RECEIVED SECTION =================
+//            Map<Long, List<ReturnOrder>> returnedGrouped =
+//                    returnOrders.stream()
+//                            .filter(r -> borrowById.containsKey(r.getBorrowOrderId()))
+//                            .collect(Collectors.groupingBy(
+//                                    r -> borrowById.get(r.getBorrowOrderId()).getOrderId()
+//                            ));
+//
+//            List<ReceivedResponse> receivedResponses = new ArrayList<>();
+//
+//            for (Map.Entry<Long, List<ReturnOrder>> entry : returnedGrouped.entrySet()) {
+//
+//                Long orderId = entry.getKey();
+//                String transactionId = orderTransactionMap.get(orderId);
+//
+//                List<ReturnOrder> returns = entry.getValue();
+//                List<BorrowOrder> relatedBorrows = leasedGrouped.get(orderId);
+//
+//                String products = relatedBorrows.stream()
+//                        .map(b -> productNameMap.get(b.getProductId()))
+//                        .distinct()
+//                        .collect(Collectors.joining("|"));
+//
+//                int totalReturnedQty = returns.stream().mapToInt(ReturnOrder::getReturnedQuantity).sum();
+//
+//                String dateTime = returns.get(0).getReturnedAt().format(formatter);
+//
+//                List<ProductOrderListResponse> productOrderListResponses = relatedBorrows.stream()
+//                        .map(b -> {
+//                            int returnedQty = returns.stream()
+//                                    .filter(r -> r.getProductId().equals(b.getProductId()))
+//                                    .mapToInt(ReturnOrder::getReturnedQuantity)
+//                                    .sum();
+//
+//                            ProductResponse p = inventoryFeignClient
+//                                    .getProductsByIds(List.of(b.getProductId().intValue())).getData()
+//                                    .get(0);
+//
+//                            return new ProductOrderListResponse(
+//                                    p.getProductId(),
+//                                    p.getProductName(),
+//                                    p.getCapacity(),
+//                                    returnedQty,                     // containerCount
+//                                    p.getProductImageUrl(),
+//                                    p.getProductUniqueId()
+//                            );
+//                        })
+//                        .collect(Collectors.toList());
+//
+//
+//                receivedResponses.add(
+//                        new ReceivedResponse(products, orderId, transactionId, dateTime, totalReturnedQty, productOrderListResponses)
+//                );
+//            }
+//
+//            // ================= FINAL RESPONSE =================
+//            OrderHistoryResponse response =
+//                    new OrderHistoryResponse(leasedResponses, receivedResponses, orderedResponses);
+//
+//            return new ApiResponse<>("Order history fetched successfully",
+//                    OrderServiceConstant.STATUS_SUCCESS, response);
+//
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return new ApiResponse<>("Failed to fetch order history",
+//                    OrderServiceConstant.STATUS_ERROR, null);
+//        }
+//    }
 
 
     @Override
@@ -1438,7 +1689,7 @@ public class OrderServiceImpl implements OrderService {
         }
     }
     @Override
-    public ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId) {
+    public ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId,Integer planId) {
 
         LocalDateTime startDate = null;
         LocalDateTime endDate = null;
@@ -1467,7 +1718,7 @@ public class OrderServiceImpl implements OrderService {
 
         // 4. Calculate Available Capacity
         // NOTE: Hardcoded to 1000 for now. Replace with real subscription limit if needed.
-        Integer totalCapacity = 1000;
+        Integer totalCapacity = getTotalContainers(planId);
 
         Integer currentlyLeasedOut = leaseCount - receiveCount;
         if (currentlyLeasedOut < 0) currentlyLeasedOut = 0;
@@ -1486,87 +1737,26 @@ public class OrderServiceImpl implements OrderService {
                 .build();
     }
 
+    private Integer getTotalContainers(Integer planId) {
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    inventoryFeignClient.getSubscriptionPlanById(planId);
 
-    @Transactional
-    @Override
-    public void markAsSold(SoldRequest request) {
+            Map<String, Object> body = response.getBody();
 
-        log.info("markAsSold called with orderId={}, paymentId={}",
-                request.getOrderId(), request.getPaymentId());
+            if (body != null && "success".equals(body.get("status"))) {
+                Map<String, Object> data = (Map<String, Object>) body.get("data");
 
-        List<BorrowOrder> orders =
-                borrowOrderRepository.findByOrderId(request.getOrderId());
-
-        log.info("Found {} orders for orderId={}", orders.size(), request.getOrderId());
-
-        for (BorrowOrder order : orders) {
-
-            int pendingQty = order.getQuantity() - order.getReturnedQuantity();
-
-            if (pendingQty <= 0) continue;
-
-            Long unitPrice = 400L; // your logic
-
-            SoldOrder sold = SoldOrder.builder()
-                    .orderId(order.getOrderId())
-                    .userId(order.getUserId())
-                    .productId(order.getProductId())
-                    .restaurantId(order.getRestaurantId())
-                    .soldQuantity(pendingQty)
-                    .unitPrice(unitPrice)
-                    .totalAmount(pendingQty * unitPrice)
-                    .paymentId(request.getPaymentId())
-                    .stripePaymentIntentId(request.getStripePaymentIntentId())
-                    .reason("AUTO_SOLD")
-                    .build();
-
-            soldOrderRepository.save(sold);
-
-            order.setIsSold(true);
-            borrowOrderRepository.save(order);
-            log.info("Setting isSold=true for order {}", order.getOrderId());
-        }
-    }
-
-    @Scheduled(fixedDelay = 60000)
-    public void processOverdueOrders() {
-
-        List<BorrowOrder> overdueOrders =
-                borrowOrderRepository.findOverdueOrders(LocalDateTime.now());
-
-        for (BorrowOrder order : overdueOrders) {
-
-            if (Boolean.TRUE.equals(order.getAutoPayProcessing())) continue;
-
-            int pendingQty = order.getQuantity() - order.getReturnedQuantity();
-
-            if (pendingQty <= 0) continue;
-
-            try {
-                // ✅ Save the lock in its own isolated transaction
-                setAutoPayLock(order.getId(), true);
-
-                paymentServiceClient.autoPay(
-                        order.getOrderId(),
-                        order.getUserId(),
-                        pendingQty,
-                        400L
-                );
-
-            } catch (Exception e) {
-                // ✅ Unlock in its own isolated transaction
-                setAutoPayLock(order.getId(), false);
-                log.error("AutoPay trigger failed for order {}", order.getOrderId(), e);
+                if (data != null && data.get("totalContainers") != null) {
+                    return ((Number) data.get("totalContainers")).intValue();
+                }
             }
+
+        } catch (Exception e) {
+            log.error("Error fetching subscription plan: {}", e.getMessage());
         }
+
+        return 0; // fallback
     }
 
-    // ✅ Each lock operation is its own clean transaction — no stale entity held
-    @org.springframework.transaction.annotation.Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void setAutoPayLock(Long id, boolean locked) {
-        borrowOrderRepository.findById(id).ifPresent(order -> {
-            order.setAutoPayProcessing(locked);
-            borrowOrderRepository.save(order);
-        });
-    }
 }

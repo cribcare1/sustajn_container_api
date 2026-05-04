@@ -1,14 +1,14 @@
 package com.auth.response;
 
 import lombok.*;
-import java.time.LocalDate;
+
 import java.util.List;
 
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class CustomerProfileResponse {
+public class UserProfileResponse {
 
     private Long id;
     private String fullName;

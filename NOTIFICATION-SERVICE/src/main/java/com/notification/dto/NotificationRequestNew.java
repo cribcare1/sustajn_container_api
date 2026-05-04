@@ -13,6 +13,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @NoArgsConstructor
 public class NotificationRequestNew {
+    private NotificationReq notification;
     private List<String> deviceTokens; // List of device tokens
     private String title; // Notification title
     private String body; // Notification body

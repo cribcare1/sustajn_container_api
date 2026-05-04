@@ -7,6 +7,7 @@ import com.auth.enumDetails.UserType;
 import com.auth.exception.GenericException;
 import com.auth.exception.ResourceNotFoundException;
 import com.auth.feignClient.InventoryFeignClient;
+import com.auth.feignClient.NotificationFeignClient;
 import com.auth.feignClient.service.NotificationFeignClientService;
 import com.auth.model.*;
 import com.auth.repository.*;
@@ -50,6 +51,7 @@ public class UserServiceImpl implements UserService {
     private final BankDetailsRepository bankRepo;
     private final SocialMediaDetailsRepository socialRepo;
     private final NotificationFeignClientService notificationFeignClientService;
+    private final NotificationFeignClient notificationFeignClient;
     private final FeedbackRepository feedbackRepository;
     private final AddressRepository addressRepository;
     private final InventoryFeignClient inventoryFeignClient;
@@ -94,10 +96,10 @@ public class UserServiceImpl implements UserService {
                 user.getProfilePictureUrl(),
                 user.getUserType().name(),
                 user.getEmail(),
-                user.getAddress(),
                 user.getFullName(),
                 token,
-                "Bearer"   // token type
+                "Bearer",
+                user.getSubscriptionPlanId()
         );
     }
 
@@ -110,10 +112,10 @@ public class UserServiceImpl implements UserService {
                 user.getProfilePictureUrl(),
                 user.getUserType().name(),
                 user.getEmail(),
-                user.getAddress(),
                 user.getFullName(),
                 token,
-                "Bearer"   // token type
+                "Bearer",
+                user.getSubscriptionPlanId()// token type
         );
     }
 
@@ -154,7 +156,7 @@ public class UserServiceImpl implements UserService {
         if (bankDetails != null) {
             bankResponse = BankDetailsResponse.builder()
                     .id(bankDetails.getId())
-                    .userId(bankDetails.getUserId())
+                    .userId(bankDetails.getUser() != null ? bankDetails.getUser().getId() : null)
                     .bankName(bankDetails.getBankName())
                     .bicNumber(bankDetails.getBicNumber())
                     .iBanNumber(bankDetails.getIBanNumber())
@@ -175,7 +177,6 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
-                .address(user.getAddress())
                 .phoneNumber(user.getPhoneNumber())
                 .profilePictureUrl(user.getProfilePictureUrl())
                 .bankDetails(bankResponse)
@@ -212,7 +213,7 @@ public class UserServiceImpl implements UserService {
         if (bankDetails != null) {
             bankResponse = BankDetailsResponse.builder()
                     .id(bankDetails.getId())
-                    .userId(bankDetails.getUserId())
+                    .userId(bankDetails.getUser() != null ? bankDetails.getUser().getId() : null)
                     .bankName(bankDetails.getBankName())
                     .accountHolderName(bankDetails.getAccountHolderName())
                     .iBanNumber(bankDetails.getIBanNumber())
@@ -234,7 +235,6 @@ public class UserServiceImpl implements UserService {
                 user.getId(),
                 user.getFullName(),
                 user.getEmail(),
-                user.getAddress(),
                 user.getPhoneNumber(),
                 user.getProfilePictureUrl(),
                 bankResponse,
@@ -310,7 +310,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public ApiResponse<CustomerProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request) {
+    public ApiResponse<UserProfileResponse> updateBankDetails(BankCardPaymentGetWayDetailsRequest request) {
         try {
 
             BankDetails bankDetails = null;
@@ -341,7 +341,6 @@ public class UserServiceImpl implements UserService {
                 Optional.ofNullable(r.getCardHolderName()).ifPresent(cardRow::setCardHolderName);
                 Optional.ofNullable(r.getCardNumber()).ifPresent(cardRow::setCardNumber);
                 Optional.ofNullable(r.getExpiryDate()).ifPresent(cardRow::setExpiryDate);
-                Optional.ofNullable(r.getCvv()).ifPresent(cardRow::setCvv);
 
                 bankDetails = bankRepo.save(cardRow);
             }
@@ -360,10 +359,11 @@ public class UserServiceImpl implements UserService {
                 bankDetails = bankRepo.save(payRow);
             }
 
-            CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(bankDetails.getUserId()).getData();
+            UserProfileResponse userProfileResponse = getCustomerProfileDetails(bankDetails.getUser() != null ? bankDetails.getUser().getId() : null
+            ).getData();
 
 
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank Details updated successfully", customerProfileResponse);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank Details updated successfully", userProfileResponse);
 
         } catch (Exception e) {
             return new ApiResponse<>(AuthConstant.ERROR, "Error on updating details", null);
@@ -371,7 +371,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> getCustomerProfileDetails(Long userId) {
+    public ApiResponse<UserProfileResponse> getCustomerProfileDetails(Long userId) {
 
         try {
             List<Object[]> result =
@@ -383,7 +383,7 @@ public class UserServiceImpl implements UserService {
 
             Object[] row = result.get(0);   // ← THIS LINE FIXES EVERYTHING
 
-            CustomerProfileResponse response = new CustomerProfileResponse();
+            UserProfileResponse response = new UserProfileResponse();
 
             // Basic
             response.setId(((Number) row[0]).longValue());
@@ -459,14 +459,16 @@ public class UserServiceImpl implements UserService {
             ObjectMapper mapper = new ObjectMapper();
             List<AddressResponse> addresses =
                     mapper.readValue(addressJson,
-                            new TypeReference<List<AddressResponse>>() {});
+                            new TypeReference<List<AddressResponse>>() {
+                            });
             response.setAddressResponses(addresses);
 
             //Social Media Details (JSON)
             String socialMediaJson = row[29].toString();
             List<SocialMediaResponse> socialMediaResponses =
                     mapper.readValue(socialMediaJson,
-                            new TypeReference<List<SocialMediaResponse>>() {});
+                            new TypeReference<List<SocialMediaResponse>>() {
+                            });
             response.setSocialMediaResponse(socialMediaResponses);
 
             //Business Details
@@ -529,11 +531,11 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse<CustomerProfileResponse> updateBusinessInfo(RegistrationRequest request) {
+    public ApiResponse<UserProfileResponse> updateBusinessInfo(RegistrationRequest request) {
         try {
-            if (request.getContactAndRegistrationDetails() != null){
+            if (request.getContactAndRegistrationDetails() != null) {
                 Optional<ContactRegistrationDetails> contactRegistrationDetailsOpt = contactAndRegistrationDetailsRepository.findById(request.getContactAndRegistrationDetails().getId());
-                if (contactRegistrationDetailsOpt.isPresent()){
+                if (contactRegistrationDetailsOpt.isPresent()) {
                     ContactRegistrationDetails contactDetails = contactRegistrationDetailsOpt.get();
                     contactDetails.setContactPersonName(request.getContactAndRegistrationDetails().getContactPersonName());
                     contactDetails.setContactNumber(request.getContactAndRegistrationDetails().getContactNumber());
@@ -545,10 +547,10 @@ public class UserServiceImpl implements UserService {
                 }
             }
 
-            if (!CollectionUtils.isEmpty(request.getSocialMediaList())){
+            if (!CollectionUtils.isEmpty(request.getSocialMediaList())) {
                 for (RegistrationRequest.SocialMediaRequest socialMediaRequest : request.getSocialMediaList()) {
                     Optional<SocialMediaDetails> socialMediaDetailsOpt = socialMediaDetailsRepository.findById(socialMediaRequest.getId());
-                    if (socialMediaDetailsOpt.isPresent()){
+                    if (socialMediaDetailsOpt.isPresent()) {
                         SocialMediaDetails socialMediaDetails = socialMediaDetailsOpt.get();
                         socialMediaDetails.setSocialMediaType(socialMediaRequest.getSocialMediaType());
                         socialMediaDetails.setLink(socialMediaRequest.getLink());
@@ -557,20 +559,20 @@ public class UserServiceImpl implements UserService {
                 }
             }
 
-            if (request.getBasicDetails() != null){
+            if (request.getBasicDetails() != null) {
                 Optional<BasicRestaurantDetails> basicDetailsOpt = basicRepo.findById(request.getBasicDetails().getId());
-                if (basicDetailsOpt.isPresent()){
+                if (basicDetailsOpt.isPresent()) {
                     BasicRestaurantDetails basicDetails = basicDetailsOpt.get();
                     basicDetails.setBusinessType(request.getBasicDetails().getBusinessType());
                     basicDetails.setWebsiteDetails(request.getBasicDetails().getWebsiteDetails());
                     basicRepo.save(basicDetails);
                 }
             }
-            CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(request.getUserId()).getData();
+            UserProfileResponse userProfileResponse = getCustomerProfileDetails(request.getUserId()).getData();
 
-            return new ApiResponse<>(AuthConstant.ERROR, "Business info updated successfully.", customerProfileResponse);
+            return new ApiResponse<>(AuthConstant.ERROR, "Business info updated successfully.", userProfileResponse);
 
-        }catch (Exception e) {
+        } catch (Exception e) {
             log.error("Error updating business info: {}", e.getMessage(), e);
             return new ApiResponse<>(AuthConstant.ERROR, "Error on updating business info", null);
         }
@@ -578,10 +580,12 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse<CustomerProfileResponse> saveNewAddress(AddressRequest request) {
+    public ApiResponse<UserProfileResponse> saveNewAddress(AddressRequest request) {
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found", AuthConstant.ERROR));
         // Save Address
         Address address = Address.builder()
-                .userId(request.getUserId())
+                .user(user)
                 .addressType(request.getAddressType())
                 .flatDoorHouseDetails(request.getFlatDoorHouseDetails())
                 .areaStreetCityBlockDetails(request.getAreaStreetCityBlockDetails())
@@ -590,13 +594,23 @@ public class UserServiceImpl implements UserService {
                 .build();
 
         Address savedAddress = addressRepository.save(address);
-        CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(savedAddress.getUserId()).getData();
 
-        return new ApiResponse<>("Address created successfully", AuthConstant.SUCCESS, customerProfileResponse);
+        Long userId = savedAddress.getUser() != null
+                ? savedAddress.getUser().getId()
+                : null;
+
+        if (userId == null) {
+            throw new GenericException("User not found for address");
+        }
+
+        getCustomerProfileDetails(userId);
+        UserProfileResponse userProfileResponse = getCustomerProfileDetails(userId).getData();
+
+        return new ApiResponse<>("Address created successfully", AuthConstant.SUCCESS, userProfileResponse);
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> updateAddress(AddressRequest request) {
+    public ApiResponse<UserProfileResponse> updateAddress(AddressRequest request) {
 
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found", AuthConstant.ERROR));
@@ -608,15 +622,23 @@ public class UserServiceImpl implements UserService {
         Optional.ofNullable(request.getPoBoxOrPostalCode()).ifPresent(address::setPoBoxOrPostalCode);
 
         Address updatedAddress = addressRepository.save(address);
+        Long userId = updatedAddress.getUser() != null
+                ? updatedAddress.getUser().getId()
+                : null;
 
-        CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(updatedAddress.getUserId()).getData();
+        if (userId == null) {
+            throw new GenericException("User not found for address");
+        }
 
 
-        return new ApiResponse<>(AuthConstant.SUCCESS, "Address updated successfully", customerProfileResponse);
+        UserProfileResponse userProfileResponse = getCustomerProfileDetails(userId).getData();
+
+
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Address updated successfully", userProfileResponse);
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> deleteAddress(AddressRequest request) {
+    public ApiResponse<UserProfileResponse> deleteAddress(AddressRequest request) {
 
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found", AuthConstant.ERROR));
@@ -624,24 +646,38 @@ public class UserServiceImpl implements UserService {
         address.setStatus(AuthConstant.IN_ACTIVE);
         Address deletedAddress = addressRepository.save(address);
 
-        CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(deletedAddress.getUserId()).getData();
+        Long userId = deletedAddress.getUser() != null
+                ? deletedAddress.getUser().getId()
+                : null;
 
-        return new ApiResponse<>(AuthConstant.SUCCESS, "Address deleted successfully", customerProfileResponse);
+        if (userId == null) {
+            throw new GenericException("User not found for address");
+        }
+
+        getCustomerProfileDetails(userId);
+
+        UserProfileResponse userProfileResponse = getCustomerProfileDetails(userId).getData();
+
+        return new ApiResponse<>(AuthConstant.SUCCESS, "Address deleted successfully", userProfileResponse);
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> createBankDetails(
+    public ApiResponse<UserProfileResponse> createBankDetails(
             BankCardPaymentGetWayDetailsRequest request) {
 
         try {
             BankDetails bankDetails = new BankDetails();
+
+            User user = userRepository.findById(request.getBankDetailsRequest().getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found", AuthConstant.ERROR));
+
 
             // ====== BANK DETAILS ======
             if (request.getBankDetailsRequest() != null) {
                 BankCardPaymentGetWayDetailsRequest.BankDetailsRequest bankReq =
                         request.getBankDetailsRequest();
 
-                bankDetails.setUserId(bankReq.getUserId());
+                bankDetails.setUser(user);
                 bankDetails.setBankName(bankReq.getBankName());
                 bankDetails.setBicNumber(bankReq.getBicNumber());
                 bankDetails.setAccountHolderName(bankReq.getAccountHolderName());
@@ -654,10 +690,9 @@ public class UserServiceImpl implements UserService {
                         request.getCardDetailsRequest();
 
                 bankDetails.setCardHolderName(cardReq.getCardHolderName());
-                bankDetails.setUserId(cardReq.getUserId());
+                bankDetails.setUser(user);
                 bankDetails.setCardNumber(cardReq.getCardNumber());
                 bankDetails.setExpiryDate(cardReq.getExpiryDate());
-                bankDetails.setCvv(cardReq.getCvv());
                 bankDetails.setPaymentGatewayId(cardReq.getPaymentGatewayId());
                 bankDetails.setPaymentGatewayName(cardReq.getPaymentGatewayName());
             }
@@ -669,7 +704,7 @@ public class UserServiceImpl implements UserService {
 
                 bankDetails.setPaymentGatewayId(payReq.getPaymentGatewayId());
                 bankDetails.setPaymentGatewayName(payReq.getPaymentGatewayName());
-                bankDetails.setUserId(payReq.getUserId());
+                bankDetails.setUser(user);
 
             }
 
@@ -679,10 +714,15 @@ public class UserServiceImpl implements UserService {
             // ====== SAVE ======
             BankDetails saved = bankRepo.save(bankDetails);
 
-            CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(saved.getUserId()).getData();
+            Long userId = null;
+            if (saved.getUser() != null) {
+                userId = saved.getUser().getId();
+            }
+
+            UserProfileResponse userProfileResponse = getCustomerProfileDetails(userId).getData();
 
 
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details created successfully", customerProfileResponse);
+            return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details created successfully", userProfileResponse);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -692,17 +732,22 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> deleteBankDetails(Long id) {
+    public ApiResponse<UserProfileResponse> deleteBankDetails(Long id) {
         try {
             Optional<BankDetails> bankDetailsOptional = bankRepo.findById(id);
             if (bankDetailsOptional.isPresent()) {
                 BankDetails bankDetails = bankDetailsOptional.get();
                 bankDetails.setStatus(AuthConstant.IN_ACTIVE);
                 BankDetails deleteDetails = bankRepo.save(bankDetails);
+                Long userId = null;
+                if (deleteDetails.getUser() != null) {
+                    userId = deleteDetails.getUser().getId();
+                }
 
-                CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(deleteDetails.getUserId()).getData();
 
-                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully", customerProfileResponse);
+                UserProfileResponse userProfileResponse = getCustomerProfileDetails(userId).getData();
+
+                return new ApiResponse<>(AuthConstant.SUCCESS, "Bank details deleted successfully", userProfileResponse);
             }
             return new ApiResponse<>(AuthConstant.ERROR, "Bank details not found", null);
         } catch (Exception e) {
@@ -714,7 +759,7 @@ public class UserServiceImpl implements UserService {
 
 
     @Override
-    public ApiResponse<CustomerProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
+    public ApiResponse<UserProfileResponse> updateUserProfile(String userData, MultipartFile profileImage) {
         try {
             UpdateProfileRequest request = AuthUtil.convertToJson(userData, UpdateProfileRequest.class);
             if (request == null) {
@@ -789,7 +834,7 @@ public class UserServiceImpl implements UserService {
 
             userRepository.save(user);
 
-            ApiResponse<CustomerProfileResponse> customerProfileResponse =
+            ApiResponse<UserProfileResponse> customerProfileResponse =
                     getCustomerProfileDetails(user.getId());
 
             // Dynamic message
@@ -812,7 +857,6 @@ public class UserServiceImpl implements UserService {
                     "Error on updating profile details", null);
         }
     }
-
 
 
     public Map<String, Object> changePassword(Long userId, String newPassword) {
@@ -853,13 +897,11 @@ public class UserServiceImpl implements UserService {
 
     @Transactional
     @Override
-    public ApiResponse<?> registerRestaurant(
-            RegistrationRequest request
-    ) {
-        Map<String, Object> response = new HashMap<>();
+    public ApiResponse<?> registerRestaurant(RegistrationRequest request) {
 
         try {
 
+            // ---------------- VALIDATION ----------------
             if (userRepository.existsByEmail(request.getEmail())) {
                 throw new GenericException("Email is already registered");
             }
@@ -872,7 +914,7 @@ public class UserServiceImpl implements UserService {
                 throw new GenericException("Password must be at least 6 characters");
             }
 
-
+            // ---------------- USER ----------------
             User user = User.builder()
                     .userType(UserType.RESTAURANT)
                     .fullName(request.getFullName())
@@ -888,111 +930,123 @@ public class UserServiceImpl implements UserService {
                     .phoneVerified(false)
                     .build();
 
+            // ---------------- ADDRESS ----------------
+            if (request.getAddress() != null) {
+
+                var addr = request.getAddress();
+
+                Address address = Address.builder()
+                        .user(user)   // ✅ VERY IMPORTANT
+                        .addressType(addr.getAddressType())
+                        .flatDoorHouseDetails(addr.getFlatDoorHouseDetails())
+                        .areaStreetCityBlockDetails(addr.getAreaStreetCityBlockDetails())
+                        .poBoxOrPostalCode(addr.getPoBoxOrPostalCode())
+                        .status(AuthConstant.ACTIVE)
+                        .build();
+
+                user.setAddresses(List.of(address));
+            }
+
+            // ---------------- BANK (ONE RECORD) ----------------
+            if (request.getBankDetails() != null
+                    || request.getCardDetails() != null
+                    || request.getPaymentGetWay() != null) {
+
+                BankDetails.BankDetailsBuilder builder = BankDetails.builder()
+                        .status(AuthConstant.ACTIVE);
+
+                // BANK
+                if (request.getBankDetails() != null) {
+                    var bank = request.getBankDetails();
+
+                    builder.bankName(bank.getBankName())
+                            .accountHolderName(bank.getAccountHolderName())
+                            .iBanNumber(bank.getIBanNumber())
+                            .bicNumber(bank.getBicNumber())
+                            .accountNumber(bank.getAccountNumber());
+                }
+
+                // CARD
+                if (request.getCardDetails() != null) {
+                    var card = request.getCardDetails();
+
+                    builder.cardHolderName(card.getCardHolderName())
+                            .cardNumber(card.getCardNumber())
+                            .expiryDate(card.getExpiryDate())
+                    ;
+                }
+
+                // PAYMENT
+                if (request.getPaymentGetWay() != null) {
+                    var pay = request.getPaymentGetWay();
+
+                    builder.paymentGatewayId(pay.getPaymentGatewayId())
+                            .paymentGatewayName(pay.getPaymentGatewayName());
+                }
+
+                BankDetails bankDetails = builder.build();
+
+                // ✅ VERY IMPORTANT RELATIONSHIP
+                bankDetails.setUser(user);
+
+                // ✅ link to user
+                user.setBankDetails(bankDetails);
+            }
+
+            // ---------------- SINGLE SAVE ----------------
             User savedUser = userRepository.save(user);
 
+
+
+            // ---------------- OTHER TABLES ----------------
             if (request.getBasicDetails() != null) {
-                BasicRestaurantDetails basic = BasicRestaurantDetails.builder()
-                        .restaurantId(savedUser.getId())
-                        .businessType(request.getBasicDetails().getBusinessType())
-                        .websiteDetails(request.getBasicDetails().getWebsiteDetails())
-                        .cuisine(request.getBasicDetails().getCuisine())
-                        .build();
-                basicRepo.save(basic);
+                basicRepo.save(
+                        BasicRestaurantDetails.builder()
+                                .restaurantId(savedUser.getId())
+                                .businessType(request.getBasicDetails().getBusinessType())
+                                .websiteDetails(request.getBasicDetails().getWebsiteDetails())
+                                .cuisine(request.getBasicDetails().getCuisine())
+                                .build()
+                );
             }
 
-
-            // ---------------- CREATE ADDRESS DETAILS ----------------
-            if (request.getAddress() != null) {
-                RegistrationRequest.AddressRequest addressReq = request.getAddress();
-
-                // You can create an AddressDetails entity and save it if needed
-                Address addressDetails = Address.builder()
-                        .userId(savedUser.getId())
-                        .addressType(addressReq.getAddressType())
-                        .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
-                        .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
-                        .poBoxOrPostalCode(addressReq.getPoBoxOrPostalCode())
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-                addressRepository.save(addressDetails);
-            }
-
-
-            // ---------------- BANK DETAILS ----------------
-            if (request.getBankDetails() != null) {
-                RegistrationRequest.BankDetailsRequest bankReq =
-                        request.getBankDetails();
-
-                BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .bankName(bankReq.getBankName())
-                        .accountHolderName(bankReq.getAccountHolderName())
-                        .iBanNumber(bankReq.getIBanNumber())
-                        .bicNumber(bankReq.getBicNumber())
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-
-                bankRepo.save(bankDetails);
-            }
-
-            if (request.getCardDetails() != null) {
-                RegistrationRequest.CardDetailsRequest cardReq =
-                        request.getCardDetails();
-                BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .cardHolderName(cardReq.getCardHolderName())
-                        .cardNumber(cardReq.getCardNumber())
-                        .expiryDate(cardReq.getExpiryDate())
-                        .cvv(passwordEncoder.encode(cardReq.getCvv()))
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-                bankRepo.save(bankDetails);
-            }
-
-            if (request.getPaymentGetWay() != null) {
-                RegistrationRequest.PaymentGetWayRequest payReq =
-                        request.getPaymentGetWay();
-                BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .paymentGatewayId(payReq.getPaymentGatewayId())
-                        .paymentGatewayName(payReq.getPaymentGatewayName())
-                        .status(AuthConstant.ACTIVE)
-                        .build();
-                bankRepo.save(bankDetails);
-            }
             if (request.getContactAndRegistrationDetails() != null) {
-                RegistrationRequest.ContactAndRegistrationDetailsRequest contactReq =
-                        request.getContactAndRegistrationDetails();
-                ContactRegistrationDetails contactDetails = ContactRegistrationDetails.builder()
-                        .userId(savedUser.getId())
-                        .contactPersonName(contactReq.getContactPersonName())
-                        .contactNumber(contactReq.getContactNumber())
-                        .registrationNumber(contactReq.getRegistrationNumber())
-                        .vatNumber(contactReq.getVatNumber())
-                        .contactEmail(contactReq.getContactEmail())
-                        .treadLicenseNumber(contactReq.getTreadLicenseNumber())
-                        .build();
-                contactAndRegistrationDetailsRepository.save(contactDetails);
+                var c = request.getContactAndRegistrationDetails();
+
+                contactAndRegistrationDetailsRepository.save(
+                        ContactRegistrationDetails.builder()
+                                .userId(savedUser.getId())
+                                .contactPersonName(c.getContactPersonName())
+                                .contactNumber(c.getContactNumber())
+                                .registrationNumber(c.getRegistrationNumber())
+                                .vatNumber(c.getVatNumber())
+                                .contactEmail(c.getContactEmail())
+                                .treadLicenseNumber(c.getTreadLicenseNumber())
+                                .build()
+                );
             }
 
-            // ---------------- SOCIAL MEDIA LINKS ----------------
             if (request.getSocialMediaList() != null) {
-                for (RegistrationRequest.SocialMediaRequest sm : request.getSocialMediaList()) {
-                    SocialMediaDetails media = SocialMediaDetails.builder()
-                            .restaurantId(savedUser.getId())
-                            .socialMediaType(sm.getSocialMediaType())
-                            .link(sm.getLink())
-                            .build();
-                    socialRepo.save(media);
-                }
+                var list = request.getSocialMediaList().stream()
+                        .map(sm -> SocialMediaDetails.builder()
+                                .restaurantId(savedUser.getId())
+                                .socialMediaType(sm.getSocialMediaType())
+                                .link(sm.getLink())
+                                .build())
+                        .toList();
+
+                socialRepo.saveAll(list);
             }
 
+            // ---------------- RESPONSE ----------------
+            LoginResponse response = generateTokenWithLoginDetails(savedUser);
 
-            // ---------------- RESPONSE DTO ----------------
-            LoginResponse loginResponse = generateTokenWithLoginDetails(savedUser);
-            return new ApiResponse<>(AuthConstant.SUCCESS, "Restaurant registered successfully", loginResponse);
+            return new ApiResponse<>(AuthConstant.SUCCESS,
+                    "Restaurant registered successfully",
+                    response);
+
         } catch (Exception e) {
-            log.error("Error registering restaurant:{} ", e.getMessage());
+            log.error("Error registering restaurant", e);
             throw new GenericException("Something went wrong: " + e.getMessage());
         }
     }
@@ -1062,14 +1116,13 @@ public class UserServiceImpl implements UserService {
             User user = userBuilder.build();
             User savedUser = userRepository.save(user);
 
-
             // ---------------- CREATE ADDRESS DETAILS ----------------
             if (request.getAddress() != null) {
                 RegistrationRequest.AddressRequest addressReq = request.getAddress();
 
                 // You can create an AddressDetails entity and save it if needed
                 Address addressDetails = Address.builder()
-                        .userId(savedUser.getId())
+                        .user(savedUser)
                         .addressType(addressReq.getAddressType())
                         .flatDoorHouseDetails(addressReq.getFlatDoorHouseDetails())
                         .areaStreetCityBlockDetails(addressReq.getAreaStreetCityBlockDetails())
@@ -1085,7 +1138,7 @@ public class UserServiceImpl implements UserService {
                         request.getBankDetails();
 
                 BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
+                        .user(savedUser)
                         .bankName(bankReq.getBankName())
                         .bicNumber(bankReq.getBicNumber())
                         .iBanNumber(bankReq.getIBanNumber())
@@ -1100,11 +1153,9 @@ public class UserServiceImpl implements UserService {
                 RegistrationRequest.CardDetailsRequest cardReq =
                         request.getCardDetails();
                 BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
-                        .cardHolderName(cardReq.getCardHolderName())
+                        .user(savedUser).cardHolderName(cardReq.getCardHolderName())
                         .cardNumber(cardReq.getCardNumber())
                         .expiryDate(cardReq.getExpiryDate())
-                        .cvv(passwordEncoder.encode(cardReq.getCvv()))
                         .status(AuthConstant.ACTIVE)
                         .build();
                 bankRepo.save(bankDetails);
@@ -1114,7 +1165,7 @@ public class UserServiceImpl implements UserService {
                 RegistrationRequest.PaymentGetWayRequest payReq =
                         request.getPaymentGetWay();
                 BankDetails bankDetails = BankDetails.builder()
-                        .userId(savedUser.getId())
+                        .user(savedUser)
                         .paymentGatewayId(payReq.getPaymentGatewayId())
                         .paymentGatewayName(payReq.getPaymentGatewayName())
                         .status(AuthConstant.ACTIVE)
@@ -1161,7 +1212,6 @@ public class UserServiceImpl implements UserService {
                     .map(user -> new RestaurantBasicDetailsResponse(
                             user.getId(),
                             user.getFullName(),
-                            user.getAddress(),
                             user.getPhoneNumber(),
                             user.getEmail(),
                             user.getProfilePictureUrl(),
@@ -1202,7 +1252,7 @@ public class UserServiceImpl implements UserService {
 
                         // A. Fetch Real Addresses
                         // Note: Ensure findByUserIdAndStatus exists in your AddressRepository
-                        List<Address> addressEntities = addressRepository.findByUserIdAndStatus(user.getId(), AuthConstant.ACTIVE);
+                        List<Address> addressEntities = addressRepository.findByUser_IdAndStatus(user.getId(), AuthConstant.ACTIVE);
                         List<AddressResponse> addressList = addressEntities.stream()
                                 .map(this::mapToAddressResponse) // Use helper method
                                 .collect(Collectors.toList());
@@ -1252,11 +1302,92 @@ public class UserServiceImpl implements UserService {
     }
 
 
-    public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon) {
+//    public Map<String, Object> searchRestaurants(String keyword, double currentLat, double currentLon) {
+//        Map<String, Object> response = new HashMap<>();
+//
+//        try {
+//            // Input validation
+//            if (keyword == null || keyword.trim().isEmpty()) {
+//                response.put("status", "error");
+//                response.put("message", "Search keyword cannot be empty");
+//                response.put("searchData", Collections.emptyList());
+//                return response;
+//            }
+//
+//            // Fetch restaurants from repository
+//            List<User> restaurants = userRepository.searchRestaurantsByKeyword(keyword);
+//
+//            if (restaurants.isEmpty()) {
+//                response.put("status", "success");
+//                response.put("message", "No restaurants found for the given keyword");
+//                response.put("searchData", Collections.emptyList());
+//                return response;
+//            }
+//
+//            // Map restaurants to response DTO with distance
+//            List<RestaurantSearchResponse> restaurantList = restaurants.stream()
+//                    .map(r -> {
+//                        double distanceKm = 0.0;
+//                        BigDecimal lat = r.getLatitude();
+//                        BigDecimal lon = r.getLongitude();
+//
+//                        if (lat != null && lon != null) {
+//                            try {
+//                                distanceKm = DistanceUtil.calculateDistance(
+//                                        currentLat, currentLon, lat.doubleValue(), lon.doubleValue()
+//                                );
+//                            } catch (Exception e) {
+//                                // Ignore distance calculation errors, distance will remain 0
+//                            }
+//                        }
+//                        // If lat/lon is null, distance will remain 0 (or you can set to -1 if you want)
+//                        Address address = r.getAddresses() != null && !r.getAddresses().isEmpty()
+//                                ? r.getAddresses().get(0)
+//                                : null;
+//
+//
+//                        return new RestaurantSearchResponse(
+//                                r.getId(),
+//                                r.getFullName(),
+//                                r.getLatitude(),
+//                                r.getLongitude(),
+//                                distanceKm,
+//                                r.getProfilePictureUrl(),
+//
+//                                // 🔥 ADDRESS MAPPING
+//                                address != null ? address.getId() : null,
+//                                address != null ? address.getAddressType() : null,
+//                                address != null ? address.getFlatDoorHouseDetails() : null,
+//                                address != null ? address.getAreaStreetCityBlockDetails() : null,
+//                                address != null ? address.getPoBoxOrPostalCode() : null
+//                        );
+//                    })
+//                    .sorted(Comparator.comparingDouble(RestaurantSearchResponse::getDistanceKm))
+//                    .toList();
+//
+//
+//            // Prepare map response
+//            response.put("status", "success");
+//            response.put("message", "Restaurants fetched successfully");
+//            response.put("searchData", restaurantList);
+//            return response;
+//
+//        } catch (Exception ex) {
+//            response.put("status", "error");
+//            response.put("message", "Unable to search restaurants at the moment. Please try again later.");
+//            response.put("searchData", Collections.emptyList());
+//            return response;
+//        }
+//    }
+
+    public Map<String, Object> searchRestaurants(String keyword,
+                                                 double currentLat,
+                                                 double currentLon) {
+
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Input validation
+            // 🔹 Validation
             if (keyword == null || keyword.trim().isEmpty()) {
                 response.put("status", "error");
                 response.put("message", "Search keyword cannot be empty");
@@ -1264,57 +1395,50 @@ public class UserServiceImpl implements UserService {
                 return response;
             }
 
-            // Fetch restaurants from repository
-            List<User> restaurants = userRepository.searchRestaurantsByKeyword(keyword);
+            // 🔹 Fetch directly DTO (NO ENTITY → NO N+1)
+            List<RestaurantSearchResponse> restaurants =
+                    userRepository.searchRestaurants(keyword);
 
             if (restaurants.isEmpty()) {
                 response.put("status", "success");
-                response.put("message", "No restaurants found for the given keyword");
+                response.put("message", "No restaurants found");
                 response.put("searchData", Collections.emptyList());
                 return response;
             }
 
-            // Map restaurants to response DTO with distance
-            List<RestaurantSearchResponse> restaurantList = restaurants.stream()
+            // 🔹 Calculate distance
+            List<RestaurantSearchResponse> updatedList = restaurants.stream()
                     .map(r -> {
                         double distanceKm = 0.0;
-                        BigDecimal lat = r.getLatitude();
-                        BigDecimal lon = r.getLongitude();
 
-                        if (lat != null && lon != null) {
+                        if (r.getLatitude() != null && r.getLongitude() != null) {
                             try {
                                 distanceKm = DistanceUtil.calculateDistance(
-                                        currentLat, currentLon, lat.doubleValue(), lon.doubleValue()
+                                        currentLat,
+                                        currentLon,
+                                        r.getLatitude().doubleValue(),
+                                        r.getLongitude().doubleValue()
                                 );
-                            } catch (Exception e) {
-                                // Ignore distance calculation errors, distance will remain 0
+                            } catch (Exception ignored) {
                             }
                         }
-                        // If lat/lon is null, distance will remain 0 (or you can set to -1 if you want)
 
-                        return new RestaurantSearchResponse(
-                                r.getId(),
-                                r.getFullName(),
-                                r.getAddress(),
-                                r.getLatitude(),
-                                r.getLongitude(),
-                                distanceKm,
-                                r.getProfilePictureUrl()
-                        );
+                        r.setDistanceKm(distanceKm);
+                        return r;
                     })
                     .sorted(Comparator.comparingDouble(RestaurantSearchResponse::getDistanceKm))
-                    .collect(Collectors.toList());
+                    .toList();
 
-
-            // Prepare map response
+            // 🔹 Response
             response.put("status", "success");
             response.put("message", "Restaurants fetched successfully");
-            response.put("searchData", restaurantList);
+            response.put("searchData", updatedList);
+
             return response;
 
         } catch (Exception ex) {
             response.put("status", "error");
-            response.put("message", "Unable to search restaurants at the moment. Please try again later.");
+            response.put("message", "Unable to search restaurants at the moment");
             response.put("searchData", Collections.emptyList());
             return response;
         }
@@ -1349,7 +1473,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> upgradeUserSubscription(SubscriptionRequest subscriptionRequest) {
+    public ApiResponse<UserProfileResponse> upgradeUserSubscription(SubscriptionRequest subscriptionRequest) {
         Map<String, Object> response = new HashMap<>();
         try {
 
@@ -1358,9 +1482,9 @@ public class UserServiceImpl implements UserService {
                 User user = userOpt.get();
                 user.setSubscriptionPlanId(subscriptionRequest.getSubscriptionPlanId());
                 User saveUser = userRepository.save(user);
-                CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(saveUser.getId()).getData();
-                System.err.println("customerProfileResponse = " + customerProfileResponse);
-                return new ApiResponse<>(AuthConstant.SUCCESS, "User subscription updated successfully", customerProfileResponse);
+                UserProfileResponse userProfileResponse = getCustomerProfileDetails(saveUser.getId()).getData();
+                System.err.println("customerProfileResponse = " + userProfileResponse);
+                return new ApiResponse<>(AuthConstant.SUCCESS, "User subscription updated successfully", userProfileResponse);
             }
 
         } catch (Exception e) {
@@ -1387,7 +1511,7 @@ public class UserServiceImpl implements UserService {
         );
 
         // Base ID
-        String baseId = namePart+ "-" + datePart;
+        String baseId = namePart + "-" + datePart;
 
         // Fetch existing IDs from DB
         List<String> existingIds = userRepository.findCustomerIdStartingWith(baseId);
@@ -1446,7 +1570,7 @@ public class UserServiceImpl implements UserService {
     public ApiResponse<List<RestaurantListResponse>> getAllActiveRestaurants() {
 
         List<Object[]> response = userRepository.findAllActiveRestaurants(UserType.RESTAURANT, AccountStatus.active);
-        if (CollectionUtils.isEmpty(response)){
+        if (CollectionUtils.isEmpty(response)) {
             return new ApiResponse<>(AuthConstant.ERROR, "No active restaurants found", null);
         }
         List<RestaurantListResponse> restaurantListResponses = new ArrayList<>();
@@ -1455,7 +1579,7 @@ public class UserServiceImpl implements UserService {
             restaurant.setId(((Number) obj[0]).longValue());
             restaurant.setName((String) obj[1]);
             restaurant.setProfileImageUrl((String) obj[2]);
-            restaurant.setAddress(obj[3]+", "+ obj[4]);
+            restaurant.setAddress(obj[3] + ", " + obj[4]);
             restaurantListResponses.add(restaurant);
         }
         return new ApiResponse<>(AuthConstant.SUCCESS, "Active restaurants fetched successfully", restaurantListResponses);
@@ -1556,13 +1680,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<CustomerProfileResponse> addBusinessInfo(RegistrationRequest request) {
+    public ApiResponse<UserProfileResponse> addBusinessInfo(RegistrationRequest request) {
         try {
             Optional<User> userOpt = userRepository.findById(request.getUserId());
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
 
-                if (request.getContactAndRegistrationDetails() != null){
+                if (request.getContactAndRegistrationDetails() != null) {
                     RegistrationRequest.ContactAndRegistrationDetailsRequest contactReq =
                             request.getContactAndRegistrationDetails();
                     ContactRegistrationDetails contactDetails = ContactRegistrationDetails.builder()
@@ -1600,8 +1724,8 @@ public class UserServiceImpl implements UserService {
                     socialRepo.saveAll(socialMediaDetailsList);
                 }
 
-                CustomerProfileResponse customerProfileResponse = getCustomerProfileDetails(user.getId()).getData();
-                return new ApiResponse<>(AuthConstant.SUCCESS, "Business info added successfully", customerProfileResponse);
+                UserProfileResponse userProfileResponse = getCustomerProfileDetails(user.getId()).getData();
+                return new ApiResponse<>(AuthConstant.SUCCESS, "Business info added successfully", userProfileResponse);
             }
 
             return new ApiResponse<>(AuthConstant.SUCCESS, "Restaurant details not found", null);
@@ -1612,13 +1736,19 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public ApiResponse<User> getUserByCustomerId(String customerId) {
+    public ApiResponse<UserResponse> getUserByCustomerId(String customerId) {
         Optional<User> userOptional = userRepository.findUserByCustomerId(customerId);
         System.err.println(customerId);
         System.err.println(userOptional);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
-            return new ApiResponse<>(AuthConstant.SUCCESS, "User found with customer ID", user);
+            UserResponse userResponse = UserResponse.builder()
+                    .id(user.getId())
+                    .fullName(user.getFullName())
+                    .customerId(user.getCustomerId())
+                    .phoneNumber(user.getPhoneNumber())
+                    .build();
+            return new ApiResponse<>(AuthConstant.SUCCESS, "User found with customer ID", userResponse);
         }
         return new ApiResponse<>(AuthConstant.ERROR, "User not found", null);
     }
@@ -1677,5 +1807,89 @@ public class UserServiceImpl implements UserService {
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
     }
+
+    @Transactional
+    @Override
+    public ApiResponse<?> updateBankDetails(Long userId, RegistrationRequest request) {
+
+        try {
+
+            // ---------------- FETCH USER ----------------
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new GenericException("User not found"));
+
+            // ---------------- BANK (UPDATE OR CREATE) ----------------
+            if (request.getBankDetails() != null
+                    || request.getCardDetails() != null
+                    || request.getPaymentGetWay() != null) {
+
+                //  Step 1: Get existing record
+                BankDetails bankDetails = user.getBankDetails();
+
+
+                // ---------------- UPDATE BANK ----------------
+                if (request.getBankDetails() != null) {
+                    var bank = request.getBankDetails();
+
+                    if (bank.getBankName() != null)
+                        bankDetails.setBankName(bank.getBankName());
+
+                    if (bank.getAccountHolderName() != null)
+                        bankDetails.setAccountHolderName(bank.getAccountHolderName());
+
+                    if (bank.getIBanNumber() != null)
+                        bankDetails.setIBanNumber(bank.getIBanNumber());
+
+                    if (bank.getBicNumber() != null)
+                        bankDetails.setBicNumber(bank.getBicNumber());
+
+                    if (bank.getAccountNumber() != null)
+                        bankDetails.setAccountNumber(bank.getAccountNumber());
+                }
+
+                // ---------------- UPDATE CARD ----------------
+                if (request.getCardDetails() != null) {
+                    var card = request.getCardDetails();
+
+                    if (card.getCardHolderName() != null)
+                        bankDetails.setCardHolderName(card.getCardHolderName());
+
+                    if (card.getCardNumber() != null)
+                        bankDetails.setCardNumber(card.getCardNumber());
+
+                    if (card.getExpiryDate() != null)
+                        bankDetails.setExpiryDate(card.getExpiryDate());
+                }
+
+                // ---------------- UPDATE PAYMENT ----------------
+                if (request.getPaymentGetWay() != null) {
+                    var pay = request.getPaymentGetWay();
+
+                    if (pay.getPaymentGatewayId() != null)
+                        bankDetails.setPaymentGatewayId(pay.getPaymentGatewayId());
+
+                    if (pay.getPaymentGatewayName() != null)
+                        bankDetails.setPaymentGatewayName(pay.getPaymentGatewayName());
+                }
+
+
+                // 👉 attach to user (important)
+                user.setBankDetails(bankDetails);
+            }
+
+            // ---------------- SAVE (CASCADE WILL HANDLE BANK) ----------------
+            userRepository.save(user);
+
+            // Refresh cache after update
+
+            return new ApiResponse<>(AuthConstant.SUCCESS,
+                    "Bank details updated successfully",
+                    getCustomerProfileDetails(userId).getData());
+
+        } catch (Exception e) {
+            throw new GenericException("Failed to update bank details: " + e.getMessage());
+        }
+    }
+
 
 }

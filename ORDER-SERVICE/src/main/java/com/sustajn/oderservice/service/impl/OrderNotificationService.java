@@ -1,9 +1,12 @@
 package com.sustajn.oderservice.service.impl;
 
 import com.sustajn.oderservice.constant.NotificationStatus;
+import com.sustajn.oderservice.dto.DeviceTokenResponse;
+import com.sustajn.oderservice.dto.NotificationResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Notification;
 import com.sustajn.oderservice.entity.Order;
+import com.sustajn.oderservice.feign.service.NotificationFeignClient;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.NotificationRepository;
 import jakarta.transaction.Transactional;
@@ -26,6 +29,7 @@ public class OrderNotificationService {
 
     private final BorrowOrderRepository borrowOrderRepository;
     private final NotificationRepository notificationRepository;
+    private final NotificationFeignClient notificationFeignClient;
 
 
     @Scheduled(cron = "0 0 1 * * ?")
@@ -49,7 +53,7 @@ public class OrderNotificationService {
             Long orderId = entry.getKey();
             List<BorrowOrder> orderBorrowOrders = entry.getValue();
 
-            // ❌ Skip order if all items are returned
+            // Skip order if all items are returned
             boolean allReturned = orderBorrowOrders.stream()
                     .allMatch(bo -> bo.getReturnedQuantity() >= bo.getQuantity());
 
@@ -104,22 +108,22 @@ public class OrderNotificationService {
             }
         }
     }
-    private void saveOrderNotification(
-            Long orderId,
-            NotificationStatus type,
-            String message
-    ) {
-
-        Notification notification = new Notification();
-        notification.setOrderId(orderId);
-
-        notification.setType(type);
-        notification.setMessage(message);
-        notification.setSentDate(LocalDateTime.now());
-        notification.setIsRead(false);
-
-        notificationRepository.save(notification);
-    }
+//    private void saveOrderNotification(
+//            Long orderId,
+//            NotificationStatus type,
+//            String message
+//    ) {
+//
+//        Notification notification = new Notification();
+//        notification.setOrderId(orderId);
+//
+//        notification.setType(type);
+//        notification.setMessage(message);
+//        notification.setSentDate(LocalDateTime.now());
+//        notification.setIsRead(false);
+//
+//        notificationRepository.save(notification);
+//    }
 
 
     @Transactional
@@ -165,5 +169,86 @@ public class OrderNotificationService {
             borrowOrderRepository.saveAll(toUpdate);
         }
     }
+
+
+    private void saveOrderNotification(
+            Long orderId,
+            NotificationStatus type,
+            String message
+    ) {
+
+        try {
+            // ================= SAVE IN DB =================
+            Notification notification = new Notification();
+            notification.setOrderId(orderId);
+            notification.setType(type);
+            notification.setMessage(message);
+            notification.setSentDate(LocalDateTime.now());
+            notification.setIsRead(false);
+
+            // 🔹 Get userId from order
+            Long userId = borrowOrderRepository.findUserIdByOrderId(orderId);
+
+            if (userId == null) {
+                log.warn("UserId not found for orderId: {}", orderId);
+                return;
+            }
+
+            notification.setUserId(userId);
+
+            notificationRepository.save(notification);
+
+            // ================= PUSH NOTIFICATION =================
+            try {
+                DeviceTokenResponse deviceTokenResponse =
+                        notificationFeignClient.getDeviceTokensByUserId(userId);
+
+                if (deviceTokenResponse == null
+                        || deviceTokenResponse.getDeviceToken() == null) {
+
+                    log.warn("No device token found for userId: {}", userId);
+                    return;
+                }
+
+                // 🔹 Title based on type
+                String title = switch (type) {
+                    case BEFORE_3_DAYS -> "Due Date Reminder";
+                    case EXTENDED_BEFORE_3_DAYS -> "Extended Due Reminder";
+                    case OVERDUE -> "Overdue Alert";
+                    default -> "Notification";
+                };
+
+                // 🔹 Build notification payload
+                NotificationResponse pushNotification =
+                        NotificationResponse.builder()
+                                .title(title)
+                                .body(message)
+                                .deviceTokens(
+                                        List.of(deviceTokenResponse.getDeviceToken())
+                                )
+                                .data(Map.of(
+                                        "type", type.name(),
+                                        "orderId", String.valueOf(orderId),
+                                        "screen", "orders"
+                                ))
+                                .build();
+
+                // 🔹 Send notification
+                notificationFeignClient
+                        .sendNotificationToMultipleDevices(pushNotification);
+
+                log.info("Notification sent successfully for orderId: {}", orderId);
+
+            } catch (Exception ex) {
+                log.error("Failed to send push notification for orderId {}: {}",
+                        orderId, ex.getMessage());
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to save notification for orderId {}: {}",
+                    orderId, e.getMessage());
+        }
+    }
+
 
 }

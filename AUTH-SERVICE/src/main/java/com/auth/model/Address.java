@@ -22,24 +22,24 @@ public class Address {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "user_id")
-    private Long userId;
-
-    @Column(name = "address_type", length = 50)
+    @Column(name = "address_type", length = 500)
     private String addressType;
 
-    @Column(name = "flat_door_house_details", length = 100)
+    @Column(name = "flat_door_house_details", length = 1000)
     private String flatDoorHouseDetails;
 
-    @Column(name = "area_street_city_block_details", length = 150)
+    @Column(name = "area_street_city_block_details", length = 1500)
     private String areaStreetCityBlockDetails;
 
-    @Column(name = "po_box_or_postal_code", length = 20)
+    @Column(name = "po_box_or_postal_code", length = 200)
     private String poBoxOrPostalCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(name = "status", length = 20)
     private String status;
-
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -53,11 +53,9 @@ public class Address {
         this.updatedAt = this.createdAt;
     }
 
-
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-
 
 }

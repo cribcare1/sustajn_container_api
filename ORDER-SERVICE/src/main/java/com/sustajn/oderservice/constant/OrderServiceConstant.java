@@ -14,4 +14,5 @@ public class OrderServiceConstant {
     public static final String REJECTED = "REJECTED";
     public static final String ACTION = "action";
     public static final Map<String, String> ACTION_BORROW = Map.of("action", "borrow");
+    public static final Map<String, String> ACTION_RETURN = Map.of("action", "return");
 }

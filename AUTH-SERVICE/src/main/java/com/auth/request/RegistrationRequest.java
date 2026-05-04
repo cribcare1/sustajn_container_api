@@ -28,6 +28,8 @@ public class RegistrationRequest {
     private Double latitude;
     private Double longitude;
     private Integer subscriptionPlanId;
+    private String pushNotificationToken;
+    private String deviceType;
 
     // ========== BASIC RESTAURANT DETAILS ==========
     private BasicDetails basicDetails;
@@ -63,6 +65,7 @@ public class RegistrationRequest {
     @Builder
     public static class BankDetailsRequest {
         private String bankName;
+        private String accountNumber;
         private String bicNumber;
         private String accountHolderName;
         public String iBanNumber;
@@ -77,7 +80,6 @@ public class RegistrationRequest {
         private String cardHolderName;
         private String cardNumber;
         private String expiryDate;
-        private String cvv;
     }
 
     @Getter
