@@ -19,4 +19,5 @@ public class ReportDamagedContainerRequest {
     private Long userId;
     private Boolean isDamagedByRestaurant;
     private Boolean isDamagedByUser;
+    private Integer damagedCount;
 }

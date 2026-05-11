@@ -12,6 +12,23 @@ import java.util.Set;
 public interface RestaurantContainerInventoryRepository extends JpaRepository<RestaurantContainerInventory,Long> {
     List<RestaurantContainerInventory> findAllByRestaurantIdAndContainerTypeIdIn(Long restaurantId, Set<Integer> containerTypeIds);
 
+//    @Query("""
+//    SELECT new com.inventory.dto.RestaurantContainerDetails(
+//        ct.id,
+//        ct.name,
+//        ct.description,
+//        ct.capacityMl,
+//        ct.imageUrl,
+//        ct.productId,
+//        inv.currentQuantity
+//    )
+//    FROM RestaurantContainerInventory inv
+//    JOIN ContainerType ct ON ct.id = inv.containerTypeId
+//    WHERE inv.restaurantId = :restaurantId
+//""")
+//    List<RestaurantContainerDetails> findContainersWithDetails(@Param("restaurantId") Long restaurantId);
+
+
     @Query("""
     SELECT new com.inventory.dto.RestaurantContainerDetails(
         ct.id,
@@ -20,12 +37,13 @@ public interface RestaurantContainerInventoryRepository extends JpaRepository<Re
         ct.capacityMl,
         ct.imageUrl,
         ct.productId,
-        inv.currentQuantity
+        inv.availableContainers
     )
-    FROM RestaurantContainerInventory inv
+    FROM RestaurantInventoryMaster inv
     JOIN ContainerType ct ON ct.id = inv.containerTypeId
     WHERE inv.restaurantId = :restaurantId
 """)
-    List<RestaurantContainerDetails> findContainersWithDetails(@Param("restaurantId") Long restaurantId);
-
+    List<RestaurantContainerDetails> findContainersWithDetails(
+            @Param("restaurantId") Long restaurantId
+    );
 }

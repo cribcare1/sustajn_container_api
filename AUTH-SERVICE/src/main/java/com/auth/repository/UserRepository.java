@@ -223,6 +223,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<Object[]> findCustomerIdsByUserIds(@Param("userIds") List<Long> userIds);
 
     // Fetch Restaurant Name and Address by their IDs
-    @Query("SELECT u.id, u.fullName, u.address FROM User u WHERE u.id IN :userIds")
+//    @Query("SELECT u.id, u.fullName, a FROM User u " +
+//            "  LEFT JOIN   Address a " +
+//            "WHERE u.id IN :userIds")
+//    List<Object[]> findPartnerDetailsByIds(@Param("userIds") List<Long> userIds);
+
+    @Query("""
+    SELECT u.id, u.fullName, a
+    FROM User u
+    LEFT JOIN u.addresses a
+    WHERE u.id IN :userIds
+""")
     List<Object[]> findPartnerDetailsByIds(@Param("userIds") List<Long> userIds);
 }
