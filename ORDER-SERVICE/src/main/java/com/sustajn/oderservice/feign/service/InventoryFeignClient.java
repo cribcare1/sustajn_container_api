@@ -36,14 +36,18 @@ public interface InventoryFeignClient {
             @PathVariable("restaurantId") Long restaurantId
     );
 
+    @PostMapping("/inventory/increaseAvailableContainers")
+    ApiResponse<?> increaseAvailableContainers(@RequestBody ReduceInventoryRequest request);
+
+
     @PostMapping("/inventory/reduceAvailableContainers")
     ApiResponse<?> reduceAvailableContainers(@RequestBody ReduceInventoryRequest request);
 
     @PostMapping("/inventory/checkAvailabilityOfContainers")
     Map<String, Object> checkAvailability(@RequestBody ReduceInventoryRequest inventoryRequest);
 
-    @PostMapping("/inventory/increaseAvailableContainers")
-    Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest inventoryRequest);
+//    @PostMapping("/inventory/increaseAvailableContainers")
+//    Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest inventoryRequest);
 
     @GetMapping("/inventory/damaged/count")
     Integer getDamagedCount(

@@ -27,4 +27,5 @@ public class DamagedContainer extends BaseEntity{
     private Boolean damagedByRestaurant;
     @Column(name = "damaged_by_user")
     private Boolean damagedByUser;
+    private Integer damagedCount;
 }

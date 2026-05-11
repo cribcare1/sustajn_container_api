@@ -349,8 +349,7 @@ public class OrderServiceImpl implements OrderService {
 
                 if (returnQty > 0) {
                     throw new IllegalArgumentException(
-                            "Return quantity exceeds borrowed quantity for productId="
-                                    + item.getProductId()
+                            "Return quantity exceeds borrowed quantity "
                     );
                 }
             }
@@ -369,13 +368,16 @@ public class OrderServiceImpl implements OrderService {
             inventoryRequest.setRestaurantId(request.getRestaurantId());
             inventoryRequest.setContainerQtyMap(qtyMap);
 
-            Map<String, Object> invResponse =
-                    inventoryFeignClient.increaseContainers(inventoryRequest);
 
-            if (OrderServiceConstant.STATUS_ERROR.equals(invResponse.get(OrderServiceConstant.STATUS))) {
+            ApiResponse<?>  invResponse =
+                    inventoryFeignClient.increaseAvailableContainers(inventoryRequest);
+
+            if (OrderServiceConstant.STATUS_ERROR.equals(invResponse.getStatus())) {
                 return ApiResponseUtil.error(
-                        invResponse.get(OrderServiceConstant.MESSAGE).toString());
+                        invResponse.getMessage());
             }
+
+
 
             // Commit DB only if inventory OK
             returnOrderRepository.saveAll(returnOrdersToSave);
@@ -412,6 +414,7 @@ public class OrderServiceImpl implements OrderService {
                     "Containers returned successfully");
 
         } catch (Exception ex) {
+            ex.printStackTrace();
             return handleReturnError(ex);
         }
     }
@@ -1735,6 +1738,11 @@ public class OrderServiceImpl implements OrderService {
                 .available(availableCount)
                 .monthYear(monthYearStr)
                 .build();
+    }
+
+    @Override
+    public void markAsSold(SoldRequest request) {
+
     }
 
     private Integer getTotalContainers(Integer planId) {

@@ -35,6 +35,8 @@ public interface InventoryService {
     ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(Long restaurantId);
 
     ApiResponse<List<RestaurantInventoryMaster>> reduceAvailableContainers(ReduceInventoryRequest request);
+    public ApiResponse<List<RestaurantInventoryMaster>> increaseContainers(
+            ReduceInventoryRequest request);
 
     Map<String, Object> checkAvailability(ReduceInventoryRequest request);
 

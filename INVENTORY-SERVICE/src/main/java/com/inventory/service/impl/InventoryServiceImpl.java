@@ -670,6 +670,75 @@ public class InventoryServiceImpl implements InventoryService {
 
 
 
+    @Override
+    @Transactional
+    public ApiResponse<List<RestaurantInventoryMaster>> increaseContainers(
+            ReduceInventoryRequest request) {
+
+        try {
+
+            Long restaurantId = request.getRestaurantId();
+
+            Map<Integer, Integer> qtyMap =
+                    request.getContainerQtyMap();
+
+            List<RestaurantInventoryMaster> masters =
+                    restaurantInventoryMasterRepository
+                            .findAllByRestaurantIdAndContainerTypeIdIn(
+                                    restaurantId,
+                                    qtyMap.keySet()
+                            );
+
+            for (RestaurantInventoryMaster master : masters) {
+
+                int returnQty =
+                        qtyMap.get(master.getContainerTypeId());
+
+//                // Safety check
+//                if (master.getBorrowedContainers() < returnQty) {
+//
+//                    return new ApiResponse<>(
+//                            InventoryConstant.ERROR,
+//                            "Return quantity exceeds borrowed containers",
+//                            null
+//                    );
+//                }
+
+                // Increase available containers
+                master.setAvailableContainers(
+                        master.getAvailableContainers() + returnQty
+                );
+
+//                // Decrease borrowed containers
+//                master.setBorrowedContainers(
+//                        master.getBorrowedContainers() - returnQty
+//                );
+
+                // Increase returned containers
+                master.setReturnedContainers(
+                        master.getReturnedContainers() + returnQty
+                );
+            }
+
+            List<RestaurantInventoryMaster> inventoryMasters =
+                    restaurantInventoryMasterRepository.saveAll(masters);
+
+            return new ApiResponse<>(
+                    InventoryConstant.SUCCESS,
+                    "Containers returned successfully",
+                    inventoryMasters
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ApiResponse<>(
+                    InventoryConstant.ERROR,
+                    "Failed to return containers",
+                    null
+            );
+        }
+    }
+
     public Map<String, Object> checkAvailability(
             ReduceInventoryRequest request) {
 
@@ -743,6 +812,7 @@ public class InventoryServiceImpl implements InventoryService {
                     .restaurantId(request.getRestaurantId())
                     .damagedByRestaurant(true)
                     .damagedByUser(false)
+                    .damagedCount(request.getDamagedCount())
                     .build();
 
             DamagedContainer savedDamagedContainer =
@@ -800,6 +870,7 @@ public class InventoryServiceImpl implements InventoryService {
                     .restaurantId(request.getRestaurantId())
                     .damagedByRestaurant(false)
                     .damagedByUser(true)
+                    .damagedCount(request.getDamagedCount())
                     .build();
 
             DamagedContainer savedDamagedContainer =

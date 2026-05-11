@@ -240,6 +240,11 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.reduceAvailableContainers(request));
     }
 
+    @PostMapping("/increaseAvailableContainers")
+    public ResponseEntity<?> increaseAvailableContainers(@RequestBody ReduceInventoryRequest request) {
+        return ResponseEntity.ok(inventoryService.increaseContainers(request));
+    }
+
     @PostMapping("/checkAvailabilityOfContainers")
     public ResponseEntity<?> checkAvailability(@RequestBody ReduceInventoryRequest request) {
         Map<String, Object> result = inventoryService.checkAvailability(request);
@@ -251,7 +256,7 @@ public class InventoryController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/increaseAvailableContainers")
+    @PostMapping("/increaseAvailableContainersOld")
     public Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest request) {
         return inventoryService.increaseAvailableContainers(request);
     }
