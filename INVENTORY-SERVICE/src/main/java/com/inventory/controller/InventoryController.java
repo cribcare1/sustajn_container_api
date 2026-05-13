@@ -285,5 +285,13 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(damageBy));
     }
 
+    @GetMapping("/getDetailedSoldHistoryByRestaurant")
+    public org.springframework.http.ResponseEntity<com.inventory.response.ApiResponse<List<com.inventory.dto.DetailedSoldMonthResponse>>> getDetailedSoldHistoryByRestaurant(@org.springframework.web.bind.annotation.RequestParam Long restaurantId) {
+
+        List<com.inventory.dto.DetailedSoldMonthResponse> data = inventoryService.getDetailedSoldHistoryMatchedToUI(restaurantId);
+
+        return org.springframework.http.ResponseEntity.ok(new com.inventory.response.ApiResponse<>("success", "Detailed sold history fetched successfully", data));
+    }
+
 
 }

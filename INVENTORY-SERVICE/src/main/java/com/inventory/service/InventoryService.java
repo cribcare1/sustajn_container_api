@@ -50,6 +50,8 @@ public interface InventoryService {
 
     ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(String damageBy);
 
+    java.util.List<com.inventory.dto.DetailedSoldMonthResponse> getDetailedSoldHistoryMatchedToUI(Long restaurantId);
+
 
 
 
