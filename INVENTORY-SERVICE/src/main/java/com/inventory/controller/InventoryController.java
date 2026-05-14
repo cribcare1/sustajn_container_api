@@ -291,6 +291,15 @@ public class InventoryController {
         List<com.inventory.dto.DetailedSoldMonthResponse> data = inventoryService.getDetailedSoldHistoryMatchedToUI(restaurantId);
 
         return org.springframework.http.ResponseEntity.ok(new com.inventory.response.ApiResponse<>("success", "Detailed sold history fetched successfully", data));
+    @GetMapping("/getAllContainerTypes")
+    public ResponseEntity<Map<String, Object>> getAllContainerTypes() {
+        Map<String, Object> response = inventoryService.getAllContainerTypes();
+
+        if ("ERROR".equals(response.get("status"))) {
+            return ResponseEntity.internalServerError().body(response);
+        }
+
+        return ResponseEntity.ok(response);
     }
 
 
