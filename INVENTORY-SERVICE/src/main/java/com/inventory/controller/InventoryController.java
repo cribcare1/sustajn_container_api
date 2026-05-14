@@ -2,10 +2,7 @@ package com.inventory.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
-import com.inventory.dto.DamageContainerMonthWiseResponse;
-import com.inventory.dto.ErrorResponses;
-import com.inventory.dto.ProductResponse;
-import com.inventory.dto.SoldContainerMonthWiseResponse;
+import com.inventory.dto.*;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
@@ -286,20 +283,11 @@ public class InventoryController {
     }
 
     @GetMapping("/getDetailedSoldHistoryByRestaurant")
-    public org.springframework.http.ResponseEntity<com.inventory.response.ApiResponse<List<com.inventory.dto.DetailedSoldMonthResponse>>> getDetailedSoldHistoryByRestaurant(@org.springframework.web.bind.annotation.RequestParam Long restaurantId) {
+    public ResponseEntity<ApiResponse<List<DetailedSoldMonthResponse>>> getDetailedSoldHistoryByRestaurant(@RequestParam Long restaurantId) {
 
-        List<com.inventory.dto.DetailedSoldMonthResponse> data = inventoryService.getDetailedSoldHistoryMatchedToUI(restaurantId);
+        List<DetailedSoldMonthResponse> data = inventoryService.getDetailedSoldHistoryByRestaurant(restaurantId);
 
-        return org.springframework.http.ResponseEntity.ok(new com.inventory.response.ApiResponse<>("success", "Detailed sold history fetched successfully", data));
-    @GetMapping("/getAllContainerTypes")
-    public ResponseEntity<Map<String, Object>> getAllContainerTypes() {
-        Map<String, Object> response = inventoryService.getAllContainerTypes();
-
-        if ("ERROR".equals(response.get("status"))) {
-            return ResponseEntity.internalServerError().body(response);
-        }
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("success", "Detailed sold history fetched successfully", data));
     }
 
 

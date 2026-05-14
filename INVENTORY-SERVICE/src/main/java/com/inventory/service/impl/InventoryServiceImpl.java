@@ -584,13 +584,13 @@ public class InventoryServiceImpl implements InventoryService {
         return response;
     }
     @Override
-    public List<com.inventory.dto.DetailedSoldMonthResponse> getDetailedSoldHistoryMatchedToUI(Long restaurantId) {
+    public List<DetailedSoldMonthResponse> getDetailedSoldHistoryByRestaurant(Long restaurantId) {
 
         // 1. Fetch real dates from Order Service
-        List<com.inventory.dto.SoldHistoryRawData> rawData = orderFeignClient.getRealSoldHistoryDates(restaurantId);
+        List<SoldHistoryRawData> rawData = orderFeignClient.getRealSoldHistoryDates(restaurantId);
 
         if (rawData == null || rawData.isEmpty()) {
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
 
         java.time.format.DateTimeFormatter monthYearFormatter = java.time.format.DateTimeFormatter.ofPattern("MMMM-yyyy", java.util.Locale.ENGLISH);
