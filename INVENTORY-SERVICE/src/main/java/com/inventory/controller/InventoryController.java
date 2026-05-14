@@ -285,5 +285,16 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(damageBy));
     }
 
+    @GetMapping("/getAllContainerTypes")
+    public ResponseEntity<Map<String, Object>> getAllContainerTypes() {
+        Map<String, Object> response = inventoryService.getAllContainerTypes();
+
+        if ("ERROR".equals(response.get("status"))) {
+            return ResponseEntity.internalServerError().body(response);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
 
 }

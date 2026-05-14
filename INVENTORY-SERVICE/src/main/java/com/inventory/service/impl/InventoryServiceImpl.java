@@ -328,6 +328,24 @@ public class InventoryServiceImpl implements InventoryService {
         }
     }
 
+    @Override
+    public Map<String, Object> getAllContainerTypes() {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // Because you extend JpaRepository, findAll() is already available!
+            List<ContainerType> allContainers = containerTypeRepository.findAll();
+
+            response.put("status", "SUCCESS");
+            response.put("message", "All container types fetched successfully");
+            response.put("data", allContainers);
+        } catch (Exception e) {
+            response.put("status", "ERROR");
+            response.put("message", "Failed to fetch container types: " + e.getMessage());
+            response.put("data", null);
+        }
+        return response;
+    }
+
 
     @Transactional
     @Override
