@@ -2,6 +2,7 @@ package com.sustajn.oderservice.controller;
 
 import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.ContainerChartResponse;
+import com.sustajn.oderservice.repository.SoldOrderRepository;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
@@ -25,6 +26,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final BorrowOrderRepository borrowOrderRepository;
+    private final SoldOrderRepository soldOrderRepository;
 
     /**
      * Borrow containers
@@ -194,6 +196,11 @@ public class OrderController {
             userCounts.put(userId, count);
         }
         return userCounts;
+    }
+
+    @GetMapping("/internal/sold-history-dates/{restaurantId}")
+    public List<com.sustajn.oderservice.dto.SoldHistoryRawData> getRealSoldHistoryDates(@PathVariable Long restaurantId) {
+        return soldOrderRepository.getRealSoldHistory(restaurantId);
     }
 
 

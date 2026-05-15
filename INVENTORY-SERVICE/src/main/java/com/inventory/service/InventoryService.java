@@ -50,7 +50,7 @@ public interface InventoryService {
 
     ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(String damageBy);
 
-    Map<String, Object> getAllContainerTypes();
+    List<DetailedSoldMonthResponse> getDetailedSoldHistoryByRestaurant(Long restaurantId);
 
 
 

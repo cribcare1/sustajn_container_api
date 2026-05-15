@@ -7,6 +7,7 @@ import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.feignClient.AuthFeignClient;
+import com.inventory.feignClient.OrderFeignClient;
 import com.inventory.feignClient.service.NotificationFeignClientService;
 import com.inventory.repository.*;
 import com.inventory.request.*;
@@ -46,6 +47,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final DamagedContainerImagesRepository damagedContainerImagesRepository;
     private final SoldContainerRepository soldContainerRepository;
     private final AuthFeignClient authFeignClient;
+    private final OrderFeignClient orderFeignClient;
 
     public Map<String, Object> saveOrUpdate(ContainerTypeRequest request, MultipartFile file) {
 
@@ -581,8 +583,68 @@ public class InventoryServiceImpl implements InventoryService {
 
         return response;
     }
+    @Override
+    public List<DetailedSoldMonthResponse> getDetailedSoldHistoryByRestaurant(Long restaurantId) {
 
+        // 1. Fetch real dates from Order Service
+        List<SoldHistoryRawData> rawData = orderFeignClient.getRealSoldHistoryDates(restaurantId);
 
+        if (rawData == null || rawData.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        java.time.format.DateTimeFormatter monthYearFormatter = java.time.format.DateTimeFormatter.ofPattern("MMMM-yyyy", java.util.Locale.ENGLISH);
+        java.time.format.DateTimeFormatter dotFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+        // 2. GROUP BY MONTH ONLY
+        java.util.Map<String, List<com.inventory.dto.SoldHistoryRawData>> groupedByMonth = rawData.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        data -> data.getSoldAt().format(monthYearFormatter),
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+
+        List<com.inventory.dto.DetailedSoldMonthResponse> finalResponse = new java.util.ArrayList<>();
+
+        // 3. PROCESS EACH MONTH
+        for (java.util.Map.Entry<String, List<com.inventory.dto.SoldHistoryRawData>> monthEntry : groupedByMonth.entrySet()) {
+            String monthYear = monthEntry.getKey();
+            List<com.inventory.dto.SoldHistoryRawData> monthItems = monthEntry.getValue();
+
+            int monthTotal = 0;
+
+            // 👉 The direct list of products for this month
+            List<com.inventory.dto.DetailedSoldProductResponse> productsList = new java.util.ArrayList<>();
+
+            for (com.inventory.dto.SoldHistoryRawData item : monthItems) {
+                monthTotal += item.getSoldQuantity();
+
+                // Fetch product details
+                com.inventory.entity.ContainerType product = containerTypeRepository.findById(item.getProductId().intValue()).orElse(null);
+
+                // Add directly to the products list
+                productsList.add(com.inventory.dto.DetailedSoldProductResponse.builder()
+                        .productId(item.getProductId().intValue())
+                        .productName(product != null ? product.getName() : "Unknown")
+                        .productDescription(product != null ? product.getDescription() : "")
+                        .productImageUrl(product != null ? product.getImageUrl() : "")
+                        .capacity(product != null ? product.getCapacityMl() : 0)
+                        .productUniqueId(product != null ? product.getProductId() : "")
+                        .soldAmount(item.getUnitPrice() * item.getSoldQuantity())
+                        .soldQuantity(item.getSoldQuantity())
+                        // The 3 Dates for the UI
+                        .borrowedOn(item.getBorrowedAt() != null ? item.getBorrowedAt().format(dotFormatter) : "")
+                        .dueOn(item.getDueDate() != null ? item.getDueDate().format(dotFormatter) : "")
+                        .soldOn(item.getSoldAt() != null ? item.getSoldAt().format(dotFormatter) : "")
+                        .build());
+            }
+
+            // Build the final Month Object
+            finalResponse.add(new com.inventory.dto.DetailedSoldMonthResponse(monthYear, monthTotal, productsList));
+        }
+
+        return finalResponse;
+    }
 //    @Override
 //    public List<ProductResponse> getProductsByIds(List<Integer> ids) {
 //        if (ids == null || ids.isEmpty()) {

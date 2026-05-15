@@ -2,10 +2,7 @@ package com.inventory.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
-import com.inventory.dto.DamageContainerMonthWiseResponse;
-import com.inventory.dto.ErrorResponses;
-import com.inventory.dto.ProductResponse;
-import com.inventory.dto.SoldContainerMonthWiseResponse;
+import com.inventory.dto.*;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
 import com.inventory.request.*;
@@ -285,15 +282,12 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(damageBy));
     }
 
-    @GetMapping("/getAllContainerTypes")
-    public ResponseEntity<Map<String, Object>> getAllContainerTypes() {
-        Map<String, Object> response = inventoryService.getAllContainerTypes();
+    @GetMapping("/getDetailedSoldHistoryByRestaurant")
+    public ResponseEntity<ApiResponse<List<DetailedSoldMonthResponse>>> getDetailedSoldHistoryByRestaurant(@RequestParam Long restaurantId) {
 
-        if ("ERROR".equals(response.get("status"))) {
-            return ResponseEntity.internalServerError().body(response);
-        }
+        List<DetailedSoldMonthResponse> data = inventoryService.getDetailedSoldHistoryByRestaurant(restaurantId);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new ApiResponse<>("success", "Detailed sold history fetched successfully", data));
     }
 
 
