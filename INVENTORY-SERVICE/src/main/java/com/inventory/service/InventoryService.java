@@ -52,6 +52,8 @@ public interface InventoryService {
 
     List<DetailedSoldMonthResponse> getDetailedSoldHistoryByRestaurant(Long restaurantId);
 
+    Map<String, Object> getAllContainerTypes();
+
 
 
 
