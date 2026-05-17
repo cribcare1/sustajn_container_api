@@ -1,11 +1,12 @@
 spring:
   application:
-    name: ORDER-SERVICE
+    name: AUTH-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-solitary-sunset-ao3lnirw-pooler.c-2.ap-southeast-1.aws.neon.tech/order_db_1?sslmode=require&channel_binding=require'
+    url: jdbc:postgresql://ep-gentle-block-aoifiomz-pooler.c-2.ap-southeast-1.aws.neon.tech/auth_db_1?sslmode=require&channel_binding=require'
     username: neondb_owner
-    password: npg_4cLW8brkUJvt
+    password: npg_pW7izeTrDs3H
+
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 3
@@ -27,17 +28,18 @@ spring:
       max-request-size: 50MB
 
 server:
-  port: 8085
+  port: 8081
 
 eureka:
   client:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
+      defaultZone: http://localhost:8761/eureka/
   instance:
     prefer-ip-address: true
 
-inventory:
-  file:
-    upload-dir: C:/InventoryUploads
+
+image:
+  storage:
+    root-path: C:/uploads

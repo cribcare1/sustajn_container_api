@@ -2,12 +2,6 @@ spring:
   application:
     name: INVENTORY-SERVICE
 
-#  datasource:
-#    url: jdbc:postgresql://ep-bitter-darkness-a122sbpg-pooler.ap-southeast-1.aws.neon.tech:5432/INVENTORY_SERVICE?sslmode=require
-#    username: neondb_owner
-#    password: npg_lkA9tfR2eHQI
-#    driver-class-name: org.postgresql.Driver
-
   datasource:
     url: jdbc:postgresql://ep-steep-feather-aonbk9z9-pooler.c-2.ap-southeast-1.aws.neon.tech/inventory_db_1?sslmode=require
     username: neondb_owner
@@ -39,17 +33,10 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
   instance:
     prefer-ip-address: true
 
 inventory:
   file:
     upload-dir: C:/InventoryUploads
-
-springdoc:
-  api-docs:
-    path: /v3/api-docs
-  swagger-ui:
-    path: /swagger-ui
-
