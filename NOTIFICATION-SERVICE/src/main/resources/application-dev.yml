@@ -4,6 +4,7 @@ spring:
 
   datasource:
     url: jdbc:postgresql://ep-gentle-block-aoifiomz-pooler.c-2.ap-southeast-1.aws.neon.tech/auth_db_1?sslmode=require&channel_binding=require'
+
     username: neondb_owner
     password: npg_pW7izeTrDs3H
     driver-class-name: org.postgresql.Driver
@@ -16,15 +17,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
-  servlet:
-    multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
 
   mail:
     host: smtp.gmail.com
@@ -40,6 +36,11 @@ spring:
             required: true
           ssl:
             trust: smtp.gmail.com
+
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
 
 server:
   port: 8082
@@ -57,6 +58,6 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://ip-172-31-43-132.ap-south-1.compute.internal:8761/eureka/
   instance:
-    hostname: localhost
+    prefer-ip-address: true

@@ -5,9 +5,6 @@ spring:
   application:
     name: API-GATEWAY
 
-  profiles:
-    active: test
-
   cloud:
     gateway:
       discovery:
