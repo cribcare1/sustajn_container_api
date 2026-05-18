@@ -79,23 +79,21 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
     List<BorrowOrder> findAllByOrderId(Long orderId);
 
     @Query(value = """
-SELECT 
-    b.order_id,
-    b.product_id,
-    b.quantity AS borrowedQty,
-    COALESCE(SUM(r.returned_quantity), 0) AS returnedQty,
-    (b.quantity - COALESCE(SUM(r.returned_quantity), 0)) AS remainingQty,
-    b.due_date AS dueDate,
-    o.order_date
-FROM borrow_orders b
-JOIN orders o ON b.order_id = o.id
-LEFT JOIN return_orders r ON r.borrow_order_id = b.id
-WHERE b.user_id = :userId
-GROUP BY b.order_id, b.product_id, b.quantity,b.due_date, o.order_date
-HAVING (b.quantity - COALESCE(SUM(r.returned_quantity), 0)) > 0
+            SELECT
+                b.order_id,
+                b.product_id,
+                b.quantity AS borrowedQty,
+                COALESCE(b.returned_quantity, 0) AS returnedQty,
+                (b.quantity - COALESCE(b.returned_quantity, 0)) AS remainingQty,
+                b.due_date,
+                o.order_date
+            FROM borrow_orders b
+            JOIN orders o
+                ON o.id = b.order_id
+            WHERE b.user_id = :userId
+            AND (b.quantity - COALESCE(b.returned_quantity, 0)) > 0
 """, nativeQuery = true)
     List<BorrowOrderResponse> getProductBorrowReturnSummary(@Param("userId") Long userId);
-
 
     List<BorrowOrder> findByRestaurantId(Long restaurantId);
 

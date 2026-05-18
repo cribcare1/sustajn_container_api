@@ -22,7 +22,9 @@ public class RestaurantInventoryMaster extends BaseEntity {
     private Integer totalContainers;
     private Integer availableContainers;
     private Integer borrowedContainers;
-    private Integer returnedContainers=0;
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer returnedContainers = 0;
 
 }
 
