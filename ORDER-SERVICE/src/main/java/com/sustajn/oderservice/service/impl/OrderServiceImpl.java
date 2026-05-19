@@ -1692,50 +1692,43 @@ public class OrderServiceImpl implements OrderService {
         }
     }
     @Override
-    public ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId,Integer planId) {
+    public ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId, Integer planId) {
 
-        LocalDateTime startDate = null;
-        LocalDateTime endDate = null;
+        LocalDateTime startDate = LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.now().plusYears(10);
         String monthYearStr = "All Time";
 
-        // 1. Resolve Date Range
         if (month != null && year != null) {
             startDate = LocalDateTime.of(year, month, 1, 0, 0);
-            endDate = startDate.plusMonths(1).minusSeconds(1); // Last second of the month
+            endDate = startDate.plusMonths(1).minusSeconds(1);
             monthYearStr = startDate.format(DateTimeFormatter.ofPattern("MMMM-yyyy"));
         }
 
-        // 2. Fetch Order Service Data
         Integer leaseCount = borrowOrderRepository.getTotalLeased(restaurantId, productId, startDate, endDate);
         Integer receiveCount = returnOrderRepository.getTotalReturned(restaurantId, productId, startDate, endDate);
 
-        // 3. Fetch Inventory Service Data (Damage)
         Integer containerTypeId = (productId != null) ? productId.intValue() : null;
-        Integer damageCount = 0;
+        Integer trueTotal = 0;
+        Integer trueAvailable = 0;
+        Integer trueDamage = 0;
+
         try {
-            damageCount = inventoryFeignClient.getDamagedCount(restaurantId, containerTypeId, month, year);
-            if (damageCount == null) damageCount = 0;
+            TrueInventoryStatsDto stats = inventoryFeignClient.getTrueInventoryStats(restaurantId, containerTypeId, month, year);
+            if (stats != null) {
+                trueTotal = stats.getTotal() != null ? stats.getTotal() : 0;
+                trueAvailable = stats.getAvailable() != null ? stats.getAvailable() : 0;
+                trueDamage = stats.getDamage() != null ? stats.getDamage() : 0;
+            }
         } catch (Exception e) {
-            log.error("Failed to fetch damaged count from Inventory Service: {}", e.getMessage());
+            log.error("Failed to fetch true inventory stats from Inventory Service: {}", e.getMessage());
         }
 
-        // 4. Calculate Available Capacity
-        // NOTE: Hardcoded to 1000 for now. Replace with real subscription limit if needed.
-        Integer totalCapacity = getTotalContainers(planId);
-
-        Integer currentlyLeasedOut = leaseCount - receiveCount;
-        if (currentlyLeasedOut < 0) currentlyLeasedOut = 0;
-
-        Integer availableCount = totalCapacity - currentlyLeasedOut - damageCount;
-        if (availableCount < 0) availableCount = 0;
-
-        // 5. Build Response
         return ContainerChartResponse.builder()
-                .total(totalCapacity)
+                .total(trueTotal)
                 .lease(leaseCount)
                 .receive(receiveCount)
-                .damage(damageCount)
-                .available(availableCount)
+                .damage(trueDamage)
+                .available(trueAvailable)
                 .monthYear(monthYearStr)
                 .build();
     }

@@ -1281,6 +1281,29 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    public TrueInventoryStatsDto getTrueInventoryStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year) {
+
+        Integer trueTotal = restaurantInventoryMasterRepository.getTrueTotalContainers(restaurantId, containerTypeId);
+        Integer trueAvailable = restaurantInventoryMasterRepository.getTrueAvailableContainers(restaurantId, containerTypeId);
+
+        LocalDateTime startDate = LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.now().plusYears(10);
+
+        if (month != null && year != null) {
+            startDate = LocalDateTime.of(year, month, 1, 0, 0);
+            endDate = startDate.plusMonths(1).minusSeconds(1);
+        }
+
+        Integer trueDamage = damagedContainerRepository.getMonthlyDamageCount(restaurantId, containerTypeId, startDate, endDate);
+
+        return TrueInventoryStatsDto.builder()
+                .total(trueTotal)
+                .available(trueAvailable)
+                .damage(trueDamage)
+                .build();
+    }
+
+    @Override
     public ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(String damageBy) {
 
         try {

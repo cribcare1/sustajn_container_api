@@ -30,4 +30,10 @@ public interface RestaurantInventoryMasterRepository extends JpaRepository<Resta
             "FROM RestaurantInventoryMaster r " +
             "WHERE r.containerTypeId = :containerTypeId AND r.availableContainers > 0")
     List<Object[]> getPartnerHoldingsByContainerType(@Param("containerTypeId") Integer containerTypeId);
+    // Add inside your RestaurantInventoryMasterRepository
+    @Query("SELECT COALESCE(SUM(r.totalContainers), 0) FROM RestaurantInventoryMaster r WHERE r.restaurantId = :restaurantId AND (:containerTypeId IS NULL OR r.containerTypeId = :containerTypeId)")
+    Integer getTrueTotalContainers(@Param("restaurantId") Long restaurantId, @Param("containerTypeId") Integer containerTypeId);
+
+    @Query("SELECT COALESCE(SUM(r.availableContainers), 0) FROM RestaurantInventoryMaster r WHERE r.restaurantId = :restaurantId AND (:containerTypeId IS NULL OR r.containerTypeId = :containerTypeId)")
+    Integer getTrueAvailableContainers(@Param("restaurantId") Long restaurantId, @Param("containerTypeId") Integer containerTypeId);
 }

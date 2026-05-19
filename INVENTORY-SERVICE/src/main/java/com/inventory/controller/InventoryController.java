@@ -301,6 +301,16 @@ public class InventoryController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/internal/true-inventory-stats")
+    public ResponseEntity<TrueInventoryStatsDto> getTrueInventoryStats(
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) Integer containerTypeId,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+
+        return ResponseEntity.ok(inventoryService.getTrueInventoryStats(restaurantId, containerTypeId, month, year));
+    }
+
 
 
 }
