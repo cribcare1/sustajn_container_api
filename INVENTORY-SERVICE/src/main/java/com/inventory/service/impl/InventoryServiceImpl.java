@@ -882,12 +882,12 @@ public class InventoryServiceImpl implements InventoryService {
 
         ReportDamagedContainerRequest request = InventoryUtils.convertToJson(reportDamagedContainerRequest, ReportDamagedContainerRequest.class);
 
-        ContainerType containerType = containerTypeRepository.findById(request.getContainerTypeId())
+        ContainerType containerType = containerTypeRepository.findByProductId(request.getContainerTypeId())
                 .orElseThrow(() -> new InventoryException("Container type not found"));
 
         if (request.getIsDamagedByRestaurant()){
             DamagedContainer damagedContainer = DamagedContainer.builder()
-                    .containerTypeId(request.getContainerTypeId())
+                    .containerTypeId(containerType.getId())
                     .remark(request.getRemark())
                     .restaurantId(request.getRestaurantId())
                     .damagedByRestaurant(true)
@@ -922,7 +922,7 @@ public class InventoryServiceImpl implements InventoryService {
                     restaurantInventoryMasterRepository
                             .findByRestaurantIdAndContainerTypeId(
                                     request.getRestaurantId(),
-                                    request.getContainerTypeId());
+                                    containerType.getId());
 
             if (master == null) {
                 throw new InventoryException("Inventory master not found");
@@ -944,7 +944,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         if (request.getIsDamagedByUser()){
             DamagedContainer damagedContainer = DamagedContainer.builder()
-                    .containerTypeId(request.getContainerTypeId())
+                    .containerTypeId(containerType.getId())
                     .remark(request.getRemark())
                     .userId(request.getUserId())
                     .restaurantId(request.getRestaurantId())
@@ -977,8 +977,8 @@ public class InventoryServiceImpl implements InventoryService {
             }
 
             AdminInventoryMaster master =
-                    masterRepo.findByContainerTypeId(request.getContainerTypeId())
-                            .orElseThrow(() -> new InventoryException("Inventory master not found"));
+                    masterRepo.findByContainerTypeId(containerType.getId())
+                            .orElseThrow(() -> new InventoryException("Inventory master not found by User"));
 
             if (master.getAvailableContainers() <= 0) {
                 throw new InventoryException("No containers available");

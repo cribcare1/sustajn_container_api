@@ -3,7 +3,9 @@ package com.inventory.repository;
 import com.inventory.dto.ContainerTypeResponse;
 import com.inventory.dto.ProductResponse;
 import com.inventory.entity.ContainerType;
+import com.inventory.validation.CreateGroup;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -48,4 +50,6 @@ public interface ContainerTypeRepository extends JpaRepository<ContainerType,Int
     Optional<ContainerType> findByNameIgnoreCase(@NotBlank(message = "Container name is required") @Size(max = 100, message = "Container name must be less than 100 characters") String containerName);
 
     Collection<ContainerType> findByIdIn(Set<Integer> containerTypeIds);
+
+    Optional<ContainerType> findByProductId(@NotNull(message = "Container type id cannot be null", groups = {CreateGroup.class}) String containerTypeId);
 }

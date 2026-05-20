@@ -13,7 +13,7 @@ import lombok.Setter;
 public class ReportDamagedContainerRequest {
 
     @NotNull(message = "Container type id cannot be null", groups = {com.inventory.validation.CreateGroup.class})
-    private Integer containerTypeId;
+    private String containerTypeId;
     private String remark;
     private Long restaurantId;
     private Long userId;
