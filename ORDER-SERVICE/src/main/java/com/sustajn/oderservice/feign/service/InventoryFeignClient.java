@@ -1,10 +1,7 @@
 package com.sustajn.oderservice.feign.service;
 
 import com.sustajn.oderservice.config.FeignClientConfig;
-import com.sustajn.oderservice.dto.ApiResponse;
-import com.sustajn.oderservice.dto.ProductResponse;
-import com.sustajn.oderservice.dto.RestaurantContainerInventoryResponse;
-import com.sustajn.oderservice.dto.RestaurantOrderedResponse;
+import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.request.ReduceInventoryRequest;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
@@ -60,5 +57,13 @@ public interface InventoryFeignClient {
     @GetMapping("/inventory/subscription-plans/getSubscriptionPlan/{id}")
     ResponseEntity<Map<String, Object>> getSubscriptionPlanById(
             @PathVariable("id") Integer id
+    );
+
+    @GetMapping("/inventory/container-stats")
+    TrueInventoryStatsDto getContainerStats(
+            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam(value = "containerTypeId", required = false) Integer containerTypeId,
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year
     );
 }

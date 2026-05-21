@@ -9,7 +9,7 @@ import com.inventory.response.ApiResponse;
 import com.inventory.response.RestaurantContainerInventoryResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.inventory.dto.TrueInventoryStatsDto;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +53,8 @@ public interface InventoryService {
     List<DetailedSoldMonthResponse> getDetailedSoldHistoryByRestaurant(Long restaurantId);
 
     Map<String, Object> getAllContainerTypes();
+
+    TrueInventoryStatsDto getContainerStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year);
 
 
 

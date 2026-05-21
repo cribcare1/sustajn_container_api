@@ -36,4 +36,8 @@ public interface DamagedContainerRepository extends JpaRepository<DamagedContain
 
     @Query("SELECT COUNT(d.id) FROM DamagedContainer d WHERE d.containerTypeId = :containerTypeId")
     Integer countTotalDamaged(@Param("containerTypeId") Integer containerTypeId);
+
+    // Add inside your DamagedContainerRepository
+    @Query("SELECT COALESCE(SUM(d.damagedCount), 0) FROM DamagedContainer d WHERE d.restaurantId = :restaurantId AND (:containerTypeId IS NULL OR d.containerTypeId = :containerTypeId) AND d.createdAt BETWEEN :startDate AND :endDate")
+    Integer getMonthlyDamageCount(@Param("restaurantId") Long restaurantId, @Param("containerTypeId") Integer containerTypeId, @Param("startDate") java.time.LocalDateTime startDate, @Param("endDate") java.time.LocalDateTime endDate);
 }

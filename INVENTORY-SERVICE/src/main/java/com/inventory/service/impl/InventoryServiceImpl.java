@@ -882,12 +882,12 @@ public class InventoryServiceImpl implements InventoryService {
 
         ReportDamagedContainerRequest request = InventoryUtils.convertToJson(reportDamagedContainerRequest, ReportDamagedContainerRequest.class);
 
-        ContainerType containerType = containerTypeRepository.findById(request.getContainerTypeId())
+        ContainerType containerType = containerTypeRepository.findByProductId(request.getContainerTypeId())
                 .orElseThrow(() -> new InventoryException("Container type not found"));
 
         if (request.getIsDamagedByRestaurant()){
             DamagedContainer damagedContainer = DamagedContainer.builder()
-                    .containerTypeId(request.getContainerTypeId())
+                    .containerTypeId(containerType.getId())
                     .remark(request.getRemark())
                     .restaurantId(request.getRestaurantId())
                     .damagedByRestaurant(true)
@@ -922,7 +922,7 @@ public class InventoryServiceImpl implements InventoryService {
                     restaurantInventoryMasterRepository
                             .findByRestaurantIdAndContainerTypeId(
                                     request.getRestaurantId(),
-                                    request.getContainerTypeId());
+                                    containerType.getId());
 
             if (master == null) {
                 throw new InventoryException("Inventory master not found");
@@ -944,7 +944,7 @@ public class InventoryServiceImpl implements InventoryService {
 
         if (request.getIsDamagedByUser()){
             DamagedContainer damagedContainer = DamagedContainer.builder()
-                    .containerTypeId(request.getContainerTypeId())
+                    .containerTypeId(containerType.getId())
                     .remark(request.getRemark())
                     .userId(request.getUserId())
                     .restaurantId(request.getRestaurantId())
@@ -975,17 +975,17 @@ public class InventoryServiceImpl implements InventoryService {
 
                 damagedContainerImagesRepository.saveAll(images);
             }
-
-            AdminInventoryMaster master =
-                    masterRepo.findByContainerTypeId(request.getContainerTypeId())
-                            .orElseThrow(() -> new InventoryException("Inventory master not found"));
-
-            if (master.getAvailableContainers() <= 0) {
-                throw new InventoryException("No containers available");
-            }
-
-            master.setTotalContainers(master.getTotalContainers() - 1);
-            masterRepo.save(master);
+// TODO  we have to implement at the time of Admin Module Implementation
+//            AdminInventoryMaster master =
+//                    masterRepo.findByContainerTypeId(containerType.getId())
+//                            .orElseThrow(() -> new InventoryException("Inventory master not found by User"));
+//
+//            if (master.getAvailableContainers() <= 0) {
+//                throw new InventoryException("No containers available");
+//            }
+//
+//            master.setTotalContainers(master.getTotalContainers() - 1);
+//            masterRepo.save(master);
 
             return new ApiResponse<>(InventoryConstant.SUCCESS,
                     "Damaged container reported successfully",
@@ -1278,6 +1278,29 @@ public class InventoryServiceImpl implements InventoryService {
                     null
             );
         }
+    }
+
+    @Override
+    public TrueInventoryStatsDto getContainerStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year) {
+
+        Integer trueTotal = restaurantInventoryMasterRepository.getTrueTotalContainers(restaurantId, containerTypeId);
+        Integer trueAvailable = restaurantInventoryMasterRepository.getTrueAvailableContainers(restaurantId, containerTypeId);
+
+        LocalDateTime startDate = LocalDateTime.of(2000, 1, 1, 0, 0);
+        LocalDateTime endDate = LocalDateTime.now().plusYears(10);
+
+        if (month != null && year != null) {
+            startDate = LocalDateTime.of(year, month, 1, 0, 0);
+            endDate = startDate.plusMonths(1).minusSeconds(1);
+        }
+
+        Integer trueDamage = damagedContainerRepository.getMonthlyDamageCount(restaurantId, containerTypeId, startDate, endDate);
+
+        return TrueInventoryStatsDto.builder()
+                .total(trueTotal)
+                .available(trueAvailable)
+                .damageCount(trueDamage)
+                .build();
     }
 
     @Override
