@@ -12,5 +12,5 @@ import lombok.NoArgsConstructor;
 public class TrueInventoryStatsDto {
     private Integer total;
     private Integer available;
-    private Integer damage;
+    private Integer damageCount;
 }

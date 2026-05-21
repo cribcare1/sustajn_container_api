@@ -6,5 +6,5 @@ import lombok.Data;
 public class TrueInventoryStatsDto {
     private Integer total;
     private Integer available;
-    private Integer damage;
+    private Integer damageCount;
 }

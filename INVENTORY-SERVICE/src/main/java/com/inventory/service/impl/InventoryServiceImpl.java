@@ -975,17 +975,17 @@ public class InventoryServiceImpl implements InventoryService {
 
                 damagedContainerImagesRepository.saveAll(images);
             }
-
-            AdminInventoryMaster master =
-                    masterRepo.findByContainerTypeId(containerType.getId())
-                            .orElseThrow(() -> new InventoryException("Inventory master not found by User"));
-
-            if (master.getAvailableContainers() <= 0) {
-                throw new InventoryException("No containers available");
-            }
-
-            master.setTotalContainers(master.getTotalContainers() - 1);
-            masterRepo.save(master);
+// TODO  we have to implement at the time of Admin Module Implementation
+//            AdminInventoryMaster master =
+//                    masterRepo.findByContainerTypeId(containerType.getId())
+//                            .orElseThrow(() -> new InventoryException("Inventory master not found by User"));
+//
+//            if (master.getAvailableContainers() <= 0) {
+//                throw new InventoryException("No containers available");
+//            }
+//
+//            master.setTotalContainers(master.getTotalContainers() - 1);
+//            masterRepo.save(master);
 
             return new ApiResponse<>(InventoryConstant.SUCCESS,
                     "Damaged container reported successfully",
@@ -1281,7 +1281,7 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
-    public TrueInventoryStatsDto getTrueInventoryStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year) {
+    public TrueInventoryStatsDto getContainerStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year) {
 
         Integer trueTotal = restaurantInventoryMasterRepository.getTrueTotalContainers(restaurantId, containerTypeId);
         Integer trueAvailable = restaurantInventoryMasterRepository.getTrueAvailableContainers(restaurantId, containerTypeId);
@@ -1299,7 +1299,7 @@ public class InventoryServiceImpl implements InventoryService {
         return TrueInventoryStatsDto.builder()
                 .total(trueTotal)
                 .available(trueAvailable)
-                .damage(trueDamage)
+                .damageCount(trueDamage)
                 .build();
     }
 

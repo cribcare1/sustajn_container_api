@@ -59,8 +59,8 @@ public interface InventoryFeignClient {
             @PathVariable("id") Integer id
     );
 
-    @GetMapping("/inventory/internal/true-inventory-stats")
-    TrueInventoryStatsDto getTrueInventoryStats(
+    @GetMapping("/inventory/container-stats")
+    TrueInventoryStatsDto getContainerStats(
             @RequestParam("restaurantId") Long restaurantId,
             @RequestParam(value = "containerTypeId", required = false) Integer containerTypeId,
             @RequestParam(value = "month", required = false) Integer month,

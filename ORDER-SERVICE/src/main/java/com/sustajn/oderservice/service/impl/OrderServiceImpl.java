@@ -1713,11 +1713,13 @@ public class OrderServiceImpl implements OrderService {
         Integer trueDamage = 0;
 
         try {
-            TrueInventoryStatsDto stats = inventoryFeignClient.getTrueInventoryStats(restaurantId, containerTypeId, month, year);
+            // 🟢 FIX: Call the new Feign client method name
+            TrueInventoryStatsDto stats = inventoryFeignClient.getContainerStats(restaurantId, containerTypeId, month, year);
             if (stats != null) {
                 trueTotal = stats.getTotal() != null ? stats.getTotal() : 0;
                 trueAvailable = stats.getAvailable() != null ? stats.getAvailable() : 0;
-                trueDamage = stats.getDamage() != null ? stats.getDamage() : 0;
+                // 🟢 FIX: Use the new getter name
+                trueDamage = stats.getDamageCount() != null ? stats.getDamageCount() : 0;
             }
         } catch (Exception e) {
             log.error("Failed to fetch true inventory stats from Inventory Service: {}", e.getMessage());

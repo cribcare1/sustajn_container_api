@@ -10,9 +10,7 @@ import com.inventory.response.ApiResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -301,14 +299,14 @@ public class InventoryController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/internal/true-inventory-stats")
-    public ResponseEntity<TrueInventoryStatsDto> getTrueInventoryStats(
+    @GetMapping("/container-stats")
+    public ResponseEntity<TrueInventoryStatsDto> getContainerStats(
             @RequestParam Long restaurantId,
             @RequestParam(required = false) Integer containerTypeId,
-            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month,
             @RequestParam(required = false) Integer year) {
 
-        return ResponseEntity.ok(inventoryService.getTrueInventoryStats(restaurantId, containerTypeId, month, year));
+        return ResponseEntity.ok(inventoryService.getContainerStats(restaurantId, containerTypeId, month, year));
     }
 
 

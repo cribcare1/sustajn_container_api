@@ -54,7 +54,7 @@ public interface InventoryService {
 
     Map<String, Object> getAllContainerTypes();
 
-    TrueInventoryStatsDto getTrueInventoryStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year);
+    TrueInventoryStatsDto getContainerStats(Long restaurantId, Integer containerTypeId, Integer month, Integer year);
 
 
 
