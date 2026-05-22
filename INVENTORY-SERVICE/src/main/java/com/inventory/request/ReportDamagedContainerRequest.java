@@ -16,7 +16,7 @@ public class ReportDamagedContainerRequest {
     private String containerTypeId;
     private String remark;
     private Long restaurantId;
-    private Long userId;
+    private String userId;
     private Boolean isDamagedByRestaurant;
     private Boolean isDamagedByUser;
     private Integer damagedCount;

@@ -17,6 +17,7 @@ import com.inventory.service.InventoryService;
 import com.inventory.util.DateTimeUtil;
 import com.inventory.util.FileStorageUtil;
 import com.inventory.util.InventoryUtils;
+import com.sustajn.oderservice.dto.UserResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -943,10 +944,16 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         if (request.getIsDamagedByUser()){
+            ApiResponse<UserResponse> userresponse = authFeignClient.getUserByCustomerId(request.getUserId());
+            if (
+                    userresponse.getStatus().equals("error")
+            ) {
+                throw new InventoryException("User not found");
+            }
             DamagedContainer damagedContainer = DamagedContainer.builder()
                     .containerTypeId(containerType.getId())
                     .remark(request.getRemark())
-                    .userId(request.getUserId())
+                    .userId(userresponse.getData().getId())
                     .restaurantId(request.getRestaurantId())
                     .damagedByRestaurant(false)
                     .damagedByUser(true)
