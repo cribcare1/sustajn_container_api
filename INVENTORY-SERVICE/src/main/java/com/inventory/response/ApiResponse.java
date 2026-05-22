@@ -1,14 +1,12 @@
 package com.inventory.response;
 
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 
 @Getter
 @Setter
 @Builder
 @ToString
+@NoArgsConstructor
 public class ApiResponse<T> {
 
     private String status;
