@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:postgresql://ep-quiet-night-apfchw33-pooler.c-7.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
     username: neondb_owner
-    password: YOUR_PASSWORD
+    password: npg_iTpQnP32Bkef
     driver-class-name: org.postgresql.Driver
 
     hikari:
