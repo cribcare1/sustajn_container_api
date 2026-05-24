@@ -1,16 +1,16 @@
 spring:
   application:
     name: INVENTORY-SERVICE
-#  datasource:
-#    url: jdbc:postgresql://ep-bitter-darkness-a122sbpg-pooler.ap-southeast-1.aws.neon.tech:5432/INVENTORY_SERVICE?sslmode=require
-#    username: neondb_owner
-#    password: npg_lkA9tfR2eHQI
-#    driver-class-name: org.postgresql.Driver
   datasource:
-    url: jdbc:postgresql://ep-steep-feather-aonbk9z9-pooler.c-2.ap-southeast-1.aws.neon.tech/inventory_db_1?sslmode=require
+    url: jdbc:postgresql://ep-bitter-darkness-a122sbpg-pooler.ap-southeast-1.aws.neon.tech:5432/INVENTORY_SERVICE?sslmode=require
     username: neondb_owner
-    password: npg_Glfkpqw0y1Hm
+    password: npg_lkA9tfR2eHQI
     driver-class-name: org.postgresql.Driver
+#  datasource:
+#    url: jdbc:postgresql://ep-steep-feather-aonbk9z9-pooler.c-2.ap-southeast-1.aws.neon.tech/inventory_db_1?sslmode=require
+#    username: neondb_owner
+#    password: npg_Glfkpqw0y1Hm
+#    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 3
       minimum-idle: 1

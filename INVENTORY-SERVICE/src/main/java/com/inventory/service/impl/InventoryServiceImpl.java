@@ -335,12 +335,29 @@ public class InventoryServiceImpl implements InventoryService {
     public Map<String, Object> getAllContainerTypes() {
         Map<String, Object> response = new HashMap<>();
         try {
-            // Because you extend JpaRepository, findAll() is already available!
+            // 1. Fetch the data using your original, untouched class
             List<ContainerType> allContainers = containerTypeRepository.findAll();
 
+            // 2. Map it to the new file you just created
+            List<ContainerTypeWithCount> combinedDataList = allContainers.stream().map(container -> {
+
+                // Fetch the count from Admin Inventory Master
+                AdminInventoryMaster master = masterRepo.findByContainerTypeId(container.getId())
+                        .orElse(null);
+
+                int total = (master != null && master.getTotalContainers() != null) ? master.getTotalContainers() : 0;
+                int available = (master != null && master.getAvailableContainers() != null) ? master.getAvailableContainers() : 0;
+
+                // 3. Return the new object (Original Data, Total Count, Available Count)
+                return new ContainerTypeWithCount(container, total, available);
+
+            }).collect(Collectors.toList());
+
+            // 4. Put the new list into the response
             response.put("status", "SUCCESS");
             response.put("message", "All container types fetched successfully");
-            response.put("data", allContainers);
+            response.put("data", combinedDataList);
+
         } catch (Exception e) {
             response.put("status", "ERROR");
             response.put("message", "Failed to fetch container types: " + e.getMessage());

@@ -3,10 +3,17 @@ spring:
     name: ORDER-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-solitary-sunset-ao3lnirw-pooler.c-2.ap-southeast-1.aws.neon.tech/order_db_1?sslmode=require&channel_binding=require'
+    url: jdbc:postgresql://ep-autumn-frog-a1kpsarq-pooler.ap-southeast-1.aws.neon.tech/order_service?sslmode=require&channel_binding=require'
     username: neondb_owner
-    password: npg_4cLW8brkUJvt
+    password: npg_Tzxn1GRg6ESp
     driver-class-name: org.postgresql.Driver
+
+
+#    datasource:
+#      url: jdbc:postgresql://ep-solitary-sunset-ao3lnirw-pooler.c-2.ap-southeast-1.aws.neon.tech/order_db_1?sslmode=require&channel_binding=require'
+#      username: neondb_owner
+#      password: npg_4cLW8brkUJvt
+#      driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 3
       minimum-idle: 1
