@@ -168,7 +168,7 @@ public class OrderServiceImpl implements OrderService {
             // 4️⃣ Create APPROVED order
             Order order = new Order();
             order.setUserId(userId);
-            order.setOrderDate(LocalDateTime.now());
+            order.setOrderDate(LocalDateTime.now().withSecond(0).withNano(0));
             order.setTransactionId(UUID.randomUUID().toString());
             order.setOrderStatus(OrderServiceConstant.APPROVED);
             orderRepository.save(order);
@@ -183,7 +183,7 @@ public class OrderServiceImpl implements OrderService {
                 borrowOrder.setProductId(item.getProductId().longValue());
                 borrowOrder.setQuantity(item.getQuantity());
                 borrowOrder.setReturnedQuantity(0);
-                borrowOrder.setBorrowedAt(LocalDateTime.now());
+                borrowOrder.setBorrowedAt(LocalDateTime.now().withSecond(0).withNano(0));
                 borrowOrder.setDueDate(LocalDateTime.now().plusDays(7));
 
                 borrowOrderRepository.save(borrowOrder);
@@ -339,7 +339,7 @@ public class OrderServiceImpl implements OrderService {
                     returnOrder.setRestaurantId(request.getRestaurantId());
                     returnOrder.setProductId(item.getProductId());
                     returnOrder.setReturnedQuantity(used);
-                    returnOrder.setReturnedAt(LocalDateTime.now());
+                    returnOrder.setReturnedAt(LocalDateTime.now().withSecond(0).withNano(0));
 
                     returnOrdersToSave.add(returnOrder);
 
