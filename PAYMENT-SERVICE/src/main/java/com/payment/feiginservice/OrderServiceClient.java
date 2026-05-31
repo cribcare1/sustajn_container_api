@@ -1,0 +1,27 @@
+package com.payment.feiginservice;
+
+import com.payment.configuration.FeignClientConfig;
+import com.payment.request.SoldRequest;
+import com.payment.response.ApiResponse;
+import com.payment.response.BorrowResponse;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+
+@FeignClient(name = "ORDER-SERVICE")
+public interface OrderServiceClient {
+
+
+    @PostMapping("/orders/{orderId}/extendOrder")
+    ApiResponse<Void> extendOrder(@PathVariable("orderId") Long orderId);
+
+    @PostMapping("/orders/getBorrowedDetailsByOrderId/{orderId}")
+    ApiResponse<List<BorrowResponse>> getBorrowedDetailsByOrderId(@PathVariable Long orderId);
+
+    @PostMapping("/orders/markSold")
+    void markOrderAsSold(@RequestBody SoldRequest request);
+}

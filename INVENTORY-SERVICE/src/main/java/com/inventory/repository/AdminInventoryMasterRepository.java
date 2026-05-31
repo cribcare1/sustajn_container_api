@@ -38,7 +38,8 @@ public interface AdminInventoryMasterRepository extends JpaRepository<AdminInven
             c.imageUrl,
             c.costPerUnit,
             m.totalContainers,
-            m.availableContainers
+            m.availableContainers,
+            c.productId
         )
         FROM AdminInventoryMaster m
         JOIN ContainerType c ON m.containerTypeId = c.id

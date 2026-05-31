@@ -1,4 +1,0 @@
-com\apiGateWay\ApiGatewayApplication.class
-com\apiGateWay\filter\Validator.class
-com\apiGateWay\filter\AuthFilter.class
-com\apiGateWay\filter\JwtUtil.class

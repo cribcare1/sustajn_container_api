@@ -2,21 +2,24 @@ package com.inventory.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
-import com.inventory.dto.ErrorResponses;
+import com.inventory.dto.*;
+import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
-import com.inventory.request.AdminRestaurantInventoryBulkRequest;
-import com.inventory.request.ContainerTypeRequest;
-import com.inventory.request.InventoryBulkAddRequest;
-import com.inventory.request.InventoryUpdateRequest;
+import com.inventory.request.*;
+import com.inventory.response.ApiResponse;
+import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -24,19 +27,20 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InventoryController {
 
-    private final InventoryService service;
+    private final InventoryService inventoryService;
     private final ObjectMapper objectMapper;
+    private final AdminRestaurantOrderService adminOrderService;
 
     @PostMapping("/saveOrUpdateContainerType")
     public ResponseEntity<?> saveOrUpdateContainerType(
-            @RequestPart("request") String requestString,
+            @RequestPart("request") ContainerTypeRequest request,
             @RequestPart(value = "file", required = false) MultipartFile file) {
 
         try {
-            // Convert JSON string to ContainerTypeRequest
-            ContainerTypeRequest request = objectMapper.readValue(requestString, ContainerTypeRequest.class);
+//            // Convert JSON string to ContainerTypeRequest
+//            ContainerTypeRequest request = objectMapper.readValue(requestString, ContainerTypeRequest.class);
 
-            Map<String, Object> response = service.saveOrUpdate(request, file);
+            Map<String, Object> response = inventoryService.saveOrUpdate(request, file);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
@@ -58,7 +62,7 @@ public class InventoryController {
      */
     @GetMapping("/getContainerTypes")
     public ResponseEntity<?> getActiveContainerTypes() {
-        Map<String, Object> response = service.getActiveContainerTypes();
+        Map<String, Object> response = inventoryService.getActiveContainerTypes();
         return ResponseEntity.ok(response);
     }
 
@@ -69,7 +73,7 @@ public class InventoryController {
      */
     @PostMapping("/delete-container-type/{id}")
     public ResponseEntity<?> deleteContainerType(@PathVariable Integer id) {
-        Map<String, Object> response = service.deleteContainerType(id);
+        Map<String, Object> response = inventoryService.deleteContainerType(id);
         return ResponseEntity.ok(response);
     }
 
@@ -81,7 +85,7 @@ public class InventoryController {
     // -----------------------------------------
     @PostMapping("/updateInventory")
     public ResponseEntity<?> updateInventory(@RequestBody InventoryUpdateRequest request) {
-        return ResponseEntity.ok(service.updateInventory(request));
+        return ResponseEntity.ok(inventoryService.updateInventory(request));
     }
 
     // -----------------------------------------
@@ -89,7 +93,7 @@ public class InventoryController {
     // -----------------------------------------
     @GetMapping("/getAllActiveInventory")
     public ResponseEntity<?> getAllActiveInventory() {
-        return ResponseEntity.ok(service.getAllActiveInventory());
+        return ResponseEntity.ok(inventoryService.getAllActiveInventory());
     }
 
     @PostMapping("/restaurant/addRestaurantInventory")
@@ -97,7 +101,7 @@ public class InventoryController {
             @RequestBody AdminRestaurantInventoryBulkRequest request) {
 
         try {
-            Map<String, Object> response = service.addRestaurantInventoryBulk(request);
+            Map<String, Object> response = inventoryService.addRestaurantInventoryBulk(request);
             return ResponseEntity.ok(response);
 
         } catch (InventoryException ex) {
@@ -125,7 +129,7 @@ public class InventoryController {
             @PathVariable Long restaurantId) {
 
         try {
-            Map<String, Object> response = service.getRestaurantInventory(restaurantId);
+            Map<String, Object> response = inventoryService.getRestaurantInventory(restaurantId);
             return ResponseEntity.ok(response);
 
         } catch (InventoryException ex) {
@@ -142,4 +146,169 @@ public class InventoryController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(err);
         }
     }
+
+    @PostMapping(
+            value = "/addContainerByAdmin"
+    )
+    public ResponseEntity<?> addContainer(
+            @RequestParam("data") String data,
+            @RequestParam(value = "image", required = false) MultipartFile image
+    ) {
+
+        Map<String, Object> response;
+
+        try {
+            // Convert String JSON → DTO
+            AddContainerRequest request =
+                    objectMapper.readValue(data, AddContainerRequest.class);
+
+            response = inventoryService.addContainer(request, image);
+
+        } catch (Exception e) {
+            response = new HashMap<>();
+            response.put("status", "error");
+            response.put("message", "Invalid request data");
+            response.put("details", e.getMessage());
+        }
+
+        // ALWAYS return 200
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/getProductsByIds")
+    public ApiResponse<List<ProductResponse>> getProductsByIds(@RequestBody List<Integer> ids) {
+        return inventoryService.getProductsByIds(ids);
+    }
+
+
+    // 1️⃣ Raise a new order request
+    @PostMapping("/raiseOrderRequest")
+    public ResponseEntity<?> raiseOrderRequest(
+            @RequestBody AdminOrderCreateRequest request
+    ) {
+        Map<String, Object> response = adminOrderService.raiseOrderRequest(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 2️⃣ Approve an order by Admin
+    @PostMapping("/approveOrder")
+    public ResponseEntity<?> approveOrder(
+            @RequestBody AdminOrderApproveRequest request
+    ) {
+        Map<String, Object> response = adminOrderService.approveOrder(request);
+        return ResponseEntity.ok(response);
+    }
+
+    // 3️⃣ Mark order as delivered (restaurant received the containers)
+    @PostMapping("/markOrderAsDelivered/{orderId}")
+    public ResponseEntity<?> markOrderAsDelivered(
+            @PathVariable("orderId") Long orderId
+    ) {
+        Map<String, Object> response = adminOrderService.markOrderAsDelivered(orderId);
+        return ResponseEntity.ok(response);
+    }
+
+    // 4️⃣ Get available containers for a restaurant
+//    @GetMapping("/restaurant/getAvailableContainers/{restaurantId}")
+    @GetMapping({
+            "/restaurant/getAvailableContainers/{restaurantId}"
+    })
+    public ResponseEntity<?> getAvailableContainers(
+            @PathVariable(required = false)
+          @NotNull(message = "restaurantId must not be null")Long restaurantId
+    ) {
+        Map<String, Object> response = adminOrderService.getAvailableContainers(restaurantId);
+        return ResponseEntity.ok(response);
+    }
+
+    // get Inventory details
+    @GetMapping("/getAllResturantInventory/{restaurantId}")
+    public ResponseEntity<?> getAllResturantInventory(
+            @PathVariable Long restaurantId
+    ) {
+        return ResponseEntity.ok(inventoryService.getRestaurantContainerInventoryByRestaurantId(restaurantId));
+    }
+
+
+    @PostMapping("/reduceAvailableContainers")
+    public ResponseEntity<?> reduceAvailableContainers(@RequestBody ReduceInventoryRequest request) {
+        return ResponseEntity.ok(inventoryService.reduceAvailableContainers(request));
+    }
+
+    @PostMapping("/increaseAvailableContainers")
+    public ResponseEntity<?> increaseAvailableContainers(@RequestBody ReduceInventoryRequest request) {
+        return ResponseEntity.ok(inventoryService.increaseContainers(request));
+    }
+
+    @PostMapping("/checkAvailabilityOfContainers")
+    public ResponseEntity<?> checkAvailability(@RequestBody ReduceInventoryRequest request) {
+        Map<String, Object> result = inventoryService.checkAvailability(request);
+
+//        if (InventoryConstant.ERROR.equals(result.get(InventoryConstant.STATUS))) {
+//            return ResponseEntity.ok(result);  // business error, not 500
+//        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/increaseAvailableContainersOld")
+    public Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest request) {
+        return inventoryService.increaseAvailableContainers(request);
+    }
+
+    @PostMapping(
+            value = "/reportDamagedContainer",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<DamagedContainer>> reportDamagedContainer(@RequestPart("request") String request, @RequestPart("images") List<MultipartFile> images) {
+        return ResponseEntity.ok(inventoryService.reportDamagedContainer(request, images));
+    }
+
+
+    @GetMapping("/getDamagedContainersByRestaurant")
+    public ResponseEntity<ApiResponse<List<DamageContainerMonthWiseResponse>>> getDamageContainerMonthWiseDetails(@RequestParam Long restaurantId){
+        return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetails(restaurantId));
+    }
+
+    @GetMapping("/getSoldContainersByRestaurant")
+    public ResponseEntity<ApiResponse<List<SoldContainerMonthWiseResponse>>> getSoldContainerMonthWiseDetails(@RequestParam Long restaurantId){
+        return ResponseEntity.ok(inventoryService.getSoldContainerMonthWiseDetails(restaurantId));
+    }
+
+    @GetMapping("/getDamageContainerByUserType")
+    public ResponseEntity<ApiResponse<List<DamageContainerMonthWiseResponse>>> getDamageContainerDamagedByCustomerOrPartner(@RequestParam String damageBy){
+        return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByAllCustomerOrPartner(damageBy));
+    }
+
+    @GetMapping("/getDetailedSoldHistoryByRestaurant")
+    public ResponseEntity<ApiResponse<List<DetailedSoldMonthResponse>>> getDetailedSoldHistoryByRestaurant(@RequestParam Long restaurantId) {
+
+        List<DetailedSoldMonthResponse> data = inventoryService.getDetailedSoldHistoryByRestaurant(restaurantId);
+
+        return ResponseEntity.ok(new ApiResponse<>("success", "Detailed sold history fetched successfully", data));
+    }
+
+    @GetMapping("/getAllContainerTypes")
+    public ResponseEntity<Map<String, Object>> getAllContainerTypes() {
+        Map<String, Object> response = inventoryService.getAllContainerTypes();
+
+        if ("ERROR".equals(response.get("status"))) {
+            return ResponseEntity.internalServerError().body(response);
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/container-stats")
+    public ResponseEntity<TrueInventoryStatsDto> getContainerStats(
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) Integer containerTypeId,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month,
+            @RequestParam(required = false) Integer year) {
+
+        return ResponseEntity.ok(inventoryService.getContainerStats(restaurantId, containerTypeId, month, year));
+    }
+
+
+
 }

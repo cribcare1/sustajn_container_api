@@ -1,0 +1,26 @@
+package com.auth.response;
+
+import jakarta.persistence.Column;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+public class RestaurantSearchResponse {
+    private Long id;
+    private String name;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
+    private double distanceKm;
+    private String imageUrl;
+    private Long addressId;
+    private String addressType;
+    private String flatDoorHouseDetails;
+    private String areaStreetCityBlockDetails;
+    private String poBoxOrPostalCode;}

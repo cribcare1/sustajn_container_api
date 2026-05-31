@@ -1,0 +1,36 @@
+INSERT INTO container_types (
+    id, created_at, created_by, updated_at, updated_by,
+    capacity_ml, container_colour, cost_per_unit, container_description,
+    is_dishwash_safe, is_food_safe,
+    dimension_height_cm, image_url, dimension_length_cm, lifespan_cycle,
+    container_material, max_temperature, is_microwave_safe, min_temperature,
+    container_type_name, product_id, status, weight_grams, dimension_width_cm
+)
+VALUES
+(1, '2026-04-26 09:22:48.27076', NULL, '2026-04-26 09:22:48.27079', NULL, 2200, 'White', 2200.00, '2- Compartment Rectangular Container with glass lids', true, true, NULL, '5fb98185-93da-4924-beba-78453810f340.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainers 30', 'ST-2CC-2200', 'active', NULL, NULL),
+
+(2, '2026-04-26 09:29:10.113299', NULL, '2026-04-26 09:29:10.11332', NULL, 200, 'White', 2200.00, 'Dip cups used for ketchup, mayo & dips', true, true, NULL, '2a9255e0-74a9-429b-ac78-3e96c17cc32f.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Dip cups 50', 'ST-DC-50', 'active', NULL, NULL),
+
+(3, '2026-04-26 09:30:51.371846', NULL, '2026-04-26 09:30:51.371864', NULL, 500, 'White', 2700.00, 'Dip cups used for ketchup, mayo & dips', true, true, NULL, '2f7a11c0-6aed-4a19-95f3-570d7b0780fa.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Dip cups 70', 'ST-DC-70', 'active', NULL, NULL),
+
+(4, '2026-04-26 09:33:55.040663', NULL, '2026-04-26 09:33:55.040684', NULL, 500, 'White', 2700.00, '2- Compartment Rectangular Container with glass lids', true, true, NULL, '4a3aa1a6-36be-463a-a168-0534a61b5041.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 700', 'ST-2CC-700', 'active', NULL, NULL),
+
+(5, '2026-04-26 09:35:27.974722', NULL, '2026-04-26 09:35:27.974742', NULL, 500, 'White', 2900.00, '2- Compartment Rectangular Container with glass lids', true, true, NULL, 'a9f47e40-5c6e-4eb3-8aef-8f082971bbfe.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 2200', 'ST-2CC-2200', 'active', NULL, NULL),
+
+(6, '2026-04-26 09:38:27.195062', NULL, '2026-04-26 09:38:27.195078', NULL, 800, 'White', 1000.00, 'Rectangular container with glass lids', true, true, NULL, '229707b0-2879-43fd-9451-23527cf8f885.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 800', 'ST-RC-800', 'active', NULL, NULL),
+
+(7, '2026-04-26 09:39:11.057045', NULL, '2026-04-26 09:39:11.057065', NULL, 1200, 'White', 1500.00, 'Rectangular container with glass lids', true, true, NULL, '8d51bfd5-02ab-4a2b-bbc8-04bd55ac399b.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 1200', 'ST-RC-1200', 'active', NULL, NULL),
+
+(8, '2026-04-26 09:39:50.08997', NULL, '2026-04-26 09:39:50.089996', NULL, 1600, 'White', 2000.00, 'Rectangular container with glass lids', true, true, NULL, '39fa2322-a0ae-463d-83c1-46d49dd7471f.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 1600', 'ST-RC-1600', 'active', NULL, NULL),
+
+(9, '2026-04-26 09:40:36.264458', NULL, '2026-04-26 09:40:36.264478', NULL, 1900, 'White', 2500.00, 'Rectangular container with glass lids', true, true, NULL, 'e4cbd7d1-cfdc-45af-b540-f714d3467858.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 1900', 'ST-RC-1900', 'active', NULL, NULL),
+
+(10, '2026-04-26 09:41:19.761502', NULL, '2026-04-26 09:41:19.761521', NULL, 3000, 'White', 3000.00, 'Rectangular container with glass lids', true, true, NULL, '87311eb5-1777-4361-bce7-41129a6fd8da.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Rectangular Cointainer 3000', 'ST-RC-3000', 'active', NULL, NULL),
+
+(11, '2026-04-26 09:43:18.67158', NULL, '2026-04-26 09:43:18.671598', NULL, 500, 'White', 1000.00, 'Round container with glass lid for liquid food', true, true, NULL, 'f19328d3-7eb2-4ff1-8503-5aca8c20ea05.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Round Cointainers 500', 'ST-RDC-500', 'active', NULL, NULL),
+
+(12, '2026-04-26 09:43:58.567098', NULL, '2026-04-26 09:43:58.567114', NULL, 1000, 'White', 1500.00, 'Round container with glass lid for liquid food', true, true, NULL, 'aa7a0c28-c26b-42b4-a39f-d452b657b03f.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Round Cointainers 1000', 'ST-RDC-1000', 'active', NULL, NULL),
+
+(13, '2026-04-26 09:46:05.149629', NULL, '2026-04-26 09:46:05.149649', NULL, 100, 'White', 100.00, 'Cold Drinks Cups', true, true, NULL, 'a475d485-bc9e-4f81-82ac-ef0e3fe9c731.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Drinking Cups 30', 'ST-TU-30', 'active', NULL, NULL),
+
+(14, '2026-04-26 09:46:29.786886', NULL, '2026-04-26 09:46:29.786905', NULL, 200, 'White', 200.00, 'Cold Drinks Cups', true, true, NULL, '7de58f47-4419-4b29-bf27-63ee99f2c0fd.png', NULL, NULL, 'Stainless Steel', NULL, true, NULL, 'Drinking Cups 40', 'ST-TU-40', 'active', NULL, NULL);

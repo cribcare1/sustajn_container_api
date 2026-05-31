@@ -1,0 +1,69 @@
+package com.sustajn.oderservice.feign.service;
+
+import com.sustajn.oderservice.config.FeignClientConfig;
+import com.sustajn.oderservice.dto.*;
+import com.sustajn.oderservice.request.ReduceInventoryRequest;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
+import java.util.Map;
+
+@FeignClient(
+        name = "INVENTORY-SERVICE",
+        configuration = FeignClientConfig.class
+)
+public interface InventoryFeignClient {
+    @PostMapping(value = "/inventory/getProductsByIds",consumes = "application/json"
+    )
+    ApiResponse<List<ProductResponse>> getProductsByIds(@RequestBody List<Integer> ids);
+
+    @GetMapping("/inventory/restaurantOrders/orderHistory/{restaurantId}")
+    ApiResponse<List<RestaurantOrderedResponse>> getOrderHistory(
+            @PathVariable("restaurantId") Long restaurantId
+    );
+
+    @GetMapping("/inventory/getAllResturantInventory/{restaurantId}")
+    ApiResponse<List<RestaurantContainerInventoryResponse>> getRestaurantContainerInventoryByRestaurantId(
+            @PathVariable("restaurantId") Long restaurantId
+    );
+
+    @PostMapping("/inventory/increaseAvailableContainers")
+    ApiResponse<?> increaseAvailableContainers(@RequestBody ReduceInventoryRequest request);
+
+
+    @PostMapping("/inventory/reduceAvailableContainers")
+    ApiResponse<?> reduceAvailableContainers(@RequestBody ReduceInventoryRequest request);
+
+    @PostMapping("/inventory/checkAvailabilityOfContainers")
+    Map<String, Object> checkAvailability(@RequestBody ReduceInventoryRequest inventoryRequest);
+
+//    @PostMapping("/inventory/increaseAvailableContainers")
+//    Map<String, Object> increaseContainers(@RequestBody ReduceInventoryRequest inventoryRequest);
+
+    @GetMapping("/inventory/damaged/count")
+    Integer getDamagedCount(
+            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam(value = "containerTypeId", required = false) Integer containerTypeId,
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year
+    );
+
+    @GetMapping("/inventory/subscription-plans/getSubscriptionPlan/{id}")
+    ResponseEntity<Map<String, Object>> getSubscriptionPlanById(
+            @PathVariable("id") Integer id
+    );
+
+    @GetMapping("/inventory/container-stats")
+    TrueInventoryStatsDto getContainerStats(
+            @RequestParam("restaurantId") Long restaurantId,
+            @RequestParam(value = "containerTypeId", required = false) Integer containerTypeId,
+            @RequestParam(value = "month", required = false) Integer month,
+            @RequestParam(value = "year", required = false) Integer year
+    );
+}
