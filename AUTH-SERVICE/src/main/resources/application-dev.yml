@@ -3,10 +3,8 @@ spring:
     name: AUTH-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-sweet-river-aozxgwe6-pooler.c-2.ap-southeast-1.aws.neon.tech/auth_service_2?sslmode=require&channel_binding=require
-    username: neondb_owner
-    password: npg_JEVd96eFNryh
-    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    password: ${DB_PASSWORD}
 
     hikari:
       maximum-pool-size: 3
