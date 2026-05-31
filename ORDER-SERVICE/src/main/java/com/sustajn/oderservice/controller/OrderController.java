@@ -8,11 +8,14 @@ import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.request.SoldRequest;
 import com.sustajn.oderservice.service.OrderService;
+import com.sustajn.oderservice.service.SseService;
 import com.sustajn.oderservice.service.impl.OrderNotificationService;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
@@ -27,6 +30,8 @@ public class OrderController {
     private final OrderService orderService;
     private final BorrowOrderRepository borrowOrderRepository;
     private final SoldOrderRepository soldOrderRepository;
+    private final OrderNotificationService borrowOrderService;
+    private final SseService sseService;
 
     /**
      * Borrow containers
@@ -36,6 +41,7 @@ public class OrderController {
             @RequestBody BorrowRequest request
     ) {
         Map<String, Object> response = orderService.borrowContainers(request);
+        try { sseService.notifyAllClients(); } catch (Exception ignored) {}
         return ResponseEntity.ok(response);
     }
 
@@ -47,6 +53,7 @@ public class OrderController {
             @RequestBody ReturnRequest request
     ) {
         Map<String, Object> response = orderService.returnContainers(request);
+        try { sseService.notifyAllClients(); } catch (Exception ignored) {}
         return ResponseEntity.ok(response);
     }
 
@@ -116,8 +123,6 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getLeasedReturnedCountWithTimeGraph(leasedReturnedGraphInput));
     }
 
-    private final OrderNotificationService borrowOrderService;
-
     /**
      * Extend all borrow orders of a given order by 5 days.
      */
@@ -162,6 +167,25 @@ public class OrderController {
                 "data", stats
         ));
 
+    }
+
+    @GetMapping(value = "/restaurantOrders/chart-stats/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamContainerChartStats(
+            @RequestParam Long restaurantId,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Long productId ,// Acts as container ID
+            @RequestParam(required = false) Integer planId
+    ) {
+        SseEmitter emitter = sseService.subscribe(restaurantId);
+
+        // send initial snapshot
+        try {
+            ContainerChartResponse stats = orderService.getChartStatistics(restaurantId, month, year, productId, planId);
+            sseService.sendUpdate(restaurantId, stats);
+        } catch (Exception ignored) {}
+
+        return emitter;
     }
 
 
