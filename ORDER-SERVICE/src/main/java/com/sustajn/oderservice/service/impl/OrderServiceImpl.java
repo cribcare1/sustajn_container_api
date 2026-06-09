@@ -28,6 +28,7 @@ import com.sustajn.oderservice.dto.DeviceTokenResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
@@ -530,6 +531,69 @@ public class OrderServiceImpl implements OrderService {
             response.put("message", "Unexpected error while fetching user order details");
             response.put("details", ex.getMessage());
             return response;
+        }
+    }
+
+    @Override
+    public ApiResponse<PartnerGraphBridgeResponse> getPartnerDailyGraph(Long restaurantId, String monthName, int year, Long productId) {
+        try {
+            // 1. Parse string Month Name to Month Enum safely
+            Month monthEnum;
+            try {
+                monthEnum = Month.valueOf(monthName.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return new ApiResponse<>("ERROR", "Invalid month name provided: " + monthName, null);
+            }
+
+            // 2. Set temporal boundaries for the target month
+            YearMonth yearMonth = YearMonth.of(year, monthEnum);
+            LocalDateTime startDate = yearMonth.atDay(1).atStartOfDay();
+            LocalDateTime endDate = yearMonth.atEndOfMonth().atTime(23, 59, 59);
+
+            String label = monthEnum.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + "-" + year;
+
+            // 3. Query dataset aggregates
+            // 3. Query dataset aggregates using the new native methods
+            List<Object[]> leasedData = borrowOrderRepository.getDailyLeasedQuantities(restaurantId, productId, startDate, endDate);
+            List<Object[]> returnedData = returnOrderRepository.getDailyReturnedQuantities(restaurantId, productId, startDate, endDate);
+
+            // 4. Transform native records to fast-lookup maps (Day -> Count)
+            Map<Integer, Integer> leasedMap = new HashMap<>();
+            for (Object[] row : leasedData) {
+                leasedMap.put(((Number) row[0]).intValue(), ((Number) row[1]).intValue());
+            }
+
+            Map<Integer, Integer> returnedMap = new HashMap<>();
+            for (Object[] row : returnedData) {
+                returnedMap.put(((Number) row[0]).intValue(), ((Number) row[1]).intValue());
+            }
+
+            // 5. Construct a continuous daily matrix for the frontend chart grid
+            List<PartnerGraphBridgeResponse.DailyStat> dailyStatsList = new ArrayList<>();
+            int daysInMonth = yearMonth.lengthOfMonth();
+
+            for (int day = 1; day <= daysInMonth; day++) {
+                String dayOfWeekName = yearMonth.atDay(day).getDayOfWeek()
+                        .getDisplayName(TextStyle.SHORT, Locale.ENGLISH);
+
+                dailyStatsList.add(new PartnerGraphBridgeResponse.DailyStat(
+                        day,
+                        dayOfWeekName,
+                        leasedMap.getOrDefault(day, 0),
+                        returnedMap.getOrDefault(day, 0)
+                ));
+            }
+
+            PartnerGraphBridgeResponse responseData = PartnerGraphBridgeResponse.builder()
+                    .monthYear(label)
+                    .dailyStats(dailyStatsList)
+                    .build();
+
+            return new ApiResponse<>("SUCCESS", "Graph metrics processed successfully", responseData);
+
+        } catch (Exception e) {
+            log.error("Failed to generate chart statistics aggregate details: ", e);
+            return new ApiResponse<>("ERROR", "Internal system logic failure", null);
         }
     }
 

@@ -2,6 +2,7 @@ package com.sustajn.oderservice.controller;
 
 import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.ContainerChartResponse;
+import com.sustajn.oderservice.dto.PartnerGraphBridgeResponse;
 import com.sustajn.oderservice.repository.SoldOrderRepository;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
@@ -227,5 +228,17 @@ public class OrderController {
         return soldOrderRepository.getRealSoldHistory(restaurantId);
     }
 
+    @GetMapping("/partner/{restaurantId}/daily-graph")
+    public ResponseEntity<ApiResponse<PartnerGraphBridgeResponse>> getPartnerDailyGraph(
+            @PathVariable Long restaurantId,
+            @RequestParam String monthName,
+            @RequestParam int year,
+            @RequestParam(required = false) Long productId) {
+
+        ApiResponse<PartnerGraphBridgeResponse> response =
+                orderService.getPartnerDailyGraph(restaurantId, monthName, year, productId);
+
+        return ResponseEntity.ok(response);
+    }
 
 }

@@ -85,5 +85,18 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+    @Query(value = """
+        SELECT EXTRACT(DAY FROM r.returned_at)::int AS dayNum, COALESCE(SUM(r.returned_quantity), 0) AS total
+        FROM return_orders r
+        WHERE r.restaurant_id = :restaurantId
+          AND (:productId IS NULL OR r.product_id = :productId)
+          AND r.returned_at BETWEEN :startDate AND :endDate
+        GROUP BY EXTRACT(DAY FROM r.returned_at)
+    """, nativeQuery = true)
+    List<Object[]> getDailyReturnedQuantities(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Long productId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
 }
