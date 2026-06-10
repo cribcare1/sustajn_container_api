@@ -154,7 +154,19 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
             @Param("startTime") LocalDateTime startTime,
             @Param("endTime") LocalDateTime endTime
     );
-
+    @Query(value = """
+        SELECT EXTRACT(DAY FROM b.borrowed_at)::int AS dayNum, COALESCE(SUM(b.quantity), 0) AS total
+        FROM borrow_orders b
+        WHERE b.restaurant_id = :restaurantId
+          AND (:productId IS NULL OR b.product_id = :productId)
+          AND b.borrowed_at BETWEEN :startDate AND :endDate
+        GROUP BY EXTRACT(DAY FROM b.borrowed_at)
+    """, nativeQuery = true)
+    List<Object[]> getDailyLeasedQuantities(
+            @Param("restaurantId") Long restaurantId,
+            @Param("productId") Long productId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
     // Only active (not fully returned)
     @Query("""
         SELECT b FROM BorrowOrder b

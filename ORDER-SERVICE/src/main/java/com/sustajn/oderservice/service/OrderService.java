@@ -42,6 +42,8 @@ public interface OrderService {
 
     ContainerChartResponse getChartStatistics(Long restaurantId, Integer month, Integer year, Long productId,Integer planId);
 
+    ApiResponse<PartnerGraphBridgeResponse> getPartnerDailyGraph(Long restaurantId, String monthName, int year, Long productId);
+
     public void markAsSold(SoldRequest request);
 
 }
