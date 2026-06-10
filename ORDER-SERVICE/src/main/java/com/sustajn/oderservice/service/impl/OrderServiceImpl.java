@@ -552,10 +552,12 @@ public class OrderServiceImpl implements OrderService {
 
             String label = monthEnum.getDisplayName(TextStyle.FULL, Locale.ENGLISH) + "-" + year;
 
-            // 3. Query dataset aggregates
-            // 3. Query dataset aggregates using the new native methods
-            List<Object[]> leasedData = borrowOrderRepository.getDailyLeasedQuantities(restaurantId, productId, startDate, endDate);
-            List<Object[]> returnedData = returnOrderRepository.getDailyReturnedQuantities(restaurantId, productId, startDate, endDate);
+            // 🟢 FIX HERE: If productId is 0, turn it into null so the SQL query fetches ALL products combined
+            Long effectiveProductId = (productId != null && productId == 0) ? null : productId;
+
+            // 3. Query dataset aggregates using the effectiveProductId variable
+            List<Object[]> leasedData = borrowOrderRepository.getDailyLeasedQuantities(restaurantId, effectiveProductId, startDate, endDate);
+            List<Object[]> returnedData = returnOrderRepository.getDailyReturnedQuantities(restaurantId, effectiveProductId, startDate, endDate);
 
             // 4. Transform native records to fast-lookup maps (Day -> Count)
             Map<Integer, Integer> leasedMap = new HashMap<>();
@@ -596,7 +598,6 @@ public class OrderServiceImpl implements OrderService {
             return new ApiResponse<>("ERROR", "Internal system logic failure", null);
         }
     }
-
 //    @Override
 //    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
 //        try {
