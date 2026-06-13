@@ -309,6 +309,17 @@ public class InventoryController {
         return ResponseEntity.ok(inventoryService.getContainerStats(restaurantId, containerTypeId, month, year));
     }
 
+    @GetMapping("/container-types/{id}")
+    public ResponseEntity<Map<String, Object>> getContainerTypeById(@PathVariable Integer id) {
+        // Following your established pattern of routing through inventoryService
+        Map<String, Object> response = inventoryService.getContainerTypeById(id);
+
+        if ("error".equals(response.get("status"))) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(response);
+        }
+        return ResponseEntity.ok(response);
+    }
+
 
 
 }

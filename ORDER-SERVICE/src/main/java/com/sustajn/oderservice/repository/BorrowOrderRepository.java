@@ -199,6 +199,13 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+    @Query(value = """
+        SELECT b.product_id, COALESCE(SUM(b.quantity), 0) AS total_borrowed
+        FROM borrow_orders b
+        WHERE b.restaurant_id = :restaurantId
+        GROUP BY b.product_id
+    """, nativeQuery = true)
+    List<Object[]> getProductLeasedTotalsLifetime(@Param("restaurantId") Long restaurantId);
 
     @Query("""
     SELECT b FROM BorrowOrder b
