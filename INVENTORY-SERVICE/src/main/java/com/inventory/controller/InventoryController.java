@@ -318,6 +318,12 @@ public class InventoryController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
 
+        // Following your established pattern of routing through inventoryService
+        Map<String, Object> response = inventoryService.getContainerTypeById(id);
+
+        if ("error".equals(response.get("status"))) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(response);
+        }
         return ResponseEntity.ok(response);
     }
 

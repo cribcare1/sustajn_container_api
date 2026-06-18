@@ -688,6 +688,72 @@ public class OrderServiceImpl implements OrderService {
 
     // Reuse Feign Lookup Engine Mapper to resolve product names/codes/images
     private UserDetailsInsightsResponse.UserProductStat buildUserProductStat(Long productId, int percentage) {
+    @Override
+    public ApiResponse<MostAndLeastLeasedResponse> getMostAndLeastLeasedContainer(Long restaurantId) {
+        try {
+            // 1. Query the simplified lifetime dataset directly
+            List<Object[]> records = borrowOrderRepository.getProductLeasedTotalsLifetime(restaurantId);
+
+            if (records == null || records.isEmpty()) {
+                return new ApiResponse<>("SUCCESS", "No lifetime leasing data found for this partner", null);
+            }
+
+            long totalLeasedSum = 0;
+            Long mostLeasedId = null;
+            long highestCount = Long.MIN_VALUE;
+
+            Long leastLeasedId = null;
+            long lowestCount = Long.MAX_VALUE;
+
+            // 2. Identify the top and bottom performing product IDs
+            for (Object[] row : records) {
+                Long productId = ((Number) row[0]).longValue();
+                long count = ((Number) row[1]).longValue();
+
+                totalLeasedSum += count;
+
+                if (count > highestCount) {
+                    highestCount = count;
+                    mostLeasedId = productId;
+                }
+                if (count < lowestCount) {
+                    lowestCount = count;
+                    leastLeasedId = productId;
+                }
+            }
+
+            if (totalLeasedSum == 0 || mostLeasedId == null || leastLeasedId == null) {
+                return new ApiResponse<>("SUCCESS", "No container tracking volume found", null);
+            }
+
+            // 3. Compute accurate relative percentages
+            int maxPercentage = (int) Math.round((double) highestCount / totalLeasedSum * 100);
+            int minPercentage = (int) Math.round((double) lowestCount / totalLeasedSum * 100);
+
+            // 4. Fetch the real specifications via Feign lookups
+            MostAndLeastLeasedResponse.ProductLeasedStat mostStat = buildLiveProductStat(mostLeasedId, maxPercentage);
+            MostAndLeastLeasedResponse.ProductLeasedStat leastStat = null;
+
+            // 🟢 Edge-Case Handler: Only populate lessLeased if there is more than one unique container type
+            if (!mostLeasedId.equals(leastLeasedId)) {
+                leastStat = buildLiveProductStat(leastLeasedId, minPercentage);
+            }
+
+            MostAndLeastLeasedResponse finalResult = MostAndLeastLeasedResponse.builder()
+                    .mostLeased(mostStat)
+                    .lessLeased(leastStat)
+                    .build();
+
+            return new ApiResponse<>("SUCCESS", "Lifetime leasing insights processed successfully", finalResult);
+
+        } catch (Exception e) {
+            log.error("Failed to compile lifetime asset metrics highlight summary: ", e);
+            return new ApiResponse<>("ERROR", "Internal system computation failure", null);
+        }
+    }
+
+    // 🟢 Helper method to fetch and build the real specifications dynamically from Inventory Service
+    private MostAndLeastLeasedResponse.ProductLeasedStat buildLiveProductStat(Long productId, int percentage) {
         String name = "Unknown Container";
         String code = "N/A";
         String capacity = "0ml";
@@ -703,6 +769,19 @@ public class OrderServiceImpl implements OrderService {
                     name = container.getName();
                     code = container.getProductId();
                     imageUrl = container.getImageUrl();
+                // Safely convert Long product reference to Integer for ContainerType lookup key
+                Integer containerTypeId = productId.intValue();
+
+                // Call your Inventory Feign Client
+                com.sustajn.oderservice.dto.ApiResponse<com.sustajn.oderservice.dto.ContainerTypeResponse> inventoryResponse =
+                        inventoryFeignClient.getContainerTypeById(containerTypeId);
+
+                if (inventoryResponse != null && inventoryResponse.getData() != null) {
+                    com.sustajn.oderservice.dto.ContainerTypeResponse container = inventoryResponse.getData();
+                    name = container.getName();
+                    code = container.getProductId(); // Gets design system codes like "ST-DC-50"
+                    imageUrl = container.getImageUrl(); // ✅ Lombok standard getter mapping
+
                     if (container.getCapacityMl() != null) {
                         capacity = container.getCapacityMl() + "ml";
                     }
@@ -713,6 +792,10 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return UserDetailsInsightsResponse.UserProductStat.builder()
+            log.error("Feign communication failure looking up asset specification for ID: {}", productId, ex);
+        }
+
+        return MostAndLeastLeasedResponse.ProductLeasedStat.builder()
                 .productId(productId)
                 .productName(name)
                 .productCode(code)
