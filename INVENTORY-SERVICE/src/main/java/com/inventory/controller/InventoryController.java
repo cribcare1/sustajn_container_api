@@ -311,6 +311,13 @@ public class InventoryController {
 
     @GetMapping("/container-types/{id}")
     public ResponseEntity<Map<String, Object>> getContainerTypeById(@PathVariable Integer id) {
+
+        Map<String, Object> response = inventoryService.getContainerTypeById(id);
+
+        if ("error".equals(response.get("status"))) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+
         // Following your established pattern of routing through inventoryService
         Map<String, Object> response = inventoryService.getContainerTypeById(id);
 

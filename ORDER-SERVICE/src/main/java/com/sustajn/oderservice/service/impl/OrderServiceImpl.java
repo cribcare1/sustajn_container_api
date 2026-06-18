@@ -598,6 +598,96 @@ public class OrderServiceImpl implements OrderService {
             return new ApiResponse<>("ERROR", "Internal system logic failure", null);
         }
     }
+
+    @Override
+    public ApiResponse<UserDetailsInsightsResponse> getUserDetailsDashboardInsights(Long userId) {
+        try {
+            LocalDateTime currentTime = LocalDateTime.now();
+
+            // 1. Fetch KPI Status Metrics
+            Integer activeCount = borrowOrderRepository.countActiveContainersByUserId(userId);
+            Integer overdueCount = borrowOrderRepository.countOverdueContainersByUserId(userId, currentTime);
+
+            // 2. Compute Borrow Insights Data
+            List<Object[]> borrowRecords = borrowOrderRepository.getUserProductBorrowTotals(userId);
+            UserDetailsInsightsResponse.UserProductStat mostBorrowed = null;
+            UserDetailsInsightsResponse.UserProductStat lessBorrowed = null;
+
+            if (borrowRecords != null && !borrowRecords.isEmpty()) {
+                long totalBorrows = 0;
+                Long maxId = null; long maxCount = Long.MIN_VALUE;
+                Long minId = null; long minCount = Long.MAX_VALUE;
+
+                for (Object[] row : borrowRecords) {
+                    Long prodId = ((Number) row[0]).longValue();
+                    long qty = ((Number) row[1]).longValue();
+                    totalBorrows += qty;
+
+                    if (qty > maxCount) { maxCount = qty; maxId = prodId; }
+                    if (qty < minCount) { minCount = qty; minId = prodId; }
+                }
+
+                if (totalBorrows > 0) {
+                    int maxPct = (int) Math.round((double) maxCount / totalBorrows * 100);
+                    int minPct = (int) Math.round((double) minCount / totalBorrows * 100);
+
+                    mostBorrowed = buildUserProductStat(maxId, maxPct);
+                    if (!maxId.equals(minId)) {
+                        lessBorrowed = buildUserProductStat(minId, minPct);
+                    }
+                }
+            }
+
+            // 3. Compute Return Insights Data
+            List<Object[]> returnRecords = returnOrderRepository.getUserProductReturnTotals(userId);
+            UserDetailsInsightsResponse.UserProductStat mostReturn = null;
+            UserDetailsInsightsResponse.UserProductStat lessReturn = null;
+
+            if (returnRecords != null && !returnRecords.isEmpty()) {
+                long totalReturns = 0;
+                Long maxId = null; long maxCount = Long.MIN_VALUE;
+                Long minId = null; long minCount = Long.MAX_VALUE;
+
+                for (Object[] row : returnRecords) {
+                    Long prodId = ((Number) row[0]).longValue();
+                    long qty = ((Number) row[1]).longValue();
+                    totalReturns += qty;
+
+                    if (qty > maxCount) { maxCount = qty; maxId = prodId; }
+                    if (qty < minCount) { minCount = qty; minId = prodId; }
+                }
+
+                if (totalReturns > 0) {
+                    int maxPct = (int) Math.round((double) maxCount / totalReturns * 100);
+                    int minPct = (int) Math.round((double) minCount / totalReturns * 100);
+
+                    mostReturn = buildUserProductStat(maxId, maxPct);
+                    if (!maxId.equals(minId)) {
+                        lessReturn = buildUserProductStat(minId, minPct);
+                    }
+                }
+            }
+
+            // 4. Combine Final Payload Dataset
+            UserDetailsInsightsResponse responsePayload = UserDetailsInsightsResponse.builder()
+                    .activeCount(activeCount)
+                    .overdueCount(overdueCount)
+                    .mostBorrowed(mostBorrowed)
+                    .lessBorrowed(lessBorrowed)
+                    .mostReturn(mostReturn)
+                    .lessReturn(lessReturn)
+                    .build();
+
+            return new ApiResponse<>("SUCCESS", "User dashboard insights processed successfully", responsePayload);
+
+        } catch (Exception e) {
+            log.error("Failed to compile layout insights for user ID: {}", userId, e);
+            return new ApiResponse<>("ERROR", "Internal system metrics collection failure", null);
+        }
+    }
+
+    // Reuse Feign Lookup Engine Mapper to resolve product names/codes/images
+    private UserDetailsInsightsResponse.UserProductStat buildUserProductStat(Long productId, int percentage) {
     @Override
     public ApiResponse<MostAndLeastLeasedResponse> getMostAndLeastLeasedContainer(Long restaurantId) {
         try {
@@ -671,6 +761,14 @@ public class OrderServiceImpl implements OrderService {
 
         try {
             if (productId != null) {
+                Integer containerTypeId = productId.intValue();
+                ApiResponse<ContainerTypeResponse> inventoryResponse = inventoryFeignClient.getContainerTypeById(containerTypeId);
+
+                if (inventoryResponse != null && inventoryResponse.getData() != null) {
+                    ContainerTypeResponse container = inventoryResponse.getData();
+                    name = container.getName();
+                    code = container.getProductId();
+                    imageUrl = container.getImageUrl();
                 // Safely convert Long product reference to Integer for ContainerType lookup key
                 Integer containerTypeId = productId.intValue();
 
@@ -690,6 +788,10 @@ public class OrderServiceImpl implements OrderService {
                 }
             }
         } catch (Exception ex) {
+            log.error("Feign lookup exception on user details resolving ID: {}", productId, ex);
+        }
+
+        return UserDetailsInsightsResponse.UserProductStat.builder()
             log.error("Feign communication failure looking up asset specification for ID: {}", productId, ex);
         }
 

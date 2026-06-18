@@ -9,6 +9,8 @@ public class ContainerTypeResponse {
     private String name;
     private String description;
     private Integer capacityMl;
+    private String productId; // Maps to your container product code string (e.g. ST-RDC-500)
+    private String imageUrl;
     private String productId; // This holds codes like "ST-RDC-500"
     private String imageUrl;
     private BigDecimal costPerUnit;

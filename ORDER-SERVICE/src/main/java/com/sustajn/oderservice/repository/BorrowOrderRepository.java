@@ -207,6 +207,35 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
     """, nativeQuery = true)
     List<Object[]> getProductLeasedTotalsLifetime(@Param("restaurantId") Long restaurantId);
 
+    // 1. Get sum of all active containers currently held by the user
+    @Query(value = """
+        SELECT COALESCE(SUM(b.quantity - b.returned_quantity), 0)
+        FROM borrow_orders b
+        WHERE b.user_id = :userId AND b.quantity > b.returned_quantity
+    """, nativeQuery = true)
+    Integer countActiveContainersByUserId(@Param("userId") Long userId);
+
+    // 2. Get sum of all overdue containers held by the user
+    @Query(value = """
+        SELECT COALESCE(SUM(b.quantity - b.returned_quantity), 0)
+        FROM borrow_orders b
+        WHERE b.user_id = :userId
+          AND (b.effective_due_date IS NOT NULL AND b.effective_due_date < :currentTime
+               OR b.effective_due_date IS NULL AND b.due_date < :currentTime)
+          AND b.returned_quantity < b.quantity
+          AND (b.is_sold = false OR b.is_sold IS NULL)
+    """, nativeQuery = true)
+    Integer countOverdueContainersByUserId(@Param("userId") Long userId, @Param("currentTime") LocalDateTime currentTime);
+
+    // 3. Get lifetime total borrows per product for this user
+    @Query(value = """
+        SELECT b.product_id, COALESCE(SUM(b.quantity), 0) AS total_borrowed
+        FROM borrow_orders b
+        WHERE b.user_id = :userId
+        GROUP BY b.product_id
+    """, nativeQuery = true)
+    List<Object[]> getUserProductBorrowTotals(@Param("userId") Long userId);
+
     @Query("""
     SELECT b FROM BorrowOrder b
     WHERE 

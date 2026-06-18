@@ -4,6 +4,7 @@ import com.sustajn.oderservice.dto.ApiResponse;
 import com.sustajn.oderservice.dto.ContainerChartResponse;
 import com.sustajn.oderservice.dto.MostAndLeastLeasedResponse;
 import com.sustajn.oderservice.dto.PartnerGraphBridgeResponse;
+import com.sustajn.oderservice.dto.UserDetailsInsightsResponse;
 import com.sustajn.oderservice.repository.SoldOrderRepository;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
@@ -242,6 +243,12 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/user/{userId}/dashboard-insights")
+    public ResponseEntity<ApiResponse<UserDetailsInsightsResponse>> getUserDashboardInsights(
+            @PathVariable Long userId) {
+
+        ApiResponse<UserDetailsInsightsResponse> response =
+                orderService.getUserDetailsDashboardInsights(userId);
     @GetMapping("/partner/{restaurantId}/leasing-insights")
     public ResponseEntity<ApiResponse<MostAndLeastLeasedResponse>> getLeasingInsights(
             @PathVariable Long restaurantId) {
