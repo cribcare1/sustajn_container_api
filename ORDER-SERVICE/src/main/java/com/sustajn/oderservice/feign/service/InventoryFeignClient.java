@@ -66,4 +66,6 @@ public interface InventoryFeignClient {
             @RequestParam(value = "month", required = false) Integer month,
             @RequestParam(value = "year", required = false) Integer year
     );
+    @GetMapping("/inventory/container-types/{id}")
+    ApiResponse<ContainerTypeResponse> getContainerTypeById(@PathVariable("id") Integer id);
 }

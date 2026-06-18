@@ -366,6 +366,32 @@ public class InventoryServiceImpl implements InventoryService {
         return response;
     }
 
+    @Override
+    public Map<String, Object> getContainerTypeById(Integer id) {
+        Map<String, Object> response = new java.util.HashMap<>();
+        try {
+            // containerTypeRepository should be your JPA interface tracking the ContainerType entity
+            return containerTypeRepository.findById(id)
+                    .map(container -> {
+                        response.put("status", "success");
+                        response.put("message", "Container type found");
+                        response.put("data", container);
+                        return response;
+                    })
+                    .orElseGet(() -> {
+                        response.put("status", "error");
+                        response.put("message", "Container type not found for ID: " + id);
+                        response.put("data", null);
+                        return response;
+                    });
+        } catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Database retrieval failure: " + ex.getMessage());
+            response.put("data", null);
+            return response;
+        }
+    }
+
 
     @Transactional
     @Override

@@ -71,6 +71,15 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
             @Param("endTime") LocalDateTime endTime
     );
 
+    // Get lifetime total returns per product for this user
+    @Query(value = """
+        SELECT r.product_id, COALESCE(SUM(r.returned_quantity), 0) AS total_returned
+        FROM return_orders r
+        WHERE r.user_id = :userId
+        GROUP BY r.product_id
+    """, nativeQuery = true)
+    List<Object[]> getUserProductReturnTotals(@Param("userId") Long userId);
+
     @Query("""
         SELECT COALESCE(SUM(r.returnedQuantity), 0) 
         FROM ReturnOrder r 

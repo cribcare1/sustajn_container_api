@@ -44,6 +44,8 @@ public interface OrderService {
 
     ApiResponse<PartnerGraphBridgeResponse> getPartnerDailyGraph(Long restaurantId, String monthName, int year, Long productId);
 
+    ApiResponse<UserDetailsInsightsResponse> getUserDetailsDashboardInsights(Long userId);
+
     public void markAsSold(SoldRequest request);
 
 }
