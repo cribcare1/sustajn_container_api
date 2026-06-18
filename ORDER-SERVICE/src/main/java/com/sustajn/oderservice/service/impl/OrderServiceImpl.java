@@ -213,7 +213,7 @@ public class OrderServiceImpl implements OrderService {
 
             DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(userId);
             System.err.println("Device token response for userId " + userId + ": " + deviceTokenResponse);
-            if (deviceTokenResponse != null){
+            if (deviceTokenResponse != null) {
 
                 System.err.println("Device token response for userId " + userId + ": " + deviceTokenResponse.getDeviceToken());
 
@@ -370,7 +370,7 @@ public class OrderServiceImpl implements OrderService {
             inventoryRequest.setContainerQtyMap(qtyMap);
 
 
-            ApiResponse<?>  invResponse =
+            ApiResponse<?> invResponse =
                     inventoryFeignClient.increaseAvailableContainers(inventoryRequest);
 
             if (OrderServiceConstant.STATUS_ERROR.equals(invResponse.getStatus())) {
@@ -379,36 +379,35 @@ public class OrderServiceImpl implements OrderService {
             }
 
 
-
             // Commit DB only if inventory OK
             returnOrderRepository.saveAll(returnOrdersToSave);
             borrowOrderRepository.saveAll(pendingBorrows);
 
             DeviceTokenResponse deviceTokenResponse = notificationFeignClient.getDeviceTokensByUserId(request.getUserId());
-                if (deviceTokenResponse != null){
+            if (deviceTokenResponse != null) {
 
-                    String title = "Containers Returned Successfully";
-                    StringBuilder body = new StringBuilder();
-                    body.append("Hi,\n\n")
-                            .append("You have successfully returned the following containers:\n");
+                String title = "Containers Returned Successfully";
+                StringBuilder body = new StringBuilder();
+                body.append("Hi,\n\n")
+                        .append("You have successfully returned the following containers:\n");
 
-                    for (ReturnItemRequest item : request.getItems()) {
+                for (ReturnItemRequest item : request.getItems()) {
 
-                        body.append("- Product ID: ")
-                                .append(item.getProductId())
-                                .append(", Quantity: ")
-                                .append(item.getQuantity())
-                                .append("\n");
-                    }
-                    NotificationResponse notification = NotificationResponse.builder()
-                            .title(title)
-                            .body(body.toString())
-                            .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
-                            .data(OrderServiceConstant.ACTION_RETURN)
-                            .build();
-
-                    notificationFeignClient.sendNotificationToMultipleDevices(notification);
+                    body.append("- Product ID: ")
+                            .append(item.getProductId())
+                            .append(", Quantity: ")
+                            .append(item.getQuantity())
+                            .append("\n");
                 }
+                NotificationResponse notification = NotificationResponse.builder()
+                        .title(title)
+                        .body(body.toString())
+                        .deviceTokens(List.of(deviceTokenResponse.getDeviceToken()))
+                        .data(OrderServiceConstant.ACTION_RETURN)
+                        .build();
+
+                notificationFeignClient.sendNotificationToMultipleDevices(notification);
+            }
 
 
             return ApiResponseUtil.success(
@@ -615,16 +614,24 @@ public class OrderServiceImpl implements OrderService {
 
             if (borrowRecords != null && !borrowRecords.isEmpty()) {
                 long totalBorrows = 0;
-                Long maxId = null; long maxCount = Long.MIN_VALUE;
-                Long minId = null; long minCount = Long.MAX_VALUE;
+                Long maxId = null;
+                long maxCount = Long.MIN_VALUE;
+                Long minId = null;
+                long minCount = Long.MAX_VALUE;
 
                 for (Object[] row : borrowRecords) {
                     Long prodId = ((Number) row[0]).longValue();
                     long qty = ((Number) row[1]).longValue();
                     totalBorrows += qty;
 
-                    if (qty > maxCount) { maxCount = qty; maxId = prodId; }
-                    if (qty < minCount) { minCount = qty; minId = prodId; }
+                    if (qty > maxCount) {
+                        maxCount = qty;
+                        maxId = prodId;
+                    }
+                    if (qty < minCount) {
+                        minCount = qty;
+                        minId = prodId;
+                    }
                 }
 
                 if (totalBorrows > 0) {
@@ -645,16 +652,24 @@ public class OrderServiceImpl implements OrderService {
 
             if (returnRecords != null && !returnRecords.isEmpty()) {
                 long totalReturns = 0;
-                Long maxId = null; long maxCount = Long.MIN_VALUE;
-                Long minId = null; long minCount = Long.MAX_VALUE;
+                Long maxId = null;
+                long maxCount = Long.MIN_VALUE;
+                Long minId = null;
+                long minCount = Long.MAX_VALUE;
 
                 for (Object[] row : returnRecords) {
                     Long prodId = ((Number) row[0]).longValue();
                     long qty = ((Number) row[1]).longValue();
                     totalReturns += qty;
 
-                    if (qty > maxCount) { maxCount = qty; maxId = prodId; }
-                    if (qty < minCount) { minCount = qty; minId = prodId; }
+                    if (qty > maxCount) {
+                        maxCount = qty;
+                        maxId = prodId;
+                    }
+                    if (qty < minCount) {
+                        minCount = qty;
+                        minId = prodId;
+                    }
                 }
 
                 if (totalReturns > 0) {
@@ -687,15 +702,71 @@ public class OrderServiceImpl implements OrderService {
     }
 
     // Reuse Feign Lookup Engine Mapper to resolve product names/codes/images
-    private UserDetailsInsightsResponse.UserProductStat buildUserProductStat(Long productId, int percentage) {
+    // Reuse Feign Lookup Engine Mapper to resolve product names/codes/images
+    private UserDetailsInsightsResponse.UserProductStat buildUserProductStat(
+            Long productId,
+            int percentage) {
+
+        String name = "Unknown Container";
+        String code = "N/A";
+        String capacity = "0ml";
+        String imageUrl = null;
+
+        try {
+
+            if (productId != null) {
+
+                Integer containerTypeId = productId.intValue();
+
+                ApiResponse<ContainerTypeResponse> inventoryResponse =
+                        inventoryFeignClient.getContainerTypeById(containerTypeId);
+
+                if (inventoryResponse != null && inventoryResponse.getData() != null) {
+
+                    ContainerTypeResponse container = inventoryResponse.getData();
+
+                    name = container.getName();
+                    code = container.getProductId();
+                    imageUrl = container.getImageUrl();
+
+                    if (container.getCapacityMl() != null) {
+                        capacity = container.getCapacityMl() + "ml";
+                    }
+                }
+            }
+
+        } catch (Exception ex) {
+            log.error(
+                    "Feign lookup exception on user details resolving ID: {}",
+                    productId,
+                    ex
+            );
+        }
+
+        return UserDetailsInsightsResponse.UserProductStat.builder()
+                .productId(productId)
+                .productName(name)
+                .productCode(code)
+                .capacity(capacity)
+                .imageUrl(imageUrl)
+                .percentage(percentage)
+                .build();
+    }
+
     @Override
     public ApiResponse<MostAndLeastLeasedResponse> getMostAndLeastLeasedContainer(Long restaurantId) {
+
         try {
-            // 1. Query the simplified lifetime dataset directly
-            List<Object[]> records = borrowOrderRepository.getProductLeasedTotalsLifetime(restaurantId);
+
+            List<Object[]> records =
+                    borrowOrderRepository.getProductLeasedTotalsLifetime(restaurantId);
 
             if (records == null || records.isEmpty()) {
-                return new ApiResponse<>("SUCCESS", "No lifetime leasing data found for this partner", null);
+                return new ApiResponse<>(
+                        "SUCCESS",
+                        "No lifetime leasing data found for this partner",
+                        null
+                );
             }
 
             long totalLeasedSum = 0;
@@ -705,8 +776,8 @@ public class OrderServiceImpl implements OrderService {
             Long leastLeasedId = null;
             long lowestCount = Long.MAX_VALUE;
 
-            // 2. Identify the top and bottom performing product IDs
             for (Object[] row : records) {
+
                 Long productId = ((Number) row[0]).longValue();
                 long count = ((Number) row[1]).longValue();
 
@@ -716,6 +787,7 @@ public class OrderServiceImpl implements OrderService {
                     highestCount = count;
                     mostLeasedId = productId;
                 }
+
                 if (count < lowestCount) {
                     lowestCount = count;
                     leastLeasedId = productId;
@@ -723,76 +795,96 @@ public class OrderServiceImpl implements OrderService {
             }
 
             if (totalLeasedSum == 0 || mostLeasedId == null || leastLeasedId == null) {
-                return new ApiResponse<>("SUCCESS", "No container tracking volume found", null);
+                return new ApiResponse<>(
+                        "SUCCESS",
+                        "No container tracking volume found",
+                        null
+                );
             }
 
-            // 3. Compute accurate relative percentages
-            int maxPercentage = (int) Math.round((double) highestCount / totalLeasedSum * 100);
-            int minPercentage = (int) Math.round((double) lowestCount / totalLeasedSum * 100);
+            int maxPercentage =
+                    (int) Math.round((double) highestCount / totalLeasedSum * 100);
 
-            // 4. Fetch the real specifications via Feign lookups
-            MostAndLeastLeasedResponse.ProductLeasedStat mostStat = buildLiveProductStat(mostLeasedId, maxPercentage);
+            int minPercentage =
+                    (int) Math.round((double) lowestCount / totalLeasedSum * 100);
+
+            MostAndLeastLeasedResponse.ProductLeasedStat mostStat =
+                    buildLiveProductStat(mostLeasedId, maxPercentage);
+
             MostAndLeastLeasedResponse.ProductLeasedStat leastStat = null;
 
-            // 🟢 Edge-Case Handler: Only populate lessLeased if there is more than one unique container type
             if (!mostLeasedId.equals(leastLeasedId)) {
                 leastStat = buildLiveProductStat(leastLeasedId, minPercentage);
             }
 
-            MostAndLeastLeasedResponse finalResult = MostAndLeastLeasedResponse.builder()
-                    .mostLeased(mostStat)
-                    .lessLeased(leastStat)
-                    .build();
+            MostAndLeastLeasedResponse finalResult =
+                    MostAndLeastLeasedResponse.builder()
+                            .mostLeased(mostStat)
+                            .lessLeased(leastStat)
+                            .build();
 
-            return new ApiResponse<>("SUCCESS", "Lifetime leasing insights processed successfully", finalResult);
+            return new ApiResponse<>(
+                    "SUCCESS",
+                    "Lifetime leasing insights processed successfully",
+                    finalResult
+            );
 
         } catch (Exception e) {
-            log.error("Failed to compile lifetime asset metrics highlight summary: ", e);
-            return new ApiResponse<>("ERROR", "Internal system computation failure", null);
+
+            log.error(
+                    "Failed to compile lifetime asset metrics highlight summary",
+                    e
+            );
+
+            return new ApiResponse<>(
+                    "ERROR",
+                    "Internal system computation failure",
+                    null
+            );
         }
     }
 
-    // 🟢 Helper method to fetch and build the real specifications dynamically from Inventory Service
-    private MostAndLeastLeasedResponse.ProductLeasedStat buildLiveProductStat(Long productId, int percentage) {
+
+    // Helper method to fetch container details from inventory service
+    private MostAndLeastLeasedResponse.ProductLeasedStat buildLiveProductStat(
+            Long productId,
+            int percentage) {
+
         String name = "Unknown Container";
         String code = "N/A";
         String capacity = "0ml";
         String imageUrl = null;
 
         try {
+
             if (productId != null) {
-                Integer containerTypeId = productId.intValue();
-                ApiResponse<ContainerTypeResponse> inventoryResponse = inventoryFeignClient.getContainerTypeById(containerTypeId);
 
-                if (inventoryResponse != null && inventoryResponse.getData() != null) {
-                    ContainerTypeResponse container = inventoryResponse.getData();
-                    name = container.getName();
-                    code = container.getProductId();
-                    imageUrl = container.getImageUrl();
-                // Safely convert Long product reference to Integer for ContainerType lookup key
                 Integer containerTypeId = productId.intValue();
 
-                // Call your Inventory Feign Client
-                com.sustajn.oderservice.dto.ApiResponse<com.sustajn.oderservice.dto.ContainerTypeResponse> inventoryResponse =
+                ApiResponse<ContainerTypeResponse> inventoryResponse =
                         inventoryFeignClient.getContainerTypeById(containerTypeId);
 
                 if (inventoryResponse != null && inventoryResponse.getData() != null) {
-                    com.sustajn.oderservice.dto.ContainerTypeResponse container = inventoryResponse.getData();
+
+                    ContainerTypeResponse container = inventoryResponse.getData();
+
                     name = container.getName();
-                    code = container.getProductId(); // Gets design system codes like "ST-DC-50"
-                    imageUrl = container.getImageUrl(); // ✅ Lombok standard getter mapping
+                    code = container.getProductId();
+                    imageUrl = container.getImageUrl();
 
                     if (container.getCapacityMl() != null) {
                         capacity = container.getCapacityMl() + "ml";
                     }
                 }
             }
-        } catch (Exception ex) {
-            log.error("Feign lookup exception on user details resolving ID: {}", productId, ex);
-        }
 
-        return UserDetailsInsightsResponse.UserProductStat.builder()
-            log.error("Feign communication failure looking up asset specification for ID: {}", productId, ex);
+        } catch (Exception ex) {
+
+            log.error(
+                    "Feign communication failure looking up asset specification for ID: {}",
+                    productId,
+                    ex
+            );
         }
 
         return MostAndLeastLeasedResponse.ProductLeasedStat.builder()

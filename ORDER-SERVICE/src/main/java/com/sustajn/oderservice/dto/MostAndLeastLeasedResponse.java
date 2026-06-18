@@ -15,15 +15,15 @@ public class MostAndLeastLeasedResponse {
     private ProductLeasedStat lessLeased;
 
     @Data
-    @Builder
+    @Builder // 🟢 Ensures builder works for the inner class
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProductLeasedStat {
         private Long productId;
         private String productName;
-        private String productCode;  // Displays "ST-RDC-500"
-        private String capacity;     // Displays "500ml"
+        private String productCode;
+        private String capacity;
         private String imageUrl;
-        private int percentage;      // Calculated breakdown metric
+        private int percentage;
     }
 }
