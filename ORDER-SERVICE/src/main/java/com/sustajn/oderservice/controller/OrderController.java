@@ -249,6 +249,10 @@ public class OrderController {
 
         ApiResponse<UserDetailsInsightsResponse> response =
                 orderService.getUserDetailsDashboardInsights(userId);
+
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/partner/{restaurantId}/leasing-insights")
     public ResponseEntity<ApiResponse<MostAndLeastLeasedResponse>> getLeasingInsights(
             @PathVariable Long restaurantId) {

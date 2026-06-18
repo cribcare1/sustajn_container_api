@@ -312,18 +312,15 @@ public class InventoryController {
     @GetMapping("/container-types/{id}")
     public ResponseEntity<Map<String, Object>> getContainerTypeById(@PathVariable Integer id) {
 
+        // 1. Single execution of the service layer lookup
         Map<String, Object> response = inventoryService.getContainerTypeById(id);
 
+        // 2. Check if the service returned a business error status
         if ("error".equals(response.get("status"))) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
         }
 
-        // Following your established pattern of routing through inventoryService
-        Map<String, Object> response = inventoryService.getContainerTypeById(id);
-
-        if ("error".equals(response.get("status"))) {
-            return ResponseEntity.status(org.springframework.http.HttpStatus.NOT_FOUND).body(response);
-        }
+        // 3. Return the successful payload wrapper
         return ResponseEntity.ok(response);
     }
 

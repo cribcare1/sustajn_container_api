@@ -59,6 +59,4 @@ public interface InventoryService {
     Map<String, Object> getContainerTypeById(Integer id);
 
 
-    Map<String, Object> getContainerTypeById(Integer id);
-
 }

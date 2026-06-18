@@ -368,9 +368,6 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public Map<String, Object> getContainerTypeById(Integer id) {
-        Map<String, Object> response = new java.util.HashMap<>();
-        try {
-            // containerTypeRepository should be your JPA interface tracking the ContainerType entity
         Map<String, Object> response = new HashMap<>();
         try {
             return containerTypeRepository.findById(id)
@@ -383,19 +380,16 @@ public class InventoryServiceImpl implements InventoryService {
                     .orElseGet(() -> {
                         response.put("status", "error");
                         response.put("message", "Container type not found for ID: " + id);
-                        response.put("message", "Container type not found");
                         response.put("data", null);
                         return response;
                     });
         } catch (Exception ex) {
             response.put("status", "error");
-            response.put("message", "Database retrieval failure: " + ex.getMessage());
             response.put("message", "Failed to retrieve container type: " + ex.getMessage());
             response.put("data", null);
             return response;
         }
     }
-
 
     @Transactional
     @Override
