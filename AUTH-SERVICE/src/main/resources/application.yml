@@ -1,5 +1,0 @@
-
-spring:
-  datasource:
-    username: neondb_owner
-    driver-class-name: org.postgresql.Driver
