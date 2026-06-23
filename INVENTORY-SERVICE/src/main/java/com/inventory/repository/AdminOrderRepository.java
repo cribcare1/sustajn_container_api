@@ -1,5 +1,6 @@
 package com.inventory.repository;
 
+import com.inventory.Constant.AdminOrderStatus;
 import com.inventory.entity.AdminOrder;
 import com.inventory.response.RestaurantOrderedResponse;
 import feign.Param;
@@ -30,4 +31,6 @@ public interface AdminOrderRepository extends JpaRepository<AdminOrder,Long> {
         ORDER BY ao.orderDate DESC
     """)
     List<RestaurantOrderedResponse> findOrdersByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    List<AdminOrder> findByStatusOrderByOrderDateDesc(AdminOrderStatus status);
 }

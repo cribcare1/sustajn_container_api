@@ -324,6 +324,119 @@ public class InventoryController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/admin/orders/pending")
+    public ResponseEntity<ApiResponse<List<PendingOrderRequestResponse>>> getPendingOrderRequests() {
+
+        // 🟢 FIXED: Routed directly through your unified inventoryService instance
+        List<PendingOrderRequestResponse> data = inventoryService.getPendingOrderRequests();
+
+        return ResponseEntity.ok(new ApiResponse<List<PendingOrderRequestResponse>>(
+                "Pending order requests fetched successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
+    /**
+     * Fetch complete structured details data model for a single order request card screen view
+     */
+    @GetMapping("/admin/orders/details/{id}")
+    public ResponseEntity<ApiResponse<AdminOrderDetailResponse>> getAdminOrderDetailById(@PathVariable Long id) {
+
+        AdminOrderDetailResponse detailedPayload = inventoryService.getAdminOrderDetailById(id);
+
+        // 🟢 FIXED: Removed extra '>' and separated the message and "SUCCESS" status with a comma
+        return ResponseEntity.ok(new ApiResponse<AdminOrderDetailResponse>(
+                "Order detailed insights view model compiled successfully",
+                "SUCCESS",
+                detailedPayload
+        ));
+    }
+
+    @PostMapping("/rejectOrder")
+    public ResponseEntity<?> rejectOrder(
+            @RequestBody AdminOrderBulkRejectRequest request
+    ) {
+        Map<String, Object> response = inventoryService.rejectOrder(request);
+        return ResponseEntity.ok(response);
+    }
+    /**
+     * Get list of all approved orders for the "Confirmed" tab view dashboard
+     */
+    @GetMapping("/admin/orders/confirmed")
+    public ResponseEntity<ApiResponse<List<ConfirmedOrderResponse>>> getConfirmedOrderRequests() {
+        List<ConfirmedOrderResponse> data = inventoryService.getConfirmedOrderRequests();
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Confirmed order requests fetched successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
+    /**
+     * Get deep insights view details card data matching the single "Confirmed Details" layout screen
+     */
+    @GetMapping("/admin/orders/confirmed/details/{id}")
+    public ResponseEntity<ApiResponse<ConfirmedOrderDetailResponse>> getConfirmedOrderDetailById(@PathVariable Long id) {
+        ConfirmedOrderDetailResponse data = inventoryService.getConfirmedOrderDetailById(id);
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Confirmed order deep details insights compiled successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
+    /**
+     * Get a list of all rejected requests for the "Rejected" tab dashboard list view
+     */
+    @GetMapping("/admin/orders/rejected")
+    public ResponseEntity<ApiResponse<List<RejectedOrderResponse>>> getRejectedOrderRequests() {
+        List<RejectedOrderResponse> data = inventoryService.getRejectedOrderRequests();
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Rejected order requests tab dataset fetched successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
+    /**
+     * Get details for a single rejected order card timeline view screen matching the UI specs
+     */
+    @GetMapping("/admin/orders/rejected/details/{id}")
+    public ResponseEntity<ApiResponse<RejectedOrderDetailResponse>> getRejectedOrderDetailById(@PathVariable Long id) {
+        RejectedOrderDetailResponse data = inventoryService.getRejectedOrderDetailById(id);
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Rejected order specific details dataset compiled successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
+    /**
+     * Get list dataset of all closed requests for the "Delivered" tab panel dashboard view
+     */
+    @GetMapping("/admin/orders/delivered")
+    public ResponseEntity<ApiResponse<List<DeliveredOrderResponse>>> getDeliveredOrderRequests() {
+        List<DeliveredOrderResponse> data = inventoryService.getDeliveredOrderRequests();
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Delivered order requests tab dataset fetched successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
+    /**
+     * Get specific milestone insight tracking metrics matching the detailed "Delivered Details" layout screen
+     */
+    @GetMapping("/admin/orders/delivered/details/{id}")
+    public ResponseEntity<ApiResponse<DeliveredOrderDetailResponse>> getDeliveredOrderDetailById(@PathVariable Long id) {
+        DeliveredOrderDetailResponse data = inventoryService.getDeliveredOrderDetailById(id);
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Delivered order specific detail metrics compiled successfully",
+                "SUCCESS",
+                data
+        ));
+    }
 
 
 }
