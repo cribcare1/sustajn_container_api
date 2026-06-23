@@ -1,5 +1,6 @@
 package com.inventory.service.impl;
 
+import com.inventory.Constant.AdminOrderStatus;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.*;
 import com.inventory.entity.*;
@@ -49,6 +50,8 @@ public class InventoryServiceImpl implements InventoryService {
     private final SoldContainerRepository soldContainerRepository;
     private final AuthFeignClient authFeignClient;
     private final OrderFeignClient orderFeignClient;
+    private final AdminOrderRepository adminOrderRepository;
+    private final AdminOrderItemRepository adminOrderItemRepository;
 
     public Map<String, Object> saveOrUpdate(ContainerTypeRequest request, MultipartFile file) {
 
@@ -171,8 +174,599 @@ public class InventoryServiceImpl implements InventoryService {
 
         return response;
     }
+    @SuppressWarnings("unchecked")
+    @Override
+    public List<PendingOrderRequestResponse> getPendingOrderRequests() {
+        try {
+            // 1. Fetch all root admin order logs waiting in PENDING status
+            List<AdminOrder> pendingOrders = adminOrderRepository.findByStatusOrderByOrderDateDesc(AdminOrderStatus.PENDING);
 
+            if (pendingOrders == null || pendingOrders.isEmpty()) {
+                return new ArrayList<>();
+            }
 
+            List<PendingOrderRequestResponse> responseList = new ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm");
+
+            // 2. Loop through pending orders and build dashboard response items
+            for (AdminOrder order : pendingOrders) {
+
+                // 🟢 FETCH THE RESTAURANT NAME VIA THE NEW TARGETED ENDPOINT
+                String restaurantName = "Unknown Restaurant";
+                try {
+                    if (order.getRestaurantId() != null) {
+                        Map<String, String> nameResponse = authFeignClient.getRestaurantNameFromAuth(order.getRestaurantId());
+                        if (nameResponse != null && nameResponse.containsKey("restaurantName")) {
+                            restaurantName = nameResponse.get("restaurantName");
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("Targeted restaurant name resolution failed for ID: {}", order.getRestaurantId());
+                }
+
+                int totalQty = 0;
+                List<String> codesList = new ArrayList<>();
+                List<String> imagesList = new ArrayList<>();
+
+                // 3. Extract items nested within this order
+                if (order.getItems() != null && !order.getItems().isEmpty()) {
+                    Set<Integer> containerTypeIds = order.getItems().stream()
+                            .map(AdminOrderItem::getContainerTypeId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+
+                    if (!containerTypeIds.isEmpty()) {
+                        Collection<ContainerType> containers = containerTypeRepository.findByIdIn(containerTypeIds);
+                        Map<Integer, ContainerType> containerMap = containers.stream()
+                                .collect(Collectors.toMap(ContainerType::getId, c -> c));
+
+                        for (AdminOrderItem item : order.getItems()) {
+                            int itemQty = (item.getRequestedQty() != null) ? item.getRequestedQty() : 0;
+                            totalQty += itemQty;
+
+                            ContainerType container = containerMap.get(item.getContainerTypeId());
+                            if (container != null) {
+                                if (container.getProductId() != null) {
+                                    codesList.add(container.getProductId());
+                                }
+                                if (container.getImageUrl() != null) {
+                                    imagesList.add(container.getImageUrl());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                String containerCodesCombined = codesList.stream().distinct().collect(Collectors.joining(" | "));
+                String formattedOrderDateTime = order.getOrderDate() != null ? order.getOrderDate().format(formatter) : "";
+
+                String orderIdString = order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId();
+                String requestTypeString = order.getType() != null ? order.getType().name() : "ORDER";
+
+                responseList.add(PendingOrderRequestResponse.builder()
+                        .id(order.getId())
+                        .requestNumber(orderIdString)
+                        .requestType(requestTypeString)
+                        .restaurantName(restaurantName)
+                        .containerCodes(containerCodesCombined.isEmpty() ? "N/A" : containerCodesCombined)
+                        .formattedDateTime(formattedOrderDateTime)
+                        .totalQuantity(totalQty)
+                        .imageUrls(imagesList)
+                        .build());
+            }
+
+            return responseList;
+
+        } catch (Exception e) {
+            log.error("Critical error compiling global pending orders dashboard payload: ", e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public AdminOrderDetailResponse getAdminOrderDetailById(Long id) {
+        // 1. Fetch parent order framework data log records from database
+        AdminOrder order = adminOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order record not found with ID: " + id));
+
+        // 2. Safely resolve restaurant display string text label using your targeted endpoint approach
+        String restaurantName = "Unknown Restaurant";
+        try {
+            if (order.getRestaurantId() != null) {
+                Map<String, String> nameResponse = authFeignClient.getRestaurantNameFromAuth(order.getRestaurantId());
+                if (nameResponse != null && nameResponse.containsKey("restaurantName")) {
+                    restaurantName = nameResponse.get("restaurantName");
+                }
+            }
+        } catch (Exception ex) {
+            log.error("Failed to map dynamic restaurant metadata for details view card: {}", order.getRestaurantId());
+        }
+
+        List<AdminOrderDetailResponse.ItemDetail> itemDetailsList = new ArrayList<>();
+
+        // 3. Extract items array list collection properties and build cards data mapping
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            for (AdminOrderItem item : order.getItems()) {
+
+                String containerName = "Unknown Container";
+                String productCode = "N/A";
+                String capacityStr = "0ml";
+                String imageUrl = "";
+                int liveAvailableStock = 0;
+
+                // Lookup matching architectural specifications from core containers inventory dictionary table
+                Optional<ContainerType> containerOpt = containerTypeRepository.findById(item.getContainerTypeId());
+                if (containerOpt.isPresent()) {
+                    ContainerType type = containerOpt.get();
+                    containerName = type.getName();
+                    productCode = type.getProductId();
+                    capacityStr = (type.getCapacityMl() != null) ? type.getCapacityMl() + "ml" : "0ml";
+                    imageUrl = type.getImageUrl();
+
+                    // 🟢 CRITICAL CRITERIA LOOKUP: Fetch live inventory stock counts matching containerType identity
+                    Optional<AdminInventoryMaster> masterOpt = masterRepo.findByContainerTypeId(type.getId());
+                    if (masterOpt.isPresent()) {
+                        liveAvailableStock = (masterOpt.get().getAvailableContainers() != null) ?
+                                masterOpt.get().getAvailableContainers() : 0;
+                    }
+                }
+
+                itemDetailsList.add(AdminOrderDetailResponse.ItemDetail.builder()
+                        .itemId(item.getId())
+                        .containerTypeId(item.getContainerTypeId())
+                        .containerName(containerName)
+                        .productCode(productCode)
+                        .capacity(capacityStr)
+                        .imageUrl(imageUrl)
+                        .orderedQty((item.getRequestedQty() != null) ? item.getRequestedQty() : 0)
+                        .availableQty(liveAvailableStock) // populates "Available Qty" field dynamically
+                        .build());
+            }
+        }
+
+        // 4. Group all assembled details into your complete screen model template payload wrapper
+        return AdminOrderDetailResponse.builder()
+                .id(order.getId())
+                .orderId(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                .restaurantName(restaurantName)
+                .restaurantRemark(order.getRestaurantRemark() != null ? order.getRestaurantRemark() : "No remarks provided.")
+                .orderType(order.getType() != null ? order.getType().name() : "BORROW")
+                .items(itemDetailsList)
+                .build();
+    }
+
+    @Transactional
+    @Override
+    public Map<String, Object> rejectOrder(AdminOrderBulkRejectRequest request) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            if (request.getOrderIds() == null || request.getOrderIds().isEmpty()) {
+                throw new RuntimeException("Order IDs collection cannot be empty");
+            }
+
+            // 1. Process all selected order IDs inside a clean transaction loop
+            for (Long orderId : request.getOrderIds()) {
+                if (orderId == null) continue;
+
+                AdminOrder order = adminOrderRepository.findById(orderId)
+                        .orElseThrow(() -> new RuntimeException("Order not found with ID: " + orderId));
+
+                if (order.getStatus() != AdminOrderStatus.PENDING) {
+                    throw new RuntimeException("Only PENDING orders can be rejected. Order #" + orderId + " is " + order.getStatus());
+                }
+
+                // 2. Reset approved quantities to 0 for all matching items
+                List<AdminOrderItem> orderItems = adminOrderItemRepository.findAllByOrder(order);
+                if (orderItems != null && !orderItems.isEmpty()) {
+                    for (AdminOrderItem item : orderItems) {
+                        item.setApprovedQty(0);
+                    }
+                    adminOrderItemRepository.saveAll(orderItems);
+                }
+
+                // 3. Update the Parent Order row fields
+                order.setStatus(AdminOrderStatus.REJECTED);
+                order.setAdminRemark(request.getAdminRemark());
+                order.setDecisionAt(LocalDateTime.now());
+
+                adminOrderRepository.save(order);
+            }
+
+            response.put("status", "success");
+            response.put("message", "All specified orders rejected successfully");
+
+        } catch (RuntimeException ex) {
+            response.put("status", "error");
+            response.put("message", ex.getMessage());
+        } catch (Exception ex) {
+            response.put("status", "error");
+            response.put("message", "Bulk execution failed: " + ex.getMessage());
+        }
+
+        return response;
+    }
+
+    @Override
+    public List<ConfirmedOrderResponse> getConfirmedOrderRequests() {
+        try {
+            // 1. Fetch all orders marked with APPROVED status matching the Confirmed Tab
+            List<AdminOrder> confirmedOrders = adminOrderRepository.findByStatusOrderByOrderDateDesc(AdminOrderStatus.APPROVED);
+
+            if (confirmedOrders == null || confirmedOrders.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<ConfirmedOrderResponse> responseList = new ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm");
+
+            for (AdminOrder order : confirmedOrders) {
+                String restaurantName = "Unknown Restaurant";
+                try {
+                    if (order.getRestaurantId() != null) {
+                        Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                        if (profile != null && profile.containsKey("restaurantName")) {
+                            restaurantName = profile.get("restaurantName");
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to map restaurant name for confirmed order card: {}", order.getRestaurantId());
+                }
+
+                int totalApprovedQty = 0;
+                List<String> codesList = new ArrayList<>();
+
+                if (order.getItems() != null && !order.getItems().isEmpty()) {
+                    Set<Integer> typeIds = order.getItems().stream().map(AdminOrderItem::getContainerTypeId).filter(Objects::nonNull).collect(Collectors.toSet());
+                    Map<Integer, ContainerType> containerMap = containerTypeRepository.findByIdIn(typeIds).stream().collect(Collectors.toMap(ContainerType::getId, c -> c));
+
+                    for (AdminOrderItem item : order.getItems()) {
+                        // Sum up the confirmed approved amounts
+                        totalApprovedQty += (item.getApprovedQty() != null) ? item.getApprovedQty() : 0;
+
+                        ContainerType container = containerMap.get(item.getContainerTypeId());
+                        if (container != null && container.getProductId() != null) {
+                            codesList.add(container.getProductId());
+                        }
+                    }
+                }
+
+                responseList.add(ConfirmedOrderResponse.builder()
+                        .id(order.getId())
+                        .requestNumber(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                        .requestType(order.getType() != null ? order.getType().name() : "ORDER")
+                        .restaurantName(restaurantName)
+                        .containerCodes(codesList.isEmpty() ? "N/A" : codesList.stream().distinct().collect(Collectors.joining(" | ")))
+                        .formattedDateTime(order.getOrderDate() != null ? order.getOrderDate().format(formatter) : "")
+                        .totalQuantity(totalApprovedQty)
+                        .build());
+            }
+            return responseList;
+        } catch (Exception e) {
+            log.error("Error fetching confirmed orders list: ", e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public ConfirmedOrderDetailResponse getConfirmedOrderDetailById(Long id) {
+        AdminOrder order = adminOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Confirmed order not found with ID: " + id));
+
+        String restaurantName = "Unknown Restaurant";
+        String restaurantAddress = "No Address Provided";
+        try {
+            if (order.getRestaurantId() != null) {
+                Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                if (profile != null) {
+                    if (profile.containsKey("restaurantName")) restaurantName = profile.get("restaurantName");
+                    if (profile.containsKey("address")) restaurantAddress = profile.get("address");
+                }
+            }
+        } catch (Exception ex) {
+            log.error("Failed to map profile strings for confirmed details view screen: {}", order.getRestaurantId());
+        }
+
+        List<ConfirmedOrderDetailResponse.ConfirmedItemDetail> itemsList = new ArrayList<>();
+
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            for (AdminOrderItem item : order.getItems()) {
+                String containerName = "Unknown Container";
+                String productCode = "N/A";
+                String capacityStr = "0ml";
+                String imageUrl = "";
+
+                Optional<ContainerType> containerOpt = containerTypeRepository.findById(item.getContainerTypeId());
+                if (containerOpt.isPresent()) {
+                    ContainerType type = containerOpt.get();
+                    containerName = type.getName();
+                    productCode = type.getProductId();
+                    capacityStr = type.getCapacityMl() != null ? type.getCapacityMl() + "ml" : "0ml";
+                    imageUrl = type.getImageUrl();
+                }
+
+                itemsList.add(ConfirmedOrderDetailResponse.ConfirmedItemDetail.builder()
+                        .itemId(item.getId())
+                        .containerName(containerName)
+                        .productCode(productCode)
+                        .capacity(capacityStr)
+                        .imageUrl(imageUrl)
+                        .orderedQty(item.getApprovedQty() != null ? item.getApprovedQty() : 0) // Displays locked approved qty
+                        .build());
+            }
+        }
+
+        return ConfirmedOrderDetailResponse.builder()
+                .id(order.getId())
+                .orderId(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                .restaurantName(restaurantName)
+                .restaurantAddress(restaurantAddress)
+                .partnerRemark(order.getRestaurantRemark() != null ? order.getRestaurantRemark() : "No remarks provided.")
+                .sustajnRemark(order.getAdminRemark() != null ? order.getAdminRemark() : "No admin notes provided.")
+                .items(itemsList)
+                .build();
+    }
+
+    @Override
+    public List<RejectedOrderResponse> getRejectedOrderRequests() {
+        try {
+            // 1. Fetch all tracking logs explicitly sitting in REJECTED status state
+            List<AdminOrder> rejectedOrders = adminOrderRepository.findByStatusOrderByOrderDateDesc(AdminOrderStatus.REJECTED);
+
+            if (rejectedOrders == null || rejectedOrders.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<RejectedOrderResponse> responseList = new ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm");
+
+            for (AdminOrder order : rejectedOrders) {
+                String restaurantName = "Unknown Restaurant";
+                try {
+                    if (order.getRestaurantId() != null) {
+                        Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                        if (profile != null && profile.containsKey("restaurantName")) {
+                            restaurantName = profile.get("restaurantName");
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to map restaurant profile text info for rejected card: {}", order.getRestaurantId());
+                }
+
+                int totalRequestedQty = 0;
+                List<String> codesList = new ArrayList<>();
+
+                if (order.getItems() != null && !order.getItems().isEmpty()) {
+                    Set<Integer> typeIds = order.getItems().stream().map(AdminOrderItem::getContainerTypeId).filter(Objects::nonNull).collect(Collectors.toSet());
+                    Map<Integer, ContainerType> containerMap = containerTypeRepository.findByIdIn(typeIds).stream().collect(Collectors.toMap(ContainerType::getId, c -> c));
+
+                    for (AdminOrderItem item : order.getItems()) {
+                        // 💡 For rejections, show the original quantity they wanted to borrow/return
+                        totalRequestedQty += (item.getRequestedQty() != null) ? item.getRequestedQty() : 0;
+
+                        ContainerType container = containerMap.get(item.getContainerTypeId());
+                        if (container != null && container.getProductId() != null) {
+                            codesList.add(container.getProductId());
+                        }
+                    }
+                }
+
+                responseList.add(RejectedOrderResponse.builder()
+                        .id(order.getId())
+                        .requestNumber(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                        .requestType(order.getType() != null ? order.getType().name() : "ORDER")
+                        .restaurantName(restaurantName)
+                        .containerCodes(codesList.isEmpty() ? "N/A" : codesList.stream().distinct().collect(Collectors.joining(" | ")))
+                        .formattedDateTime(order.getOrderDate() != null ? order.getOrderDate().format(formatter) : "")
+                        .totalQuantity(totalRequestedQty)
+                        .build());
+            }
+            return responseList;
+        } catch (Exception e) {
+            log.error("Global crash parsing rejected orders logging tracking dashboard list: ", e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public RejectedOrderDetailResponse getRejectedOrderDetailById(Long id) {
+        AdminOrder order = adminOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Rejected order log row entity not found with ID: " + id));
+
+        // Pull restaurant information from the inter-service bridge cleanly
+        String restaurantName = "Unknown Restaurant";
+        String restaurantAddress = "No Address Provided";
+        try {
+            if (order.getRestaurantId() != null) {
+                Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                if (profile != null) {
+                    if (profile.containsKey("restaurantName")) restaurantName = profile.get("restaurantName");
+                    if (profile.containsKey("address")) restaurantAddress = profile.get("address");
+                }
+            }
+        } catch (Exception ex) {
+            log.error("Inter-service client validation broken for rejected profile mapping ID: {}", order.getRestaurantId());
+        }
+
+        // Setup timeline date/time formatters split configurations
+        DateTimeFormatter dateOnly = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        DateTimeFormatter timeOnly = DateTimeFormatter.ofPattern("HH:mm");
+
+        List<RejectedOrderDetailResponse.RejectedItemDetail> itemsList = new ArrayList<>();
+
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            for (AdminOrderItem item : order.getItems()) {
+                String containerName = "Unknown Container";
+                String productCode = "N/A";
+                String capacityStr = "0ml";
+                String imageUrl = "";
+
+                Optional<ContainerType> containerOpt = containerTypeRepository.findById(item.getContainerTypeId());
+                if (containerOpt.isPresent()) {
+                    ContainerType type = containerOpt.get();
+                    containerName = type.getName();
+                    productCode = type.getProductId();
+                    capacityStr = type.getCapacityMl() != null ? type.getCapacityMl() + "ml" : "0ml";
+                    imageUrl = type.getImageUrl();
+                }
+
+                itemsList.add(RejectedOrderDetailResponse.RejectedItemDetail.builder()
+                        .itemId(item.getId())
+                        .containerName(containerName)
+                        .productCode(productCode)
+                        .capacity(capacityStr)
+                        .imageUrl(imageUrl)
+                        .requestedQty(item.getRequestedQty() != null ? item.getRequestedQty() : 0)
+                        .build());
+            }
+        }
+
+        return RejectedOrderDetailResponse.builder()
+                .id(order.getId())
+                .orderId(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                .restaurantName(restaurantName)
+                .restaurantAddress(restaurantAddress)
+                // Split date and time fields dynamically to fill tracking timeline layout widgets
+                .orderedDate(order.getOrderDate() != null ? order.getOrderDate().format(dateOnly) : "N/A")
+                .orderedTime(order.getOrderDate() != null ? order.getOrderDate().format(timeOnly) : "N/A")
+                .rejectedDate(order.getDecisionAt() != null ? order.getDecisionAt().format(dateOnly) : "N/A")
+                .rejectedTime(order.getDecisionAt() != null ? order.getDecisionAt().format(timeOnly) : "N/A")
+                .rejectedRemark(order.getAdminRemark() != null ? order.getAdminRemark() : "No rejection notes provided.")
+                .items(itemsList)
+                .build();
+    }
+
+    @Override
+    public List<DeliveredOrderResponse> getDeliveredOrderRequests() {
+        try {
+            // 1. Query the tracking registry for records matching DELIVERED status
+            List<AdminOrder> deliveredOrders = adminOrderRepository.findByStatusOrderByOrderDateDesc(AdminOrderStatus.DELIVERED);
+
+            if (deliveredOrders == null || deliveredOrders.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            List<DeliveredOrderResponse> responseList = new ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm");
+
+            for (AdminOrder order : deliveredOrders) {
+                String restaurantName = "Unknown Restaurant";
+                try {
+                    if (order.getRestaurantId() != null) {
+                        Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                        if (profile != null && profile.containsKey("restaurantName")) {
+                            restaurantName = profile.get("restaurantName");
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to map restaurant name profile for delivered card target identity: {}", order.getRestaurantId());
+                }
+
+                int totalDeliveredQty = 0;
+                List<String> codesList = new ArrayList<>();
+
+                if (order.getItems() != null && !order.getItems().isEmpty()) {
+                    Set<Integer> typeIds = order.getItems().stream()
+                            .map(AdminOrderItem::getContainerTypeId)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toSet());
+
+                    Map<Integer, ContainerType> containerMap = containerTypeRepository.findByIdIn(typeIds).stream()
+                            .collect(Collectors.toMap(ContainerType::getId, c -> c));
+
+                    for (AdminOrderItem item : order.getItems()) {
+                        totalDeliveredQty += (item.getApprovedQty() != null) ? item.getApprovedQty() : 0;
+
+                        ContainerType container = containerMap.get(item.getContainerTypeId());
+                        if (container != null && container.getProductId() != null) {
+                            codesList.add(container.getProductId());
+                        }
+                    }
+                }
+
+                responseList.add(DeliveredOrderResponse.builder()
+                        .id(order.getId())
+                        .requestNumber(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                        .requestType(order.getType() != null ? order.getType().name() : "ORDER")
+                        .restaurantName(restaurantName)
+                        .containerCodes(codesList.isEmpty() ? "N/A" : codesList.stream().distinct().collect(Collectors.joining(" | ")))
+                        .formattedDateTime(order.getOrderDate() != null ? order.getOrderDate().format(formatter) : "")
+                        .totalQuantity(totalDeliveredQty)
+                        .build());
+            }
+            return responseList;
+        } catch (Exception e) {
+            log.error("Failed compiling delivered orders dashboard registry dataset list: ", e);
+            return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public DeliveredOrderDetailResponse getDeliveredOrderDetailById(Long id) {
+        AdminOrder order = adminOrderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Delivered order history log entity not found with ID: " + id));
+
+        String restaurantName = "Unknown Restaurant";
+        String restaurantAddress = "No Address Provided";
+        try {
+            if (order.getRestaurantId() != null) {
+                Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                if (profile != null) {
+                    if (profile.containsKey("restaurantName")) restaurantName = profile.get("restaurantName");
+                    if (profile.containsKey("address")) restaurantAddress = profile.get("address");
+                }
+            }
+        } catch (Exception ex) {
+            log.error("Failed to map restaurant profile text info for delivered detail id: {}", order.getRestaurantId());
+        }
+
+        DateTimeFormatter dateOnly = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        DateTimeFormatter timeOnly = DateTimeFormatter.ofPattern("HH:mm");
+
+        List<DeliveredOrderDetailResponse.DeliveredItemDetail> itemsList = new ArrayList<>();
+
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            for (AdminOrderItem item : order.getItems()) {
+                String containerName = "Unknown Container";
+                String productCode = "N/A";
+                String capacityStr = "0ml";
+                String imageUrl = "";
+
+                Optional<ContainerType> containerOpt = containerTypeRepository.findById(item.getContainerTypeId());
+                if (containerOpt.isPresent()) {
+                    ContainerType type = containerOpt.get();
+                    containerName = type.getName();
+                    productCode = type.getProductId();
+                    capacityStr = type.getCapacityMl() != null ? type.getCapacityMl() + "ml" : "0ml";
+                    imageUrl = type.getImageUrl();
+                }
+
+                itemsList.add(DeliveredOrderDetailResponse.DeliveredItemDetail.builder()
+                        .itemId(item.getId())
+                        .containerName(containerName)
+                        .productCode(productCode)
+                        .capacity(capacityStr)
+                        .imageUrl(imageUrl)
+                        .deliveredQty(item.getApprovedQty() != null ? item.getApprovedQty() : 0)
+                        .build());
+            }
+        }
+
+        return DeliveredOrderDetailResponse.builder()
+                .id(order.getId())
+                .orderId(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
+                .restaurantName(restaurantName)
+                .restaurantAddress(restaurantAddress)
+                // Split Dates and Times to map directly to the 3-Step Milestone Vertical UI layout
+                .orderedDate(order.getOrderDate() != null ? order.getOrderDate().format(dateOnly) : "N/A")
+                .orderedTime(order.getOrderDate() != null ? order.getOrderDate().format(timeOnly) : "N/A")
+                .confirmedDate(order.getDecisionAt() != null ? order.getDecisionAt().format(dateOnly) : "N/A")
+                .confirmedTime(order.getDecisionAt() != null ? order.getDecisionAt().format(timeOnly) : "N/A")
+                .deliveredDate(order.getUpdatedAt() != null ? order.getUpdatedAt().format(dateOnly) : "N/A")
+                .deliveredTime(order.getUpdatedAt() != null ? order.getUpdatedAt().format(timeOnly) : "N/A")
+                .items(itemsList)
+                .build();
+    }
 
     @Transactional
     public Map<String, Object> addMultipleInventories(InventoryBulkAddRequest request) {

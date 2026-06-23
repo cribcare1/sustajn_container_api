@@ -31,4 +31,10 @@ public interface AuthFeignClient {
 
     @GetMapping(value = "/auth/getUserByCustomerId")
     ApiResponse<UserResponse> getUserByCustomerId(@RequestParam String customerId);
+
+    @GetMapping("/auth/internal/restaurant-name/{userId}")
+    Map<String, String> getRestaurantNameFromAuth(@PathVariable("userId") Long userId);
+
+    @GetMapping("/auth/internal/restaurant-profile/{userId}")
+    Map<String, String> getRestaurantProfileFromAuth(@PathVariable("userId") Long userId);
 }

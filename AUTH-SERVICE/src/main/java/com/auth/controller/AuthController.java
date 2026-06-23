@@ -25,6 +25,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -365,5 +366,86 @@ public class AuthController {
             @RequestBody RegistrationRequest request) {
 
         return ResponseEntity.ok(userService.updateBankDetails(customerId, request));
+    }
+
+    @GetMapping("/internal/restaurant-name/{userId}")
+    public ResponseEntity<Map<String, String>> getRestaurantNameInternal(@PathVariable Long userId) {
+        Map<String, String> response = new HashMap<>();
+
+        try {
+            // 1. Find the user entity inside your auth database (using your exact User model)
+            Optional<com.auth.model.User> userOpt = userRepository.findById(userId);
+
+            if (userOpt.isPresent() && userOpt.get().getFullName() != null) {
+                // 🟢 Map the entity field 'fullName' directly to the response key
+                response.put("restaurantName", userOpt.get().getFullName());
+                return ResponseEntity.ok(response);
+            }
+        } catch (Exception e) {
+            log.error("Failed to resolve restaurant name for id: {}", userId, e);
+        }
+
+        // Safe fallback text if no account is found or an exception is caught
+        response.put("restaurantName", "Unknown Restaurant");
+        return ResponseEntity.ok(response);
+    }
+    @GetMapping("/internal/restaurant-profile/{userId}")
+    public ResponseEntity<Map<String, String>> getRestaurantProfileInternal(@PathVariable Long userId) {
+        Map<String, String> response = new HashMap<>();
+        response.put("restaurantName", "Unknown Restaurant");
+        response.put("address", "No Address Provided");
+
+        try {
+            Optional<com.auth.model.User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                com.auth.model.User user = userOpt.get();
+
+                // 1. Extract Full Name safely
+                if (user.getFullName() != null) {
+                    response.put("restaurantName", user.getFullName());
+                }
+
+                // 2. Extract first address text safely from the List<Address> using explicit entity fields
+                if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
+
+                    // 🟢 Typed explicitly to your core database Address entity model class
+                    com.auth.model.Address firstAddress = user.getAddresses().get(0);
+
+                    if (firstAddress != null) {
+                        StringBuilder addressBuilder = new StringBuilder();
+
+                        // Append house/flat details safely
+                        if (firstAddress.getFlatDoorHouseDetails() != null && !firstAddress.getFlatDoorHouseDetails().trim().isEmpty()) {
+                            addressBuilder.append(firstAddress.getFlatDoorHouseDetails().trim());
+                        }
+
+                        // Append area/street/block details with proper comma positioning logic
+                        if (firstAddress.getAreaStreetCityBlockDetails() != null && !firstAddress.getAreaStreetCityBlockDetails().trim().isEmpty()) {
+                            if (addressBuilder.length() > 0) {
+                                addressBuilder.append(", ");
+                            }
+                            addressBuilder.append(firstAddress.getAreaStreetCityBlockDetails().trim());
+                        }
+
+                        // Append the postal tracking code block
+                        if (firstAddress.getPoBoxOrPostalCode() != null && !firstAddress.getPoBoxOrPostalCode().trim().isEmpty()) {
+                            if (addressBuilder.length() > 0) {
+                                addressBuilder.append(" - ");
+                            }
+                            addressBuilder.append(firstAddress.getPoBoxOrPostalCode().trim());
+                        }
+
+                        String combinedAddress = addressBuilder.toString();
+                        if (!combinedAddress.isEmpty()) {
+                            response.put("address", combinedAddress);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to resolve restaurant profile for id: {}", userId, e);
+        }
+
+        return ResponseEntity.ok(response);
     }
 }

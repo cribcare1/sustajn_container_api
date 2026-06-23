@@ -58,5 +58,24 @@ public interface InventoryService {
 
     Map<String, Object> getContainerTypeById(Integer id);
 
+    List<PendingOrderRequestResponse> getPendingOrderRequests();
+
+    // Append this method blueprint to your InventoryService interface listing
+    AdminOrderDetailResponse getAdminOrderDetailById(Long id);
+
+    // Append this method inside your InventoryService interface listing
+    Map<String, Object> rejectOrder(AdminOrderBulkRejectRequest request);
+
+    List<ConfirmedOrderResponse> getConfirmedOrderRequests();
+    ConfirmedOrderDetailResponse getConfirmedOrderDetailById(Long id);
+
+    // Append these two methods to your core InventoryService interface listing
+    List<RejectedOrderResponse> getRejectedOrderRequests();
+    RejectedOrderDetailResponse getRejectedOrderDetailById(Long id);
+
+    // Append these two methods to your InventoryService contract interface listing
+    List<DeliveredOrderResponse> getDeliveredOrderRequests();
+    DeliveredOrderDetailResponse getDeliveredOrderDetailById(Long id);
+
 
 }
