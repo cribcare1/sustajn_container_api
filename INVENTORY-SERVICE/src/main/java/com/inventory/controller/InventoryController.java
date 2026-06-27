@@ -453,5 +453,12 @@ public class InventoryController {
         ));
     }
 
+    @GetMapping("/getDamagedContainersByUser")
+    public ResponseEntity<ApiResponse<List<DamageContainerMonthWiseResponse>>> getDamageContainerMonthWiseDetailsByUser(
+            @RequestParam Long userId) {
+
+        return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByUserId(userId));
+    }
+
 
 }

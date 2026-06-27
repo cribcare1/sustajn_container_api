@@ -79,5 +79,7 @@ public interface InventoryService {
 
     List<SubscriptionTransactionResponse> getSubscriptionTransactionsDashboard();
 
+    ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByUserId(Long userId);
+
 
 }

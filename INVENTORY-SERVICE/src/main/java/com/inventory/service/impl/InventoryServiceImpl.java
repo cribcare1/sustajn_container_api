@@ -1852,6 +1852,130 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
+    public ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByUserId(Long userId) {
+        try {
+            List<DamagedContainer> damagedContainers = damagedContainerRepository.findByUserId(userId);
+
+            if (damagedContainers == null || damagedContainers.isEmpty()) {
+                return new ApiResponse<>(
+                        InventoryConstant.SUCCESS,
+                        "No damaged containers found for this user",
+                        Collections.emptyList()
+                );
+            }
+
+
+            Set<Integer> containerTypeIds = damagedContainers.stream()
+                    .map(DamagedContainer::getContainerTypeId)
+                    .collect(Collectors.toSet());
+
+            Map<Integer, ContainerType> containerTypeMap = containerTypeRepository.findByIdIn(containerTypeIds)
+                    .stream()
+                    .collect(Collectors.toMap(ContainerType::getId, ct -> ct));
+
+
+            Set<Long> damageIds = damagedContainers.stream()
+                    .map(DamagedContainer::getId)
+                    .collect(Collectors.toSet());
+
+            Map<Long, List<DamagedContainerImages>> damageImagesMap = damagedContainerImagesRepository.findByDamageIdIn(damageIds)
+                    .stream()
+                    .collect(Collectors.groupingBy(DamagedContainerImages::getDamageId));
+
+
+            Map<String, List<DamagedContainer>> monthWiseMap = damagedContainers.stream()
+                    .collect(Collectors.groupingBy(dc -> {
+                        LocalDateTime date = dc.getCreatedAt();
+                        return date.getMonth().getDisplayName(TextStyle.FULL, Locale.ENGLISH) + "-" + date.getYear();
+                    }));
+
+            List<DamageContainerMonthWiseResponse> monthWiseResponses = new ArrayList<>();
+
+            for (Map.Entry<String, List<DamagedContainer>> monthEntry : monthWiseMap.entrySet()) {
+                String monthYear = monthEntry.getKey();
+                List<DamagedContainer> monthContainers = monthEntry.getValue();
+                Integer monthWiseTotal = monthContainers.size();
+
+
+                Map<String, List<DamagedContainer>> dateWiseMap = monthContainers.stream()
+                        .collect(Collectors.groupingBy(dc ->
+                                dc.getCreatedAt().format(DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm"))
+                        ));
+
+                List<DamageContainerDateWiseResponse> dateResponses = new ArrayList<>();
+
+                for (Map.Entry<String, List<DamagedContainer>> dateEntry : dateWiseMap.entrySet()) {
+                    String dateTime = dateEntry.getKey();
+                    List<DamagedContainer> dateContainers = dateEntry.getValue();
+                    Integer dateWiseTotal = dateContainers.size();
+
+                    List<DamageProductResponse> productResponses = new ArrayList<>();
+                    Set<String> productIds = new LinkedHashSet<>();
+
+                    for (DamagedContainer dc : dateContainers) {
+                        ContainerType containerType = containerTypeMap.get(dc.getContainerTypeId());
+                        if (containerType == null) continue;
+
+                        // Get images matching the damaged unit item row
+                        List<DamagedContainerImages> images = damageImagesMap.getOrDefault(dc.getId(), Collections.emptyList());
+                        String imageUrls = images.stream()
+                                .map(DamagedContainerImages::getDamageImageUrl)
+                                .collect(Collectors.joining("#"));
+
+                        DamageProductResponse product = new DamageProductResponse(
+                                null,
+                                null,
+                                containerType.getId(),
+                                containerType.getName(),
+                                containerType.getDescription(),
+                                containerType.getImageUrl(),
+                                containerType.getCapacityMl(),
+                                containerType.getProductId(),
+                                dc.getRemark(),
+                                imageUrls
+                        );
+
+                        productResponses.add(product);
+
+                        if (containerType.getProductId() != null) {
+                            productIds.add(containerType.getProductId());
+                        }
+                    }
+
+                    DamageContainerDateWiseResponse damageResponse = new DamageContainerDateWiseResponse(
+                            String.join(" | ", productIds),
+                            dateTime,
+                            dateWiseTotal,
+                            productResponses
+                    );
+                    dateResponses.add(damageResponse);
+                }
+
+                DamageContainerMonthWiseResponse monthResponse = new DamageContainerMonthWiseResponse(
+                        monthYear,
+                        monthWiseTotal,
+                        dateResponses
+                );
+                monthWiseResponses.add(monthResponse);
+            }
+
+            return new ApiResponse<>(
+                    InventoryConstant.SUCCESS,
+                    "User damaged container details fetched successfully",
+                    monthWiseResponses
+            );
+
+        } catch (Exception e) {
+            log.error("Error fetching month-wise damaged container details for userId {}: {}", userId, e.getMessage(), e);
+            return new ApiResponse<>(
+                    InventoryConstant.ERROR,
+                    "Failed to fetch user month-wise damaged container details",
+                    null
+            );
+        }
+    }
+
+    @Override
     public ApiResponse<List<SoldContainerMonthWiseResponse>> getSoldContainerMonthWiseDetails(Long restaurantId) {
 
         try {
