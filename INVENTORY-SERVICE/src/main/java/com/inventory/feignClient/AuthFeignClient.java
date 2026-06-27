@@ -37,4 +37,7 @@ public interface AuthFeignClient {
 
     @GetMapping("/auth/internal/restaurant-profile/{userId}")
     Map<String, String> getRestaurantProfileFromAuth(@PathVariable("userId") Long userId);
+
+    @GetMapping("/auth/internal/partner-subscriptions")
+    List<Map<String, Object>> getPartnerSubscriptionsFromAuth();
 }

@@ -438,5 +438,20 @@ public class InventoryController {
         ));
     }
 
+    /**
+     * Fetch complete unified dashboard list for the "Transactions -> Subscriptions" tab flow layout screen
+     */
+    @GetMapping("/admin/transactions/subscriptions")
+    public ResponseEntity<ApiResponse<List<SubscriptionTransactionResponse>>> getSubscriptionTransactionsDashboard() {
+
+        List<SubscriptionTransactionResponse> data = inventoryService.getSubscriptionTransactionsDashboard();
+
+        return ResponseEntity.ok(new ApiResponse<>(
+                "Subscription transactions list provided successfully",
+                "SUCCESS",
+                data
+        ));
+    }
+
 
 }
