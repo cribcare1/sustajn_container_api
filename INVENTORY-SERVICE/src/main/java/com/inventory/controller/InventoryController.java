@@ -447,7 +447,7 @@ public class InventoryController {
         List<SubscriptionTransactionResponse> data = inventoryService.getSubscriptionTransactionsDashboard();
 
         return ResponseEntity.ok(new ApiResponse<>(
-                "Subscription transactions list compiled successfully",
+                "Subscription transactions list provided successfully",
                 "SUCCESS",
                 data
         ));
