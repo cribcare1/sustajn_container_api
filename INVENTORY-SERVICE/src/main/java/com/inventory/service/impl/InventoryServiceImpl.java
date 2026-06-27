@@ -27,6 +27,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -52,6 +53,7 @@ public class InventoryServiceImpl implements InventoryService {
     private final OrderFeignClient orderFeignClient;
     private final AdminOrderRepository adminOrderRepository;
     private final AdminOrderItemRepository adminOrderItemRepository;
+    private final SubscriptionPlanRepository subscriptionPlanRepository;
 
     public Map<String, Object> saveOrUpdate(ContainerTypeRequest request, MultipartFile file) {
 
@@ -766,6 +768,65 @@ public class InventoryServiceImpl implements InventoryService {
                 .deliveredTime(order.getUpdatedAt() != null ? order.getUpdatedAt().format(timeOnly) : "N/A")
                 .items(itemsList)
                 .build();
+    }
+
+    @Override
+    public List<SubscriptionTransactionResponse> getSubscriptionTransactionsDashboard() {
+        List<SubscriptionTransactionResponse> responseList = new ArrayList<>();
+
+        try {
+            // 1. Fetch unified user records from Auth-Service via Feign mapping contract
+            List<Map<String, Object>> remoteUsers = authFeignClient.getPartnerSubscriptionsFromAuth();
+            if (remoteUsers == null || remoteUsers.isEmpty()) {
+                return responseList;
+            }
+
+            // 2. Fetch all local master configuration plans
+            List<SubscriptionPlan> localPlans = subscriptionPlanRepository.findAll();
+            Map<Integer, SubscriptionPlan> planMap = localPlans.stream()
+                    .collect(Collectors.toMap(SubscriptionPlan::getPlanId, p -> p, (existing, replacement) -> existing));
+
+            DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            DateTimeFormatter groupFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+
+            // 3. Process and map values
+            for (Map<String, Object> userMap : remoteUsers) {
+
+                Integer planId = (Integer) userMap.get("subscriptionPlanId");
+                if (planId == null || !planMap.containsKey(planId)) {
+                    continue; // Skip if no plan details match up
+                }
+
+                SubscriptionPlan activePlan = planMap.get(planId);
+
+                LocalDateTime trackingDate = LocalDateTime.now();
+                if (userMap.get("trackedAt") != null) {
+                    try {
+                        trackingDate = LocalDateTime.parse(userMap.get("trackedAt").toString());
+                    } catch (Exception ex) {
+                        // Keep default fallback if parsing anomalies hit
+                    }
+                }
+
+                String userTypeString = userMap.get("userType") != null ? userMap.get("userType").toString() : "CUSTOMER";
+
+                responseList.add(SubscriptionTransactionResponse.builder()
+                        .id(Long.valueOf(userMap.get("userId").toString()))
+                        .name(userMap.get("name").toString())
+                        .userType(userTypeString) // 🟢 Natively forwards "CUSTOMER" or "PARTNER"
+                        .restaurantAddress(userMap.get("concatenatedAddress").toString())
+                        .planType(activePlan.getPlanType() != null ? activePlan.getPlanType() : activePlan.getPlanName())
+                        .amount(activePlan.getFeeType() != null ? activePlan.getFeeType() : BigDecimal.ZERO)
+                        .formattedDate(trackingDate.format(displayFormatter))
+                        .groupMonthYear(trackingDate.format(groupFormatter))
+                        .build());
+            }
+
+        } catch (Exception e) {
+            log.error("Failed compiling mixed type subscription transactions dashboard payload: ", e);
+        }
+
+        return responseList;
     }
 
     @Transactional

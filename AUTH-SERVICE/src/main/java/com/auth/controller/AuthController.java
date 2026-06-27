@@ -2,6 +2,7 @@ package com.auth.controller;
 
 import com.auth.constant.AuthConstant;
 import com.auth.feignClient.service.NotificationFeignClientService;
+import com.auth.model.Address;
 import com.auth.model.User;
 import com.auth.repository.UserRepository;
 import com.auth.request.*;
@@ -25,6 +26,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -447,5 +449,50 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(response);
+    }
+    @GetMapping("/internal/partner-subscriptions")
+    public ResponseEntity<List<com.auth.response.PartnerSubscriptionInternalResponse>> getPartnerSubscriptionsInternal() {
+        List<com.auth.response.PartnerSubscriptionInternalResponse> resultList = new java.util.ArrayList<>();
+
+        try {
+            // Fetch all accounts from the database
+            List<User> users = userRepository.findAll();
+
+            for (User user : users) {
+                // Filter to only capture records with active subscriptions assigned
+                if (user.getSubscriptionPlanId() != null) {
+
+                    // Build address safely using explicit fields to prevent memory hash bugs
+                    String displayAddress = "No Address Provided";
+                    if (user.getAddresses() != null && !user.getAddresses().isEmpty()) {
+                        Address addr = user.getAddresses().get(0);
+                        StringBuilder sb = new StringBuilder();
+                        if (addr.getFlatDoorHouseDetails() != null) sb.append(addr.getFlatDoorHouseDetails().trim());
+                        if (addr.getAreaStreetCityBlockDetails() != null) {
+                            if (sb.length() > 0) sb.append(", ");
+                            sb.append(addr.getAreaStreetCityBlockDetails().trim());
+                        }
+                        if (sb.length() > 0) displayAddress = sb.toString();
+                    }
+
+                    // Resolve User Type safely
+                    String resolvedType = (user.getUserType() != null) ? user.getUserType().name() : "CUSTOMER";
+
+                    // 🟢 Build the exact Response object matching your package patterns
+                    resultList.add(com.auth.response.PartnerSubscriptionInternalResponse.builder()
+                            .userId(user.getId())
+                            .name(user.getFullName() != null ? user.getFullName() : "Unknown Account")
+                            .userType(resolvedType)
+                            .subscriptionPlanId(user.getSubscriptionPlanId())
+                            .concatenatedAddress(displayAddress)
+                            .trackedAt(user.getCreatedAt() != null ? user.getCreatedAt() : LocalDateTime.now())
+                            .build());
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed executing internal multi-type subscription response mapping: {}", e.getMessage());
+        }
+
+        return ResponseEntity.ok(resultList);
     }
 }
