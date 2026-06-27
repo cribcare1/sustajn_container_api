@@ -13,6 +13,9 @@ public interface DamagedContainerRepository extends JpaRepository<DamagedContain
     @Query("SELECT d FROM DamagedContainer d WHERE d.restaurantId = :restaurantId AND d.damagedByRestaurant = true")
     List<DamagedContainer> findByRestaurantId(Long restaurantId);
 
+    @Query("SELECT d FROM DamagedContainer d WHERE d.userId = :userId AND d.damagedByUser = true")
+    List<DamagedContainer> findByUserId(@Param("userId") Long userId);
+
     @Query("SELECT d FROM DamagedContainer d WHERE d.damagedByUser = true")
     List<DamagedContainer> findAllIsDamageByCustomer();
 
