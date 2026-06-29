@@ -331,8 +331,8 @@ public class InventoryController {
         List<PendingOrderRequestResponse> data = inventoryService.getPendingOrderRequests();
 
         return ResponseEntity.ok(new ApiResponse<List<PendingOrderRequestResponse>>(
-                "Pending order requests fetched successfully",
                 "SUCCESS",
+                "Pending order requests fetched successfully",
                 data
         ));
     }
@@ -347,8 +347,8 @@ public class InventoryController {
 
         // 🟢 FIXED: Removed extra '>' and separated the message and "SUCCESS" status with a comma
         return ResponseEntity.ok(new ApiResponse<AdminOrderDetailResponse>(
-                "Order detailed insights view model compiled successfully",
                 "SUCCESS",
+                "Order detailed insights view model Provided successfully",
                 detailedPayload
         ));
     }
@@ -367,8 +367,8 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<List<ConfirmedOrderResponse>>> getConfirmedOrderRequests() {
         List<ConfirmedOrderResponse> data = inventoryService.getConfirmedOrderRequests();
         return ResponseEntity.ok(new ApiResponse<>(
-                "Confirmed order requests fetched successfully",
                 "SUCCESS",
+                "Confirmed order requests fetched successfully",
                 data
         ));
     }
@@ -380,8 +380,8 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<ConfirmedOrderDetailResponse>> getConfirmedOrderDetailById(@PathVariable Long id) {
         ConfirmedOrderDetailResponse data = inventoryService.getConfirmedOrderDetailById(id);
         return ResponseEntity.ok(new ApiResponse<>(
-                "Confirmed order deep details insights compiled successfully",
                 "SUCCESS",
+                "Confirmed order deep details insights compiled successfully",
                 data
         ));
     }
@@ -393,8 +393,8 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<List<RejectedOrderResponse>>> getRejectedOrderRequests() {
         List<RejectedOrderResponse> data = inventoryService.getRejectedOrderRequests();
         return ResponseEntity.ok(new ApiResponse<>(
-                "Rejected order requests tab dataset fetched successfully",
                 "SUCCESS",
+                "Rejected order requests tab dataset fetched successfully",
                 data
         ));
     }
@@ -406,8 +406,8 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<RejectedOrderDetailResponse>> getRejectedOrderDetailById(@PathVariable Long id) {
         RejectedOrderDetailResponse data = inventoryService.getRejectedOrderDetailById(id);
         return ResponseEntity.ok(new ApiResponse<>(
-                "Rejected order specific details dataset compiled successfully",
                 "SUCCESS",
+                "Rejected order specific details dataset provided successfully",
                 data
         ));
     }
@@ -419,8 +419,8 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<List<DeliveredOrderResponse>>> getDeliveredOrderRequests() {
         List<DeliveredOrderResponse> data = inventoryService.getDeliveredOrderRequests();
         return ResponseEntity.ok(new ApiResponse<>(
-                "Delivered order requests tab dataset fetched successfully",
                 "SUCCESS",
+                "Delivered order requests tab dataset fetched successfully",
                 data
         ));
     }
@@ -432,8 +432,8 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<DeliveredOrderDetailResponse>> getDeliveredOrderDetailById(@PathVariable Long id) {
         DeliveredOrderDetailResponse data = inventoryService.getDeliveredOrderDetailById(id);
         return ResponseEntity.ok(new ApiResponse<>(
-                "Delivered order specific detail metrics compiled successfully",
                 "SUCCESS",
+                "Delivered order specific detail metrics provided successfully",
                 data
         ));
     }
@@ -447,8 +447,8 @@ public class InventoryController {
         List<SubscriptionTransactionResponse> data = inventoryService.getSubscriptionTransactionsDashboard();
 
         return ResponseEntity.ok(new ApiResponse<>(
-                "Subscription transactions list provided successfully",
                 "SUCCESS",
+                "Subscription transactions list provided successfully",
                 data
         ));
     }
