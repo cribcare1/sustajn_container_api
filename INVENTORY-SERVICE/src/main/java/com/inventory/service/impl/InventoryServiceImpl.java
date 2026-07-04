@@ -469,6 +469,11 @@ public class InventoryServiceImpl implements InventoryService {
             log.error("Failed to map profile strings for confirmed details view screen: {}", order.getRestaurantId());
         }
 
+        // 🟢 1. EXTRACT AND FORMAT DATE & TIME DEFENSIVELY
+        java.time.LocalDateTime orderTimestamp = order.getCreatedAt() != null ? order.getCreatedAt() : java.time.LocalDateTime.now();
+        String formattedDate = orderTimestamp.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+        String formattedTime = orderTimestamp.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+
         List<ConfirmedOrderDetailResponse.ConfirmedItemDetail> itemsList = new ArrayList<>();
 
         if (order.getItems() != null && !order.getItems().isEmpty()) {
@@ -493,11 +498,12 @@ public class InventoryServiceImpl implements InventoryService {
                         .productCode(productCode)
                         .capacity(capacityStr)
                         .imageUrl(imageUrl)
-                        .orderedQty(item.getApprovedQty() != null ? item.getApprovedQty() : 0) // Displays locked approved qty
+                        .orderedQty(item.getApprovedQty() != null ? item.getApprovedQty() : 0)
                         .build());
             }
         }
 
+        // 🟢 2. INJECT FORMATTED STRINGS INTO THE DTO BUILDER
         return ConfirmedOrderDetailResponse.builder()
                 .id(order.getId())
                 .orderId(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
@@ -505,10 +511,11 @@ public class InventoryServiceImpl implements InventoryService {
                 .restaurantAddress(restaurantAddress)
                 .partnerRemark(order.getRestaurantRemark() != null ? order.getRestaurantRemark() : "No remarks provided.")
                 .sustajnRemark(order.getAdminRemark() != null ? order.getAdminRemark() : "No admin notes provided.")
+                .orderDate(formattedDate) // 🟢 Maps to UI card date text
+                .orderTime(formattedTime) // 🟢 Maps to UI card time text
                 .items(itemsList)
                 .build();
     }
-
     @Override
     public List<RejectedOrderResponse> getRejectedOrderRequests() {
         try {
@@ -771,30 +778,33 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     @Override
-    public List<SubscriptionTransactionResponse> getSubscriptionTransactionsDashboard() {
-        List<SubscriptionTransactionResponse> responseList = new ArrayList<>();
+    public List<SubscriptionMonthWiseResponse> getSubscriptionTransactionsDashboard() {
+        List<SubscriptionMonthWiseResponse> finalDashboardList = new ArrayList<>();
 
         try {
-            // 1. Fetch unified user records from Auth-Service via Feign mapping contract
+            // 1. Fetch remote user subscription targets from Auth-Service via Feign mapping contract
             List<Map<String, Object>> remoteUsers = authFeignClient.getPartnerSubscriptionsFromAuth();
             if (remoteUsers == null || remoteUsers.isEmpty()) {
-                return responseList;
+                return finalDashboardList;
             }
 
-            // 2. Fetch all local master configuration plans
+            // 2. Load all local master configuration plans configurations
             List<SubscriptionPlan> localPlans = subscriptionPlanRepository.findAll();
             Map<Integer, SubscriptionPlan> planMap = localPlans.stream()
                     .collect(Collectors.toMap(SubscriptionPlan::getPlanId, p -> p, (existing, replacement) -> existing));
 
             DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-            DateTimeFormatter groupFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+            // 🟢 Formats to "June 2026" instead of "June-2026" to perfectly match your UI design spec
+            DateTimeFormatter groupFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", java.util.Locale.ENGLISH);
 
-            // 3. Process and map values
+            // 3. Map flat data rows out of the Feign bridge safely
+            List<SubscriptionItemDetailResponse> flatItems = new ArrayList<>();
+            Map<Long, LocalDateTime> dateTrackingMap = new HashMap<>();
+
             for (Map<String, Object> userMap : remoteUsers) {
-
                 Integer planId = (Integer) userMap.get("subscriptionPlanId");
                 if (planId == null || !planMap.containsKey(planId)) {
-                    continue; // Skip if no plan details match up
+                    continue;
                 }
 
                 SubscriptionPlan activePlan = planMap.get(planId);
@@ -804,29 +814,57 @@ public class InventoryServiceImpl implements InventoryService {
                     try {
                         trackingDate = LocalDateTime.parse(userMap.get("trackedAt").toString());
                     } catch (Exception ex) {
-                        // Keep default fallback if parsing anomalies hit
+                        // Keep default fallback
                     }
                 }
 
                 String userTypeString = userMap.get("userType") != null ? userMap.get("userType").toString() : "CUSTOMER";
+                Long userId = Long.valueOf(userMap.get("userId").toString());
 
-                responseList.add(SubscriptionTransactionResponse.builder()
-                        .id(Long.valueOf(userMap.get("userId").toString()))
+                SubscriptionItemDetailResponse item = SubscriptionItemDetailResponse.builder()
+                        .id(userId)
                         .name(userMap.get("name").toString())
-                        .userType(userTypeString) // 🟢 Natively forwards "CUSTOMER" or "PARTNER"
+                        .userType(userTypeString)
                         .restaurantAddress(userMap.get("concatenatedAddress").toString())
                         .planType(activePlan.getPlanType() != null ? activePlan.getPlanType() : activePlan.getPlanName())
                         .amount(activePlan.getFeeType() != null ? activePlan.getFeeType() : BigDecimal.ZERO)
                         .formattedDate(trackingDate.format(displayFormatter))
-                        .groupMonthYear(trackingDate.format(groupFormatter))
+                        .build();
+
+                flatItems.add(item);
+                dateTrackingMap.put(userId, trackingDate); // Cache for sorting operations later
+            }
+
+            // 4. Group elements chronologically by Month-Year string keys
+            Map<String, List<SubscriptionItemDetailResponse>> groupedMap = flatItems.stream()
+                    .collect(Collectors.groupingBy(
+                            item -> dateTrackingMap.get(item.getId()).format(groupFormatter),
+                            LinkedHashMap::new,
+                            Collectors.toList()
+                    ));
+
+            // 5. Build nested layout wrappers and compute totals
+            for (Map.Entry<String, List<SubscriptionItemDetailResponse>> entry : groupedMap.entrySet()) {
+                String monthYearKey = entry.getKey();
+                List<SubscriptionItemDetailResponse> monthSubscriptions = entry.getValue();
+
+                // Compute aggregate subscription collections costs
+                BigDecimal monthTotalAmount = monthSubscriptions.stream()
+                        .map(SubscriptionItemDetailResponse::getAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                finalDashboardList.add(SubscriptionMonthWiseResponse.builder()
+                        .monthYear(monthYearKey)
+                        .monthWiseTotalSusbcriptionAmount(monthTotalAmount)
+                        .dateWiseSubscription(monthSubscriptions)
                         .build());
             }
 
         } catch (Exception e) {
-            log.error("Failed compiling mixed type subscription transactions dashboard payload: ", e);
+            log.error("Failed compiling month-wise nested subscription dashboard layout payload: ", e);
         }
 
-        return responseList;
+        return finalDashboardList;
     }
 
     @Transactional
@@ -1214,6 +1252,7 @@ public class InventoryServiceImpl implements InventoryService {
                         .minTemperature(request.getMinTemperature())
                         .lifespanCycle(request.getLifespanCycle())
                         .costPerUnit(request.getPrice())
+                        .extendFee(request.getExtendFee() != null ? request.getExtendFee() : BigDecimal.ZERO)
                         .imageUrl(imageUrl)
                         .status("active")
                         .build();

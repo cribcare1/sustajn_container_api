@@ -51,5 +51,7 @@ public interface ContainerTypeRepository extends JpaRepository<ContainerType,Int
 
     Collection<ContainerType> findByIdIn(Set<Integer> containerTypeIds);
 
+    List<ContainerType> findAllByIdIn(List<Integer> ids);
+
     Optional<ContainerType> findByProductId(@NotNull(message = "Container type id cannot be null", groups = {CreateGroup.class}) String containerTypeId);
 }

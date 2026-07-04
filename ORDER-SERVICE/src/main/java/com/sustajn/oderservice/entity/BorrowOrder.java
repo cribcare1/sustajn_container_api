@@ -3,6 +3,7 @@ package com.sustajn.oderservice.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -55,6 +56,9 @@ public class BorrowOrder extends BaseEntity {
     private Boolean isExtended = false;      // default false
     private LocalDateTime extendedAt;        // when extension applied
     private LocalDateTime effectiveDueDate;  // actual due date (after extension)
+
+    @Column(name = "extended_fee", precision = 10, scale = 2)
+    private BigDecimal extendedFee;
 
     @Column(name = "is_sold")
     private Boolean isSold = false;

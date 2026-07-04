@@ -25,6 +25,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import com.sustajn.oderservice.dto.DeviceTokenResponse;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Month;
@@ -894,6 +896,89 @@ public class OrderServiceImpl implements OrderService {
                 .capacity(capacity)
                 .imageUrl(imageUrl)
                 .percentage(percentage)
+                .build();
+    }
+
+    @Override
+    public ExtensionPreviewResponse getExtensionPreview(Long orderId) {
+        List<BorrowOrder> borrowOrders = borrowOrderRepository.findByOrderId(orderId);
+        if (borrowOrders.isEmpty()) {
+            throw new RuntimeException("No active borrow items found for orderId: " + orderId);
+        }
+
+        // 1. Filter out items that are already fully returned
+        List<BorrowOrder> itemsToExtend = borrowOrders.stream()
+                .filter(bo -> bo.getReturnedQuantity() < bo.getQuantity())
+                .collect(Collectors.toList());
+
+        if (itemsToExtend.isEmpty()) {
+            throw new RuntimeException("All items in this order have already been returned.");
+        }
+
+        // 2. Resolve timestamps from the first available active item row
+        BorrowOrder referenceItem = itemsToExtend.get(0);
+        LocalDateTime currentDue = referenceItem.getEffectiveDueDate() != null
+                ? referenceItem.getEffectiveDueDate()
+                : referenceItem.getDueDate();
+        LocalDateTime newDue = currentDue.plusDays(5); // Appends the standard 5-day lease cushion
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+        // 3. Gather component container keys to perform the microservice bridge lookup
+        List<Integer> containerTypeIds = itemsToExtend.stream()
+                .map(bo -> bo.getProductId().intValue())
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 4. Query the Inventory Service via Feign
+        List<Map<String, Object>> remoteDetails = inventoryFeignClient.getContainerExtensionDetailsBulk(containerTypeIds);
+        Map<Integer, Map<String, Object>> metadataMap = remoteDetails.stream()
+                .collect(Collectors.toMap(m -> (Integer) m.get("id"), m -> m, (a, b) -> a));
+
+        // 🟢 Standalone top-level collection declaration
+        List<ExtensionItemDetail> productList = new ArrayList<>();
+        BigDecimal grandTotalFee = BigDecimal.ZERO;
+
+        // 5. Aggregate active balances and multiply unit cost rates against item counts
+        for (BorrowOrder bo : itemsToExtend) {
+            Integer targetId = bo.getProductId().intValue();
+            int remainingQty = bo.getQuantity() - bo.getReturnedQuantity();
+
+            String name = "Unknown Container";
+            String code = "N/A";
+            String capacity = "0ml";
+            String imageUrl = "";
+            BigDecimal unitFee = BigDecimal.ZERO;
+
+            if (metadataMap.containsKey(targetId)) {
+                Map<String, Object> meta = metadataMap.get(targetId);
+                if (meta.get("name") != null) name = meta.get("name").toString();
+                if (meta.get("productId") != null) code = meta.get("productId").toString();
+                if (meta.get("capacityMl") != null) capacity = meta.get("capacityMl").toString() + "ml";
+                if (meta.get("imageUrl") != null) imageUrl = meta.get("imageUrl").toString();
+                if (meta.get("extendFee") != null) unitFee = new BigDecimal(meta.get("extendFee").toString());
+            }
+
+            // Extended Item Price Calculation = Unit Fee * Remaining Quantity
+            BigDecimal itemTotalFee = unitFee.multiply(BigDecimal.valueOf(remainingQty));
+            grandTotalFee = grandTotalFee.add(itemTotalFee);
+
+            // 🟢 Clean standalone class builder invocation (Zero IntelliJ compiler lag)
+            productList.add(ExtensionItemDetail.builder()
+                    .containerTypeId(bo.getProductId())
+                    .containerName(name)
+                    .productCode(code)
+                    .capacity(capacity)
+                    .imageUrl(imageUrl)
+                    .quantityToExtend(remainingQty)
+                    .build());
+        }
+
+        return ExtensionPreviewResponse.builder()
+                .currentDueDate(currentDue.format(dtf))
+                .newDueDate(newDue.format(dtf))
+                .totalExtensionFee(grandTotalFee)
+                .products(productList)
                 .build();
     }
 //    @Override

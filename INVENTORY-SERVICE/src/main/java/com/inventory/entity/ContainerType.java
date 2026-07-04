@@ -80,6 +80,9 @@ public class ContainerType extends BaseEntity{
     @Column(name = "cost_per_unit", precision = 8, scale = 2)
     private BigDecimal costPerUnit;
 
+    @Column(name = "extend_fee", precision = 8, scale = 2)
+    private BigDecimal extendFee;
+
     @Column(name = "status", length = 15)
     private String status; // active, inactive, discontinued
 

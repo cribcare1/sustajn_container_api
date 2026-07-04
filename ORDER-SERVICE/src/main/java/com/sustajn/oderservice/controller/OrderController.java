@@ -1,10 +1,6 @@
 package com.sustajn.oderservice.controller;
 
-import com.sustajn.oderservice.dto.ApiResponse;
-import com.sustajn.oderservice.dto.ContainerChartResponse;
-import com.sustajn.oderservice.dto.MostAndLeastLeasedResponse;
-import com.sustajn.oderservice.dto.PartnerGraphBridgeResponse;
-import com.sustajn.oderservice.dto.UserDetailsInsightsResponse;
+import com.sustajn.oderservice.dto.*;
 import com.sustajn.oderservice.repository.SoldOrderRepository;
 import com.sustajn.oderservice.request.BorrowRequest;
 import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
@@ -261,6 +257,22 @@ public class OrderController {
                 orderService.getMostAndLeastLeasedContainer(restaurantId);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Fetch checkout layout configurations for the "Extend Lease Period" mobile application screen
+     */
+    @GetMapping("/{orderId}/extension-preview")
+    public ResponseEntity<ApiResponse<ExtensionPreviewResponse>> getExtensionPreview(
+            @PathVariable Long orderId) {
+
+        ExtensionPreviewResponse data = orderService.getExtensionPreview(orderId);
+
+        return ResponseEntity.ok(new ApiResponse<>(
+                "SUCCESS",
+                "Extension screen data layout provided successfully",
+                data
+        ));
     }
 
 }
