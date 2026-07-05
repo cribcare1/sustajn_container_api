@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ContainerExtensionInfoInfo {
+public class ContainerExtensionInfo {
     private Integer id;
     private String name;
     private String productId;
