@@ -29,6 +29,9 @@ public class AddContainerRequest {
     @DecimalMin(value = "0.01", message = "Price must be greater than 0")
     private BigDecimal price;
 
+    @DecimalMin(value = "0.00", message = "Extension fee cannot be negative")
+    private BigDecimal extendFee;
+
     private String description;
     private String material;
     private String colour;

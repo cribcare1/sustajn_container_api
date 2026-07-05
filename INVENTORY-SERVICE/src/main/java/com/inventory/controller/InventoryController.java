@@ -3,13 +3,14 @@ package com.inventory.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.*;
+import com.inventory.entity.ContainerType;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
+import com.inventory.repository.ContainerTypeRepository;
 import com.inventory.request.*;
 import com.inventory.response.ApiResponse;
 import com.inventory.service.AdminRestaurantOrderService;
 import com.inventory.service.InventoryService;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +33,7 @@ public class InventoryController {
     private final InventoryService inventoryService;
     private final ObjectMapper objectMapper;
     private final AdminRestaurantOrderService adminOrderService;
+    private final ContainerTypeRepository containerTypeRepository;
 
     @PostMapping("/saveOrUpdateContainerType")
     public ResponseEntity<?> saveOrUpdateContainerType(
@@ -442,13 +446,13 @@ public class InventoryController {
      * Fetch complete unified dashboard list for the "Transactions -> Subscriptions" tab flow layout screen
      */
     @GetMapping("/admin/transactions/subscriptions")
-    public ResponseEntity<ApiResponse<List<SubscriptionTransactionResponse>>> getSubscriptionTransactionsDashboard() {
+    public ResponseEntity<ApiResponse<List<SubscriptionMonthWiseResponse>>> getSubscriptionTransactionsDashboard() {
 
-        List<SubscriptionTransactionResponse> data = inventoryService.getSubscriptionTransactionsDashboard();
+        List<SubscriptionMonthWiseResponse> data = inventoryService.getSubscriptionTransactionsDashboard();
 
         return ResponseEntity.ok(new ApiResponse<>(
                 "SUCCESS",
-                "Subscription transactions list provided successfully",
+                "Subscription details list fetched successfully.",
                 data
         ));
     }
@@ -459,6 +463,48 @@ public class InventoryController {
 
         return ResponseEntity.ok(inventoryService.getDamageContainerMonthWiseDetailsByUserId(userId));
     }
+    @PostMapping("/internal/container-fees")
+    public ResponseEntity<Map<Integer, BigDecimal>> getContainerExtendFees(
+            @RequestBody List<Integer> containerTypeIds) {
 
+        Map<Integer, BigDecimal> feeMap = new HashMap<>();
+        if (containerTypeIds == null || containerTypeIds.isEmpty()) {
+            return ResponseEntity.ok(feeMap);
+        }
 
+        List<ContainerType> types = containerTypeRepository.findAllByIdIn(containerTypeIds);
+
+        for (ContainerType type : types) {
+            BigDecimal fee = type.getExtendFee() != null ? type.getExtendFee() : BigDecimal.ZERO;
+            feeMap.put(type.getId(), fee);
+        }
+
+        return ResponseEntity.ok(feeMap);
+    }
+
+    /**
+     * Internal endpoint for Order-Service to fetch full container data + fees for preview screens
+     */
+    @PostMapping("/internal/container-extension-details")
+    public ResponseEntity<List<ContainerExtensionInfo>> getContainerExtensionDetails(
+            @RequestBody List<Integer> containerTypeIds) {
+
+        List<ContainerExtensionInfo> details = new ArrayList<>();
+        if (containerTypeIds == null || containerTypeIds.isEmpty()) {
+            return ResponseEntity.ok(details);
+        }
+
+        List<ContainerType> types = containerTypeRepository.findAllByIdIn(containerTypeIds);
+        for (ContainerType type : types) {
+            details.add(ContainerExtensionInfo.builder()
+                    .id(type.getId())
+                    .name(type.getName())
+                    .productId(type.getProductId())
+                    .capacityMl(type.getCapacityMl())
+                    .imageUrl(type.getImageUrl())
+                    .extendFee(type.getExtendFee() != null ? type.getExtendFee() : BigDecimal.ZERO) // 🟢 FIXED
+                    .build());
+        }
+        return ResponseEntity.ok(details);
+    }
 }

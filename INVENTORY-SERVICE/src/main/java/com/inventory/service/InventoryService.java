@@ -77,7 +77,7 @@ public interface InventoryService {
     List<DeliveredOrderResponse> getDeliveredOrderRequests();
     DeliveredOrderDetailResponse getDeliveredOrderDetailById(Long id);
 
-    List<SubscriptionTransactionResponse> getSubscriptionTransactionsDashboard();
+    List<SubscriptionMonthWiseResponse> getSubscriptionTransactionsDashboard();
 
     ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByUserId(Long userId);
 

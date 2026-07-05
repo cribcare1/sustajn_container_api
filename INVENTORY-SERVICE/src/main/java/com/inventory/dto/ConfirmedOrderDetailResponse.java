@@ -13,7 +13,9 @@ public class ConfirmedOrderDetailResponse {
     private String restaurantName;
     private String restaurantAddress;
     private String partnerRemark;      // Maps to "Partner Remarks" section
-    private String sustajnRemark;      // Maps to "Sustajn Remarks" section
+    private String sustajnRemark;// Maps to "Sustajn Remarks" section
+    private String orderDate;          // Returns "27.11.2025"
+    private String orderTime;          // Returns "11:00"
     private List<ConfirmedItemDetail> items;
 
     @Data

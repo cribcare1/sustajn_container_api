@@ -69,4 +69,10 @@ public interface InventoryFeignClient {
     // Add this method map inside your existing InventoryFeignClient interface
     @GetMapping("/inventory/container-types/{id}")
     ApiResponse<ContainerTypeResponse> getContainerTypeById(@PathVariable("id") Integer id);
+
+    @PostMapping("/internal/container-fees")
+    Map<Integer, java.math.BigDecimal> getContainerExtendFees(@RequestBody List<Integer> containerTypeIds);
+
+    @PostMapping("/inventory/internal/container-extension-details")
+    List<Map<String, Object>> getContainerExtensionDetailsBulk(@RequestBody List<Integer> containerTypeIds);
 }

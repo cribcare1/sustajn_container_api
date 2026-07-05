@@ -6,6 +6,7 @@ import com.sustajn.oderservice.dto.NotificationResponse;
 import com.sustajn.oderservice.entity.BorrowOrder;
 import com.sustajn.oderservice.entity.Notification;
 import com.sustajn.oderservice.entity.Order;
+import com.sustajn.oderservice.feign.service.InventoryFeignClient;
 import com.sustajn.oderservice.feign.service.NotificationFeignClient;
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.NotificationRepository;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +32,7 @@ public class OrderNotificationService {
     private final BorrowOrderRepository borrowOrderRepository;
     private final NotificationRepository notificationRepository;
     private final NotificationFeignClient notificationFeignClient;
+    private final InventoryFeignClient inventoryFeignClient;
 
 
     @Scheduled(cron = "0 0 1 * * ?")
@@ -129,11 +132,27 @@ public class OrderNotificationService {
     @Transactional
     public void extendBorrowOrder(Long orderId) {
 
-        List<BorrowOrder> borrowOrders =
-                borrowOrderRepository.findByOrderId(orderId);
+        List<BorrowOrder> borrowOrders = borrowOrderRepository.findByOrderId(orderId);
 
         if (borrowOrders.isEmpty()) {
             throw new RuntimeException("No borrow orders found for orderId: " + orderId);
+        }
+
+        // 1. Collect all unique container type IDs needing an extension step
+        List<Integer> containerIds = borrowOrders.stream()
+                .filter(bo -> bo.getReturnedQuantity() < bo.getQuantity() && !Boolean.TRUE.equals(bo.getIsExtended()))
+                .map(bo -> bo.getProductId().intValue())
+                .distinct()
+                .collect(Collectors.toList());
+
+        // 2. Fetch the extension fees from the Inventory Service via Feign
+        Map<Integer, java.math.BigDecimal> feeMap = new HashMap<>();
+        try {
+            if (!containerIds.isEmpty()) {
+                feeMap = inventoryFeignClient.getContainerExtendFees(containerIds);
+            }
+        } catch (Exception ex) {
+            log.error("Failed to fetch extended fees from INVENTORY-SERVICE: {}", ex.getMessage());
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -152,14 +171,26 @@ public class OrderNotificationService {
             }
 
             // ✅ Base due date
-            LocalDateTime baseDueDate =
-                    borrowOrder.getEffectiveDueDate() != null
-                            ? borrowOrder.getEffectiveDueDate()
-                            : borrowOrder.getDueDate();
+            LocalDateTime baseDueDate = borrowOrder.getEffectiveDueDate() != null
+                    ? borrowOrder.getEffectiveDueDate()
+                    : borrowOrder.getDueDate();
 
             borrowOrder.setIsExtended(true);
             borrowOrder.setExtendedAt(now);
             borrowOrder.setEffectiveDueDate(baseDueDate.plusDays(5));
+
+            // 🟢 Calculate fee based ONLY on remaining unreturned inventory items
+            Integer containerTypeId = borrowOrder.getProductId().intValue();
+            java.math.BigDecimal unitFee = java.math.BigDecimal.ZERO;
+
+            if (feeMap != null && feeMap.containsKey(containerTypeId)) {
+                unitFee = new java.math.BigDecimal(feeMap.get(containerTypeId).toString());
+            }
+
+            // 🟢 FIXED: Changed borrowOrder.getQuantity() -> remainingQty calculation
+            int remainingQty = borrowOrder.getQuantity() - borrowOrder.getReturnedQuantity();
+            java.math.BigDecimal totalItemExtendedPrice = unitFee.multiply(java.math.BigDecimal.valueOf(remainingQty));
+            borrowOrder.setExtendedFee(totalItemExtendedPrice);
 
             toUpdate.add(borrowOrder);
         }
@@ -169,7 +200,6 @@ public class OrderNotificationService {
             borrowOrderRepository.saveAll(toUpdate);
         }
     }
-
 
     private void saveOrderNotification(
             Long orderId,
