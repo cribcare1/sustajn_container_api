@@ -507,4 +507,16 @@ public class InventoryController {
         }
         return ResponseEntity.ok(details);
     }
+
+    @GetMapping("/admin/transactions/sold-dashboard")
+    public ResponseEntity<com.inventory.response.ApiResponse<List<com.inventory.dto.SoldMonthWiseDashboardResponse>>> getSoldContainersDashboard() {
+
+        List<com.inventory.dto.SoldMonthWiseDashboardResponse> dataset = inventoryService.getSoldContainersComprehensiveDashboard();
+
+        return ResponseEntity.ok(new com.inventory.response.ApiResponse<>(
+                "SUCCESS",
+                "sold items statement records provided successfully",
+                dataset
+        ));
+    }
 }

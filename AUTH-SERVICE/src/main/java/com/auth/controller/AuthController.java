@@ -451,8 +451,8 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
     @GetMapping("/internal/partner-subscriptions")
-    public ResponseEntity<List<com.auth.response.PartnerSubscriptionInternalResponse>> getPartnerSubscriptionsInternal() {
-        List<com.auth.response.PartnerSubscriptionInternalResponse> resultList = new java.util.ArrayList<>();
+    public ResponseEntity<List<PartnerSubscriptionInternalResponse>> getPartnerSubscriptionsInternal() {
+        List<PartnerSubscriptionInternalResponse> resultList = new java.util.ArrayList<>();
 
         try {
             // Fetch all accounts from the database
@@ -479,7 +479,7 @@ public class AuthController {
                     String resolvedType = (user.getUserType() != null) ? user.getUserType().name() : "CUSTOMER";
 
                     // 🟢 Build the exact Response object matching your package patterns
-                    resultList.add(com.auth.response.PartnerSubscriptionInternalResponse.builder()
+                    resultList.add(PartnerSubscriptionInternalResponse.builder()
                             .userId(user.getId())
                             .name(user.getFullName() != null ? user.getFullName() : "Unknown Account")
                             .userType(resolvedType)
