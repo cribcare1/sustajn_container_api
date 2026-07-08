@@ -16,6 +16,10 @@ public class ConfirmedOrderDetailResponse {
     private String sustajnRemark;// Maps to "Sustajn Remarks" section
     private String orderDate;          // Returns "27.11.2025"
     private String orderTime;          // Returns "11:00"
+    private String orderedOnDate;      // Returns format: "10.12.2025"
+    private String orderedOnTime;      // Returns format: "10:00"
+    private String confirmedOnDate;    // Returns format: "10.12.2025"
+    private String confirmedOnTime;    // Returns format: "10:00"
     private List<ConfirmedItemDetail> items;
 
     @Data

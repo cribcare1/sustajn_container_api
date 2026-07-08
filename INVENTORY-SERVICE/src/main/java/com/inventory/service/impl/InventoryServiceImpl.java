@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
@@ -469,11 +470,20 @@ public class InventoryServiceImpl implements InventoryService {
             log.error("Failed to map profile strings for confirmed details view screen: {}", order.getRestaurantId());
         }
 
-        // 🟢 1. EXTRACT AND FORMAT DATE & TIME DEFENSIVELY
-        java.time.LocalDateTime orderTimestamp = order.getCreatedAt() != null ? order.getCreatedAt() : java.time.LocalDateTime.now();
-        String formattedDate = orderTimestamp.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"));
-        String formattedTime = orderTimestamp.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"));
+        // 🟢 1. SETUP LOGICAL TIMESTAMP FORMATTING MATRICES
+        java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
 
+        // Safely extract transaction placement timestamps from your base persistence model
+        java.time.LocalDateTime rawOrderedTime = order.getCreatedAt() != null ? order.getCreatedAt() : java.time.LocalDateTime.now();
+
+        // Employs tracking state values (If your entity defines an explicit order confirmation timestamp field, use it here)
+        java.time.LocalDateTime rawConfirmedTime = order.getUpdatedAt() != null ? order.getUpdatedAt() : rawOrderedTime;
+
+        String formattedOrderDate = rawOrderedTime.format(dateFormatter);
+        String formattedOrderTime = rawOrderedTime.format(timeFormatter);
+        String formattedConfirmedDate = rawConfirmedTime.format(dateFormatter);
+        String formattedConfirmedTime = rawConfirmedTime.format(timeFormatter);
         List<ConfirmedOrderDetailResponse.ConfirmedItemDetail> itemsList = new ArrayList<>();
 
         if (order.getItems() != null && !order.getItems().isEmpty()) {
@@ -511,8 +521,10 @@ public class InventoryServiceImpl implements InventoryService {
                 .restaurantAddress(restaurantAddress)
                 .partnerRemark(order.getRestaurantRemark() != null ? order.getRestaurantRemark() : "No remarks provided.")
                 .sustajnRemark(order.getAdminRemark() != null ? order.getAdminRemark() : "No admin notes provided.")
-                .orderDate(formattedDate) // 🟢 Maps to UI card date text
-                .orderTime(formattedTime) // 🟢 Maps to UI card time text
+                .orderedOnDate(formattedOrderDate)
+                .orderedOnTime(formattedOrderTime)
+                .confirmedOnDate(formattedConfirmedDate)
+                .confirmedOnTime(formattedConfirmedTime)
                 .items(itemsList)
                 .build();
     }
@@ -865,6 +877,212 @@ public class InventoryServiceImpl implements InventoryService {
         }
 
         return finalDashboardList;
+    }
+    @Override
+    public List<SoldMonthWiseDashboardResponse> getSoldContainersComprehensiveDashboard() {
+        List<SoldMonthWiseDashboardResponse> dashboardPayload = new ArrayList<>();
+
+        try {
+            List<SoldContainers> allRecords = soldContainerRepository.findAll();
+            if (allRecords.isEmpty()) {
+                return dashboardPayload;
+            }
+
+            List<ContainerType> containerTypes = containerTypeRepository.findAll();
+            Map<Integer, ContainerType> typeMap = containerTypes.stream()
+                    .collect(Collectors.toMap(ContainerType::getId, c -> c, (a, b) -> a));
+
+            DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            DateTimeFormatter monthYearFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+
+            List<Long> restaurantUserIds = allRecords.stream()
+                    .map(SoldContainers::getRestaurantId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            List<Long> customerUserIds = allRecords.stream()
+                    .map(SoldContainers::getUserId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            Map<Long, PartnerInfoDto> partnerProfileMap = new HashMap<>();
+            Map<Long, String> customerIdMap = new HashMap<>();
+
+            try {
+                if (!restaurantUserIds.isEmpty()) {
+                    partnerProfileMap = authFeignClient.getPartnerDetailsBulk(restaurantUserIds);
+                }
+            } catch (Exception e) {
+                log.error("Feign bulk network error fetching remote partner shapes: ", e);
+            }
+
+            try {
+                if (!customerUserIds.isEmpty()) {
+                    customerIdMap = authFeignClient.getCustomerIdsBulk(customerUserIds);
+                }
+            } catch (Exception e) {
+                log.error("Feign bulk network error fetching customer target markers: ", e);
+            }
+
+            Map<String, List<SoldContainers>> transactionGroupingMap = new LinkedHashMap<>();
+            Map<String, LocalDateTime> timestampCache = new HashMap<>();
+
+            for (SoldContainers record : allRecords) {
+                LocalDateTime createdAt = record.getCreatedAt() != null ? record.getCreatedAt() : LocalDateTime.now();
+                String dateKey = createdAt.format(displayFormatter);
+
+                String groupKey;
+                if (record.getRestaurantId() != null) {
+                    groupKey = "RESTAURANT_" + record.getRestaurantId() + "_" + dateKey;
+                } else {
+                    groupKey = "USER_" + (record.getUserId() != null ? record.getUserId() : "GUEST") + "_" + dateKey;
+                }
+
+                transactionGroupingMap.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(record);
+                timestampCache.putIfAbsent(groupKey, createdAt);
+            }
+
+            List<SoldTransactionResponse> derivedTransactions = new ArrayList<>();
+
+            // 6. Bind profiles onto structural layouts contextually
+            for (Map.Entry<String, List<SoldContainers>> transactionEntry : transactionGroupingMap.entrySet()) {
+                String trackingKey = transactionEntry.getKey();
+                List<SoldContainers> items = transactionEntry.getValue();
+                LocalDateTime txTimestamp = timestampCache.get(trackingKey);
+
+                SoldContainers firstItem = items.get(0);
+                String type = trackingKey.startsWith("RESTAURANT") ? "RESTAURANT" : "USER";
+
+                String displayName = "Unknown Profile";
+                String displayAddress = null;
+                String targetCustomerId = null;
+                String entityIdStr = "";
+
+                if ("RESTAURANT".equals(type)) {
+                    Long restId = firstItem.getRestaurantId();
+                    entityIdStr = String.valueOf(restId);
+                    displayName = "Restaurant #" + entityIdStr;
+
+                    if (partnerProfileMap != null && partnerProfileMap.containsKey(restId)) {
+                        Object profileObj = partnerProfileMap.get(restId);
+
+                        // Safe conversion checks to cleanly support default Jackson fallback deserializers
+                        if (profileObj instanceof Map) {
+                            Map<?, ?> m = (Map<?, ?>) profileObj;
+                            // Check both potential key mappings contextually
+                            if (m.get("name") != null) displayName = m.get("name").toString();
+                            else if (m.get("restaurantName") != null) displayName = m.get("restaurantName").toString();
+
+                            if (m.get("address") != null) displayAddress = m.get("address").toString();
+                        } else if (profileObj instanceof PartnerInfoDto) {
+                            PartnerInfoDto dto = (PartnerInfoDto) profileObj;
+                            // 🟢 FIXED: Using the corrected matching getter methods
+                            if (dto.getName() != null) displayName = dto.getName();
+                            if (dto.getAddress() != null) displayAddress = dto.getAddress();
+                        }
+                    }
+                } else {
+                    Long usrId = firstItem.getUserId();
+                    entityIdStr = usrId != null ? String.valueOf(usrId) : "1234";
+                    displayName = "JACK-" + entityIdStr;
+
+                    if (customerIdMap != null && customerIdMap.containsKey(usrId)) {
+                        targetCustomerId = customerIdMap.get(usrId);
+                        displayName = targetCustomerId;
+                    } else {
+                        targetCustomerId = "JACK-" + entityIdStr;
+                    }
+                }
+
+                List<SoldContainerItemDetail> itemDetailsList = new ArrayList<>();
+                Set<String> productCodesSet = new LinkedHashSet<>();
+                int txTotalQty = 0;
+                int txTotalAmount = 0;
+
+                for (SoldContainers sc : items) {
+                    String containerName = "Standard Container";
+                    String productCode = "N/A";
+                    String capacity = "0ml";
+                    String imageUrl = "";
+
+                    if (typeMap.containsKey(sc.getContainerId())) {
+                        ContainerType ct = typeMap.get(sc.getContainerId());
+                        containerName = ct.getName();
+                        productCode = ct.getProductId();
+                        capacity = ct.getCapacityMl() != null ? ct.getCapacityMl() + "ml" : "0ml";
+                        imageUrl = ct.getImageUrl();
+                    }
+
+                    if (!"N/A".equals(productCode)) {
+                        productCodesSet.add(productCode);
+                    }
+
+                    int qty = sc.getSoldQuantity() != null ? sc.getSoldQuantity() : 0;
+                    int price = sc.getSoldPrice() != null ? sc.getSoldPrice() : 0;
+
+                    txTotalQty += qty;
+                    txTotalAmount += price;
+
+                    itemDetailsList.add(SoldContainerItemDetail.builder()
+                            .containerTypeId(sc.getContainerId())
+                            .containerName(containerName)
+                            .productCode(productCode)
+                            .capacity(capacity)
+                            .imageUrl(imageUrl)
+                            .quantity(qty)
+                            .price(price)
+                            .build());
+                }
+
+                String concatenatedCodes = productCodesSet.isEmpty() ? "N/A" : String.join(" | ", productCodesSet);
+
+                derivedTransactions.add(SoldTransactionResponse.builder()
+                        .id(entityIdStr)
+                        .type(type)
+                        .name(displayName)
+                        .customerId(targetCustomerId)
+                        .address(displayAddress)
+                        .formattedDate(txTimestamp.format(displayFormatter))
+                        .totalQuantity(txTotalQty)
+                        .totalAmount(txTotalAmount)
+                        .productCodesConcatenated(concatenatedCodes)
+                        .containers(itemDetailsList)
+                        .build());
+            }
+
+            // 7. Group transaction elements into month buckets chronologically
+            Map<String, List<SoldTransactionResponse>> monthlyBuckets = derivedTransactions.stream()
+                    .collect(Collectors.groupingBy(
+                            tx -> {
+                                LocalDate parsingDate = LocalDate.parse(tx.getFormattedDate(), DateTimeFormatter.ofPattern("dd.MM.yyyy"));
+                                return parsingDate.format(monthYearFormatter);
+                            },
+                            LinkedHashMap::new,
+                            Collectors.toList()
+                    ));
+
+            for (Map.Entry<String, List<SoldTransactionResponse>> bucket : monthlyBuckets.entrySet()) {
+                String monthYearKey = bucket.getKey();
+                List<SoldTransactionResponse> monthTxList = bucket.getValue();
+
+                int monthTotalCostSum = monthTxList.stream()
+                        .mapToInt(SoldTransactionResponse::getTotalAmount)
+                        .sum();
+
+                dashboardPayload.add(SoldMonthWiseDashboardResponse.builder()
+                        .monthYear(monthYearKey)
+                        .monthTotalAmount(monthTotalCostSum)
+                        .transactions(monthTxList)
+                        .build());
+            }
+
+        } catch (Exception ex) {
+            log.error("Fatal exception provided monthly sales dashboard datasets: ", ex);
+        }
+
+        return dashboardPayload;
     }
 
     @Transactional
