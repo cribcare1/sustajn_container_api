@@ -262,5 +262,9 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
             "GROUP BY b.userId")
     List<Object[]> getCirculationPerUserForProduct(@Param("productId") Long productId);
 
+    List<BorrowOrder> findByIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc();
+
+    List<BorrowOrder> findByUserIdAndIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc(Long userId);
+
     Long findUserIdByOrderId(Long orderId);
 }

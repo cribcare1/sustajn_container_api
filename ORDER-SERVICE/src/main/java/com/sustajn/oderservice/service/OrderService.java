@@ -47,6 +47,10 @@ public interface OrderService {
     ApiResponse<UserDetailsInsightsResponse> getUserDetailsDashboardInsights(Long userId);
     ApiResponse<MostAndLeastLeasedResponse> getMostAndLeastLeasedContainer(Long restaurantId);
 
+    List<ExtendedFeeMonthWiseResponse> getGlobalExtendedFeeDashboard();
+
+    List<UserExtendedFeeMonthWiseResponse> getUserExtendedFeeHistory(Long userId);
+
     ExtensionPreviewResponse getExtensionPreview(Long orderId);
 
     public void markAsSold(SoldRequest request);

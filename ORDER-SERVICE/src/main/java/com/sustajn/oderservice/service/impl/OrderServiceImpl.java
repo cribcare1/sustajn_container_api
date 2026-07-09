@@ -49,6 +49,9 @@ public class OrderServiceImpl implements OrderService {
     private final InventoryFeignClient inventoryFeignClient;
     private final NotificationFeignClient notificationFeignClient;
 
+    private final DateTimeFormatter cardFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm");
+    private final DateTimeFormatter headerFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+
 //    @Override
 //    @Transactional
 //    public Map<String, Object> borrowContainers(BorrowRequest request) {
@@ -980,6 +983,164 @@ public class OrderServiceImpl implements OrderService {
                 .totalExtensionFee(grandTotalFee)
                 .products(productList)
                 .build();
+    }
+    @Override
+    public List<ExtendedFeeMonthWiseResponse> getGlobalExtendedFeeDashboard() {
+        List<ExtendedFeeMonthWiseResponse> payload = new ArrayList<>();
+
+        try {
+            // 1. Fetch all system-wide lease extension records
+            List<BorrowOrder> customerExtendedRows = borrowOrderRepository.findByIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc();
+            if (customerExtendedRows.isEmpty()) {
+                return payload;
+            }
+
+            // 2. 🟢 FIXED: Extract all distinct customer user IDs directly from the rows
+            List<Long> customerUserIds = customerExtendedRows.stream()
+                    .map(BorrowOrder::getUserId)
+                    .distinct()
+                    .collect(Collectors.toList());
+
+            Map<Long, String> customerIdMap = new HashMap<>();
+
+            // 3. Batch look up the customer text identifiers from AUTH-SERVICE
+            try {
+                if (!customerUserIds.isEmpty()) {
+                    Map<Long, String> rawCustomers = authClient.getCustomerIdsBulk(customerUserIds);
+                    if (rawCustomers != null) {
+                        for (Map.Entry<?, String> entry : rawCustomers.entrySet()) {
+                            Long userIdKey = Long.valueOf(entry.getKey().toString());
+                            customerIdMap.put(userIdKey, entry.getValue());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Feign microservice exception batch fetching customer identity strings: ", e);
+            }
+
+            // 4. Group by Order ID to aggregate items extended together inside the same transaction window
+            Map<Long, List<BorrowOrder>> ordersMap = customerExtendedRows.stream()
+                    .collect(Collectors.groupingBy(BorrowOrder::getOrderId, LinkedHashMap::new, Collectors.toList()));
+
+            List<ExtendedFeeTransactionResponse> flatCardsList = new ArrayList<>();
+            Map<Long, LocalDateTime> timeCache = new HashMap<>();
+
+            for (Map.Entry<Long, List<BorrowOrder>> entry : ordersMap.entrySet()) {
+                Long orderId = entry.getKey();
+                List<BorrowOrder> items = entry.getValue();
+                BorrowOrder firstItem = items.get(0);
+
+                LocalDateTime actionTime = firstItem.getExtendedAt() != null ? firstItem.getExtendedAt() : LocalDateTime.now();
+                timeCache.put(orderId, actionTime);
+
+                // 🟢 FIXED: Use getQuantity() directly to prevent 0 values if containers are returned later
+                int totalExtendedQty = items.stream().mapToInt(BorrowOrder::getQuantity).sum();
+
+                BigDecimal totalOrderFee = items.stream()
+                        .map(bo -> bo.getExtendedFee() != null ? bo.getExtendedFee() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                // Map to real customer identifier strings (e.g. "ALOK-230626")
+                String profileName = "JACK-" + firstItem.getUserId();
+                if (customerIdMap.containsKey(firstItem.getUserId())) {
+                    profileName = customerIdMap.get(firstItem.getUserId());
+                }
+
+                flatCardsList.add(ExtendedFeeTransactionResponse.builder()
+                        .orderId(orderId)
+                        .name(profileName)
+                        .formattedDateTime(actionTime.format(cardFormatter))
+                        .totalQuantity(totalExtendedQty)
+                        .totalAmount(totalOrderFee)
+                        .build());
+            }
+
+            // 5. Partition elements into chronological monthly dashboard segments
+            Map<String, List<ExtendedFeeTransactionResponse>> monthlyBuckets = flatCardsList.stream()
+                    .collect(Collectors.groupingBy(
+                            tx -> timeCache.get(tx.getOrderId()).format(headerFormatter),
+                            LinkedHashMap::new, Collectors.toList()
+                    ));
+
+            for (Map.Entry<String, List<ExtendedFeeTransactionResponse>> bucket : monthlyBuckets.entrySet()) {
+                BigDecimal monthSum = bucket.getValue().stream()
+                        .map(ExtendedFeeTransactionResponse::getTotalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                payload.add(ExtendedFeeMonthWiseResponse.builder()
+                        .monthYear(bucket.getKey())
+                        .monthTotalAmount(monthSum)
+                        .transactions(bucket.getValue())
+                        .build());
+            }
+
+        } catch (Exception ex) {
+            log.error("Unhandled runtime failure packaging global transactions tab payload: ", ex);
+        }
+        return payload;
+    }
+
+    @Override
+    public List<UserExtendedFeeMonthWiseResponse> getUserExtendedFeeHistory(Long userId) {
+        List<UserExtendedFeeMonthWiseResponse> payload = new ArrayList<>();
+
+        try {
+            List<BorrowOrder> userRows = borrowOrderRepository.findByUserIdAndIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc(userId);
+            if (userRows.isEmpty()) {
+                return payload;
+            }
+
+            Map<Long, List<BorrowOrder>> ordersMap = userRows.stream()
+                    .collect(Collectors.groupingBy(BorrowOrder::getOrderId, LinkedHashMap::new, Collectors.toList()));
+
+            List<UserExtendedFeeItemResponse> flatUserItems = new ArrayList<>();
+            Map<Long, LocalDateTime> timeCache = new HashMap<>();
+
+            for (Map.Entry<Long, List<BorrowOrder>> entry : ordersMap.entrySet()) {
+                Long orderId = entry.getKey();
+                List<BorrowOrder> items = entry.getValue();
+                BorrowOrder firstItem = items.get(0);
+
+                LocalDateTime actionTime = firstItem.getExtendedAt() != null ? firstItem.getExtendedAt() : LocalDateTime.now();
+                timeCache.put(orderId, actionTime);
+
+                // 🟢 FIXED: Use getQuantity() directly to accurately reflect item extension numbers
+                int totalQty = items.stream().mapToInt(BorrowOrder::getQuantity).sum();
+
+                BigDecimal totalFee = items.stream()
+                        .map(bo -> bo.getExtendedFee() != null ? bo.getExtendedFee() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                flatUserItems.add(UserExtendedFeeItemResponse.builder()
+                        .orderId(orderId)
+                        .formattedDateTime(actionTime.format(cardFormatter))
+                        .totalQuantity(totalQty)
+                        .totalAmount(totalFee)
+                        .build());
+            }
+
+            Map<String, List<UserExtendedFeeItemResponse>> monthlyBuckets = flatUserItems.stream()
+                    .collect(Collectors.groupingBy(
+                            item -> timeCache.get(item.getOrderId()).format(headerFormatter),
+                            LinkedHashMap::new, Collectors.toList()
+                    ));
+
+            for (Map.Entry<String, List<UserExtendedFeeItemResponse>> bucket : monthlyBuckets.entrySet()) {
+                BigDecimal userMonthSum = bucket.getValue().stream()
+                        .map(UserExtendedFeeItemResponse::getTotalAmount)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+                payload.add(UserExtendedFeeMonthWiseResponse.builder()
+                        .monthYear(bucket.getKey())
+                        .monthTotalAmount(userMonthSum)
+                        .extensions(bucket.getValue())
+                        .build());
+            }
+
+        } catch (Exception ex) {
+            log.error("Unhandled runtime exception gathering individual context maps: ", ex);
+        }
+        return payload;
     }
 //    @Override
 //    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {

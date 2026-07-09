@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Map;
 
 @FeignClient(name = "AUTH-SERVICE",configuration = FeignClientConfig.class)
 public interface AuthClient {
@@ -24,4 +25,8 @@ public interface AuthClient {
 
     @GetMapping(value = "/auth/getUserByCustomerId")
     ApiResponse<UserResponse> getUserByCustomerId(@RequestParam String customerId);
+
+    @PostMapping("/auth/internal/customer-ids")
+    Map<Long, String> getCustomerIdsBulk(@RequestBody List<Long> userIds);
+
 }
