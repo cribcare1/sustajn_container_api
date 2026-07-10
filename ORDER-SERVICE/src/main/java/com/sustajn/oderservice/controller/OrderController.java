@@ -275,4 +275,27 @@ public class OrderController {
         ));
     }
 
+    @GetMapping("/admin/transactions/extended-fees-dashboard")
+    public ResponseEntity<ApiResponse<List<ExtendedFeeMonthWiseResponse>>> getGlobalExtendedFeeDashboard() {
+
+        List<ExtendedFeeMonthWiseResponse> dataset = orderService.getGlobalExtendedFeeDashboard();
+        return ResponseEntity.ok(new ApiResponse<>(
+                "SUCCESS",
+                "  lease extension logs provided successfully",
+                dataset
+        ));
+    }
+
+    @GetMapping("/user/{userId}/extended-fees-timeline")
+    public ResponseEntity<ApiResponse<List<UserExtendedFeeMonthWiseResponse>>> getUserExtendedFeeHistory(
+            @PathVariable Long userId) {
+
+        List<UserExtendedFeeMonthWiseResponse> timeline = orderService.getUserExtendedFeeHistory(userId);
+        return ResponseEntity.ok(new ApiResponse<>(
+                "SUCCESS",
+                "User profile  extension timelines loaded successfully",
+                timeline
+        ));
+    }
+
 }
