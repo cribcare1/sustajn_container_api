@@ -1,6 +1,7 @@
 package com.inventory.repository;
 
 import com.inventory.Constant.AdminOrderStatus;
+import com.inventory.Constant.TransactionType;
 import com.inventory.entity.AdminOrder;
 import com.inventory.response.RestaurantOrderedResponse;
 import feign.Param;
@@ -31,6 +32,15 @@ public interface AdminOrderRepository extends JpaRepository<AdminOrder,Long> {
         ORDER BY ao.orderDate DESC
     """)
     List<RestaurantOrderedResponse> findOrdersByRestaurantId(@Param("restaurantId") Long restaurantId);
+
+    @Query("SELECT oi.containerTypeId, SUM(COALESCE(oi.approvedQty, oi.requestedQty)) " +
+            "FROM AdminOrder o JOIN o.items oi " +
+            "WHERE o.type = :type AND o.status = :status " +
+            "GROUP BY oi.containerTypeId")
+    List<Object[]> getProcessedQuantitiesGroupedByType(
+            @Param("type") TransactionType type,
+            @Param("status") AdminOrderStatus status
+    );
 
     List<AdminOrder> findByStatusOrderByOrderDateDesc(AdminOrderStatus status);
 }
