@@ -895,6 +895,73 @@ public class InventoryServiceImpl implements InventoryService {
 
         return finalDashboardList;
     }
+
+    @Override
+    public List<RestaurantStockResponse> getRestaurantReturnInventory(Long restaurantId) {
+        List<RestaurantStockResponse> stockList = new ArrayList<>();
+
+        try {
+            // 1. Fetch all system container models
+            List<ContainerType> allTypes = containerTypeRepository.findAll();
+
+            // 2. Term 1: Total container borrow from admin
+            Map<Integer, Integer> adminBorrowedMap = new HashMap<>();
+            List<Object[]> adminBorrows = adminOrderRepository.getRestaurantAdminBorrows(
+                    restaurantId, TransactionType.BORROW, AdminOrderStatus.APPROVED
+            );
+            for (Object[] row : adminBorrows) {
+                if (row[0] != null) {
+                    adminBorrowedMap.put((Integer) row[0], ((Long) row[1]).intValue());
+                }
+            }
+
+            // 3. Fetch Term 2 & Term 3 from Order-Service via Feign Client
+            Map<Long, Map<String, Integer>> orderBalancesMap = new HashMap<>();
+            try {
+                Map<Long, Map<String, Integer>> rawFeignData = orderFeignClient.getRestaurantUserBalances(restaurantId);
+                if (rawFeignData != null) {
+                    for (Map.Entry<?, Map<String, Integer>> entry : rawFeignData.entrySet()) {
+                        orderBalancesMap.put(Long.valueOf(entry.getKey().toString()), entry.getValue());
+                    }
+                }
+            } catch (Exception ex) {
+                log.error("Failed to reach Order-Service for user metrics. Defaulting to 0 offsets.", ex);
+            }
+
+            // 4. Calculate final values matching your exact formula per unique container profile
+            for (ContainerType type : allTypes) {
+
+                // Term 1: Borrowed from Admin
+                int totalBorrowedFromAdmin = adminBorrowedMap.getOrDefault(type.getId(), 0);
+
+                // Extract Term 2 and Term 3 from the Feign map results
+                Map<String, Integer> userMetrics = orderBalancesMap.getOrDefault(Long.valueOf(type.getId()), new HashMap<>());
+                int totalBorrowedByUser = userMetrics.getOrDefault("borrowedByUser", 0);
+                int totalReturnedByUser = userMetrics.getOrDefault("returnedByUser", 0);
+
+                // 🟢 YOUR FORMULA: Admin Borrow - User Borrow + User Return
+                int availableToReturn = totalBorrowedFromAdmin - totalBorrowedByUser + totalReturnedByUser;
+
+                // Defensive safety check to protect UI lists from showing negative values
+                int finalStockValue = Math.max(0, availableToReturn);
+
+                if (finalStockValue > 0) {
+                    stockList.add(RestaurantStockResponse.builder()
+                            .id(type.getId())
+                            .name(type.getName())
+                            .productCode(type.getProductId())
+                            .capacity(type.getCapacityMl() != null ? type.getCapacityMl() + "ml" : "0ml")
+                            .imageUrl(type.getImageUrl())
+                            .inStockCount(finalStockValue)
+                            .build());
+                }
+            }
+
+        } catch (Exception ex) {
+            log.error("Fatal error loading live return inventory details: ", ex);
+        }
+        return stockList;
+    }
     @Override
     public List<SoldMonthWiseDashboardResponse> getSoldContainersComprehensiveDashboard() {
         List<SoldMonthWiseDashboardResponse> dashboardPayload = new ArrayList<>();

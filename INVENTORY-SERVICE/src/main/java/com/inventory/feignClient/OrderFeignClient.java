@@ -23,4 +23,7 @@ public interface OrderFeignClient {
 
     @GetMapping("/orders/internal/sold-history-dates/{restaurantId}")
     List<SoldHistoryRawData> getRealSoldHistoryDates(@PathVariable("restaurantId") Long restaurantId);
+
+    @GetMapping("/orders/internal/restaurant/{restaurantId}/user-balances")
+    Map<Long, Map<String, Integer>> getRestaurantUserBalances(@PathVariable("restaurantId") Long restaurantId);
 }

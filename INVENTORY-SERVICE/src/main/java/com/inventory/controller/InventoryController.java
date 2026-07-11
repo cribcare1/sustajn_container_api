@@ -519,4 +519,16 @@ public class InventoryController {
                 dataset
         ));
     }
+
+    @GetMapping("/restaurant/{restaurantId}/return-inventory")
+    public ResponseEntity<ApiResponse<List<RestaurantStockResponse>>> getRestaurantReturnInventory(
+            @PathVariable Long restaurantId) {
+
+        List<RestaurantStockResponse> data = inventoryService.getRestaurantReturnInventory(restaurantId);
+        return ResponseEntity.ok(new ApiResponse<>(
+                "SUCCESS",
+                "Live restaurant returnable stock items compiled successfully",
+                data
+        ));
+    }
 }

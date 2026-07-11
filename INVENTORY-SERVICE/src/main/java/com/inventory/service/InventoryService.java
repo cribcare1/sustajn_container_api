@@ -81,6 +81,8 @@ public interface InventoryService {
 
     List<SoldMonthWiseDashboardResponse> getSoldContainersComprehensiveDashboard();
 
+    List<RestaurantStockResponse> getRestaurantReturnInventory(Long restaurantId);
+
     ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByUserId(Long userId);
 
 
