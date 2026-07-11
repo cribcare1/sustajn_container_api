@@ -2,6 +2,7 @@ package com.inventory.service.impl;
 
 import com.inventory.Constant.AdminOrderStatus;
 import com.inventory.Constant.InventoryConstant;
+import com.inventory.Constant.TransactionType;
 import com.inventory.dto.*;
 import com.inventory.entity.*;
 import com.inventory.exception.DuplicateResourceException;
@@ -272,22 +273,35 @@ public class InventoryServiceImpl implements InventoryService {
         AdminOrder order = adminOrderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order record not found with ID: " + id));
 
-        // 2. Safely resolve restaurant display string text label using your targeted endpoint approach
+        // 2. Resolve both restaurant name and address using getRestaurantProfileFromAuth
         String restaurantName = "Unknown Restaurant";
+        String restaurantAddress = "No Address Provided";
         try {
             if (order.getRestaurantId() != null) {
-                Map<String, String> nameResponse = authFeignClient.getRestaurantNameFromAuth(order.getRestaurantId());
-                if (nameResponse != null && nameResponse.containsKey("restaurantName")) {
-                    restaurantName = nameResponse.get("restaurantName");
+                Map<String, String> profile = authFeignClient.getRestaurantProfileFromAuth(order.getRestaurantId());
+                if (profile != null) {
+                    if (profile.containsKey("restaurantName")) restaurantName = profile.get("restaurantName");
+                    if (profile.containsKey("address")) restaurantAddress = profile.get("address");
                 }
             }
         } catch (Exception ex) {
             log.error("Failed to map dynamic restaurant metadata for details view card: {}", order.getRestaurantId());
         }
 
+        // 🟢 3. LOGICAL TIMESTAMP FORMATTING MATRICES
+        java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
+
+        // Fallback cleanly to createdAt or system time if orderDate field hasn't been written to
+        java.time.LocalDateTime rawOrderTime = order.getOrderDate() != null ? order.getOrderDate() :
+                (order.getCreatedAt() != null ? order.getCreatedAt() : java.time.LocalDateTime.now());
+
+        String formattedOrderDate = rawOrderTime.format(dateFormatter);
+        String formattedOrderTime = rawOrderTime.format(timeFormatter);
+
         List<AdminOrderDetailResponse.ItemDetail> itemDetailsList = new ArrayList<>();
 
-        // 3. Extract items array list collection properties and build cards data mapping
+        // 4. Extract items array list collection properties and build cards data mapping
         if (order.getItems() != null && !order.getItems().isEmpty()) {
             for (AdminOrderItem item : order.getItems()) {
 
@@ -306,7 +320,7 @@ public class InventoryServiceImpl implements InventoryService {
                     capacityStr = (type.getCapacityMl() != null) ? type.getCapacityMl() + "ml" : "0ml";
                     imageUrl = type.getImageUrl();
 
-                    // 🟢 CRITICAL CRITERIA LOOKUP: Fetch live inventory stock counts matching containerType identity
+                    // CRITICAL CRITERIA LOOKUP: Fetch live inventory stock counts matching containerType identity
                     Optional<AdminInventoryMaster> masterOpt = masterRepo.findByContainerTypeId(type.getId());
                     if (masterOpt.isPresent()) {
                         liveAvailableStock = (masterOpt.get().getAvailableContainers() != null) ?
@@ -322,18 +336,21 @@ public class InventoryServiceImpl implements InventoryService {
                         .capacity(capacityStr)
                         .imageUrl(imageUrl)
                         .orderedQty((item.getRequestedQty() != null) ? item.getRequestedQty() : 0)
-                        .availableQty(liveAvailableStock) // populates "Available Qty" field dynamically
+                        .availableQty(liveAvailableStock)
                         .build());
             }
         }
 
-        // 4. Group all assembled details into your complete screen model template payload wrapper
+        // 5. Inject properties straight into your payload builder
         return AdminOrderDetailResponse.builder()
                 .id(order.getId())
                 .orderId(order.getOrderId() != null ? order.getOrderId() : "#ORD-" + order.getId())
                 .restaurantName(restaurantName)
+                .restaurantAddress(restaurantAddress)
                 .restaurantRemark(order.getRestaurantRemark() != null ? order.getRestaurantRemark() : "No remarks provided.")
                 .orderType(order.getType() != null ? order.getType().name() : "BORROW")
+                .orderedOnDate(formattedOrderDate) // 🟢 Injected Date
+                .orderedOnTime(formattedOrderTime) // 🟢 Injected Time
                 .items(itemDetailsList)
                 .build();
     }
@@ -1246,30 +1263,61 @@ public class InventoryServiceImpl implements InventoryService {
     public Map<String, Object> getAllContainerTypes() {
         Map<String, Object> response = new HashMap<>();
         try {
-            // 1. Fetch the data using your original, untouched class
+            // 1. Fetch raw container metadata models
             List<ContainerType> allContainers = containerTypeRepository.findAll();
 
-            // 2. Map it to the new file you just created
+            // 2. 🟢 FETCH ALL APPROVED BORROWED COUNTS FROM THE DATABASE
+            Map<Integer, Integer> borrowedMap = new HashMap<>();
+            List<Object[]> borrowResults = adminOrderRepository.getProcessedQuantitiesGroupedByType(
+                    TransactionType.BORROW, AdminOrderStatus.APPROVED
+            );
+            for (Object[] row : borrowResults) {
+                if (row[0] != null && row[1] != null) {
+                    borrowedMap.put((Integer) row[0], ((Long) row[1]).intValue());
+                }
+            }
+
+            // 3. 🟢 FETCH ALL APPROVED RETURNED COUNTS FROM THE DATABASE
+            Map<Integer, Integer> returnedMap = new HashMap<>();
+            List<Object[]> returnResults = adminOrderRepository.getProcessedQuantitiesGroupedByType(
+                    TransactionType.RETURN, AdminOrderStatus.APPROVED
+            );
+            for (Object[] row : returnResults) {
+                if (row[0] != null && row[1] != null) {
+                    returnedMap.put((Integer) row[0], ((Long) row[1]).intValue());
+                }
+            }
+
+            // 4. Map records out while computing true inventory values dynamically
             List<ContainerTypeWithCount> combinedDataList = allContainers.stream().map(container -> {
 
-                // Fetch the count from Admin Inventory Master
+                // Fetch base allocation limits from Admin Inventory Master
                 AdminInventoryMaster master = masterRepo.findByContainerTypeId(container.getId())
                         .orElse(null);
 
-                int total = (master != null && master.getTotalContainers() != null) ? master.getTotalContainers() : 0;
-                int available = (master != null && master.getAvailableContainers() != null) ? master.getAvailableContainers() : 0;
+                int totalContainers = (master != null && master.getTotalContainers() != null) ? master.getTotalContainers() : 0;
 
-                // 3. Return the new object (Original Data, Total Count, Available Count)
-                return new ContainerTypeWithCount(container, total, available);
+                // Resolve live quantities distributed out on loan vs inventory recoveries
+                int totalBorrowed = borrowedMap.getOrDefault(container.getId(), 0);
+                int totalReturned = returnedMap.getOrDefault(container.getId(), 0);
+
+                // 🟢 LIVE DYNAMIC STOCK CALCULATION: Total - Borrowed + Returned
+                int dynamicAvailable = totalContainers - totalBorrowed + totalReturned;
+
+                // Secure safety fallback so availability never prints negative numbers
+                int finalAvailableCount = Math.max(0, dynamicAvailable);
+
+                return new ContainerTypeWithCount(container, totalContainers, finalAvailableCount);
 
             }).collect(Collectors.toList());
 
-            // 4. Put the new list into the response
+            // 5. Package up the structured map
             response.put("status", "SUCCESS");
-            response.put("message", "All container types fetched successfully");
+            response.put("message", "All container types fetched successfully with live calculated balances");
             response.put("data", combinedDataList);
 
         } catch (Exception e) {
+            log.error("Error executing dynamic container type calculations: ", e);
             response.put("status", "ERROR");
             response.put("message", "Failed to fetch container types: " + e.getMessage());
             response.put("data", null);
