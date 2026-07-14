@@ -42,5 +42,15 @@ public interface AdminOrderRepository extends JpaRepository<AdminOrder,Long> {
             @Param("status") AdminOrderStatus status
     );
 
+    @Query("SELECT oi.containerTypeId, SUM(COALESCE(oi.approvedQty, oi.requestedQty)) " +
+            "FROM AdminOrder o JOIN o.items oi " +
+            "WHERE o.restaurantId = :restaurantId AND o.type = :type AND o.status = :status " +
+            "GROUP BY oi.containerTypeId")
+    List<Object[]> getRestaurantAdminBorrows(
+            @Param("restaurantId") Long restaurantId,
+            @Param("type") TransactionType type,
+            @Param("status") AdminOrderStatus status
+    );
+
     List<AdminOrder> findByStatusOrderByOrderDateDesc(AdminOrderStatus status);
 }

@@ -264,6 +264,12 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
 
     List<BorrowOrder> findByIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc();
 
+    @Query("SELECT bo.productId, SUM(bo.quantity), SUM(bo.returnedQuantity) " +
+            "FROM BorrowOrder bo " +
+            "WHERE bo.restaurantId = :restaurantId " +
+            "GROUP BY bo.productId")
+    List<Object[]> getRestaurantUserBalances(@Param("restaurantId") Long restaurantId);
+
     List<BorrowOrder> findByUserIdAndIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc(Long userId);
 
     Long findUserIdByOrderId(Long orderId);

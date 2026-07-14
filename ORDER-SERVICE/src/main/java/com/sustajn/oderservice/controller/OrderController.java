@@ -298,4 +298,20 @@ public class OrderController {
         ));
     }
 
+    @GetMapping("/internal/restaurant/user-balances/{restaurantId}")
+    public ResponseEntity<Map<Long, Map<String, Integer>>> getRestaurantUserBalances(@PathVariable Long restaurantId) {
+        List<Object[]> results = borrowOrderRepository.getRestaurantUserBalances(restaurantId);
+        Map<Long, Map<String, Integer>> balanceMap = new HashMap<>();
+
+        for (Object[] row : results) {
+            if (row[0] != null) {
+                Map<String, Integer> metrics = new HashMap<>();
+                metrics.put("borrowedByUser", row[1] != null ? ((Long) row[1]).intValue() : 0);
+                metrics.put("returnedByUser", row[2] != null ? ((Long) row[2]).intValue() : 0);
+                balanceMap.put((Long) row[0], metrics);
+            }
+        }
+        return ResponseEntity.ok(balanceMap);
+    }
+
 }
