@@ -298,7 +298,7 @@ public class OrderController {
         ));
     }
 
-    @GetMapping("/internal/restaurant/{restaurantId}/user-balances")
+    @GetMapping("/internal/restaurant/user-balances/{restaurantId}")
     public ResponseEntity<Map<Long, Map<String, Integer>>> getRestaurantUserBalances(@PathVariable Long restaurantId) {
         List<Object[]> results = borrowOrderRepository.getRestaurantUserBalances(restaurantId);
         Map<Long, Map<String, Integer>> balanceMap = new HashMap<>();
