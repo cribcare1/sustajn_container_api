@@ -272,5 +272,10 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
 
     List<BorrowOrder> findByUserIdAndIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc(Long userId);
 
+    List<BorrowOrder> findByIsSoldFalse();
+
+    @Query("SELECT bo FROM BorrowOrder bo WHERE bo.borrowedAt BETWEEN :start AND :end")
+    List<BorrowOrder> findBorrowsBetweenDates(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     Long findUserIdByOrderId(Long orderId);
 }

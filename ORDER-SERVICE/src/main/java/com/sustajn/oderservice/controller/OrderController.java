@@ -314,4 +314,9 @@ public class OrderController {
         return ResponseEntity.ok(balanceMap);
     }
 
+    @GetMapping(value = "/admin/dashboard/metrics/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamAdminDashboardMetrics() {
+        return orderService.subscribeAdminDashboard();
+    }
+
 }

@@ -22,19 +22,19 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import com.sustajn.oderservice.dto.DeviceTokenResponse;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.Month;
-import java.time.YearMonth;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,6 +51,8 @@ public class OrderServiceImpl implements OrderService {
 
     private final DateTimeFormatter cardFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy | HH:mm");
     private final DateTimeFormatter headerFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy");
+
+    private final List<SseEmitter> dashboardEmitters = new CopyOnWriteArrayList<>();
 
 //    @Override
 //    @Transactional
@@ -1141,6 +1143,174 @@ public class OrderServiceImpl implements OrderService {
             log.error("Unhandled runtime exception gathering individual context maps: ", ex);
         }
         return payload;
+    }
+    @Override
+    public SseEmitter subscribeAdminDashboard() {
+        SseEmitter emitter = new SseEmitter(1800000L);
+
+        try {
+            // Push initial immediate confirmation handshakes event block down line
+            emitter.send(SseEmitter.event().name("INIT").data("Connected to live engine pipeline."));
+        } catch (Exception e) {
+            log.error("Failed sending startup connection event: ", e);
+        }
+
+        emitter.onCompletion(() -> dashboardEmitters.remove(emitter));
+        emitter.onTimeout(() -> dashboardEmitters.remove(emitter));
+        emitter.onError((ex) -> dashboardEmitters.remove(emitter));
+
+        dashboardEmitters.add(emitter);
+        return emitter;
+    }
+
+    @Scheduled(fixedRate = 5000)
+    public void broadcastDashboardMetrics() {
+        if (dashboardEmitters.isEmpty()) {
+            return;
+        }
+
+        log.info("Broadcasting updated calculations down to {} active stream handles.", dashboardEmitters.size());
+        AdminDashboardResponse dynamicData = getAdminDashboardMetrics();
+
+        List<SseEmitter> unreachableEmitters = new ArrayList<>();
+        for (SseEmitter emitter : dashboardEmitters) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("dashboard-metrics")
+                        .data(dynamicData));
+            } catch (Exception ex) {
+                // Collect stale connections if the client closed their app layout pane
+                unreachableEmitters.add(emitter);
+            }
+        }
+        dashboardEmitters.removeAll(unreachableEmitters);
+    }
+
+    @Override
+    public AdminDashboardResponse getAdminDashboardMetrics() {
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime startOfToday = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+            LocalDateTime startOfYesterday = startOfToday.minusDays(1);
+
+            // 1. CIRCULATION CALCULATION
+            List<BorrowOrder> nonSoldOrders = borrowOrderRepository.findByIsSoldFalse();
+            int totalCirculation = 0, activeContainers = 0, overdueContainers = 0;
+            BigDecimal totalExtendedFee = BigDecimal.ZERO;
+
+            for (BorrowOrder bo : nonSoldOrders) {
+                int outstandingQty = bo.getQuantity() - bo.getReturnedQuantity();
+                if (outstandingQty > 0) {
+                    totalCirculation += outstandingQty;
+                    LocalDateTime absoluteDueDate = bo.getEffectiveDueDate() != null ? bo.getEffectiveDueDate() : bo.getDueDate();
+                    if (now.isAfter(absoluteDueDate)) {
+                        overdueContainers += outstandingQty;
+                    } else {
+                        activeContainers += outstandingQty;
+                    }
+                }
+                if (bo.getExtendedFee() != null) {
+                    totalExtendedFee = totalExtendedFee.add(bo.getExtendedFee());
+                }
+            }
+
+            // SOLD REVENUE CALCULATION FROM REAL TRANSACTIONS
+            List<BorrowOrder> soldOrders = borrowOrderRepository.findAll().stream().filter(BorrowOrder::getIsSold).toList();
+            BigDecimal totalSoldRevenue = BigDecimal.ZERO;
+            for (BorrowOrder bo : soldOrders) {
+                if (bo.getExtendedFee() != null) {
+                    totalSoldRevenue = totalSoldRevenue.add(bo.getExtendedFee().multiply(new BigDecimal(bo.getQuantity())));
+                }
+            }
+
+            // 2. TODAY VS YESTERDAY QUANTITY TREND CALCULATIONS
+            List<BorrowOrder> todayBorrows = borrowOrderRepository.findBorrowsBetweenDates(startOfToday, now);
+            List<BorrowOrder> yesterdayBorrows = borrowOrderRepository.findBorrowsBetweenDates(startOfYesterday, startOfToday);
+            int leasedTodayCount = todayBorrows.stream().mapToInt(BorrowOrder::getQuantity).sum();
+            int leasedYesterdayCount = yesterdayBorrows.stream().mapToInt(BorrowOrder::getQuantity).sum();
+            String leasedTrend = calculateTrend(leasedTodayCount, leasedYesterdayCount);
+
+            List<ReturnOrder> todayReturns = returnOrderRepository.findReturnsBetweenDates(startOfToday, now);
+            List<ReturnOrder> yesterdayReturns = returnOrderRepository.findReturnsBetweenDates(startOfYesterday, startOfToday);
+            int returnedTodayCount = todayReturns.stream().mapToInt(ReturnOrder::getReturnedQuantity).sum();
+            int returnedYesterdayCount = yesterdayReturns.stream().mapToInt(ReturnOrder::getReturnedQuantity).sum();
+            String returnsTrend = calculateTrend(returnedTodayCount, returnedYesterdayCount);
+
+            // 3. UNIQUE USER INTERACTIONS TRACKER
+            Set<Long> uniqueUsersToday = new HashSet<>();
+            todayBorrows.forEach(b -> uniqueUsersToday.add(b.getUserId()));
+            todayReturns.forEach(r -> uniqueUsersToday.add(r.getUserId()));
+
+            // 4. REAL OPERATION LIFESPAN METRICS
+            List<ReturnOrder> allPastReturns = returnOrderRepository.findAll();
+            double totalReturnDays = 0; long totalReturnQuantitySum = 0;
+            List<Long> parentBorrowIds = allPastReturns.stream().map(ReturnOrder::getBorrowOrderId).distinct().toList();
+            Map<Long, BorrowOrder> borrowOrderMap = borrowOrderRepository.findAllById(parentBorrowIds).stream()
+                    .collect(Collectors.toMap(BorrowOrder::getId, b -> b, (b1, b2) -> b1));
+
+            for (ReturnOrder ro : allPastReturns) {
+                BorrowOrder parent = borrowOrderMap.get(ro.getBorrowOrderId());
+                if (parent != null && parent.getBorrowedAt() != null && ro.getReturnedAt() != null) {
+                    long daysBetween = Duration.between(parent.getBorrowedAt(), ro.getReturnedAt()).toDays();
+                    totalReturnDays += (daysBetween * ro.getReturnedQuantity());
+                    totalReturnQuantitySum += ro.getReturnedQuantity();
+                }
+            }
+            double avgReturnTime = totalReturnQuantitySum > 0 ? (totalReturnDays / totalReturnQuantitySum) : 0.0;
+
+            // 5. POPULARITY SHIFTS EVALUATION AND BULK SERVICE FEIGN CROSS-REFERENCES
+            List<BorrowOrder> allHistoricalBorrows = borrowOrderRepository.findAll();
+            Map<Long, Integer> productDistributionMap = allHistoricalBorrows.stream()
+                    .collect(Collectors.groupingBy(BorrowOrder::getProductId, Collectors.summingInt(BorrowOrder::getQuantity)));
+            int overallLeaseVolume = productDistributionMap.values().stream().mapToInt(Integer::intValue).sum();
+
+            PopularProductInfo mostLeasedCard = null; PopularProductInfo lessLeasedCard = null;
+
+            if (!productDistributionMap.isEmpty() && overallLeaseVolume > 0) {
+                Long maxId = Collections.max(productDistributionMap.entrySet(), Map.Entry.comparingByValue()).getKey();
+                Long minId = Collections.min(productDistributionMap.entrySet(), Map.Entry.comparingByValue()).getKey();
+
+                int maxPct = (productDistributionMap.get(maxId) * 100) / overallLeaseVolume;
+                int minPct = (productDistributionMap.get(minId) * 100) / overallLeaseVolume;
+
+                try {
+                    List<Integer> targetIds = List.of(maxId.intValue(), minId.intValue());
+                    List<ProductResponse> products = inventoryFeignClient.getProductsByIds(targetIds).getData();
+                    Map<Long, ProductResponse> productMap = products.stream()
+                            .collect(Collectors.toMap(p -> p.getProductId().longValue(), p -> p, (p1, p2) -> p1));
+
+                    ProductResponse maxProd = productMap.get(maxId);
+                    if (maxProd != null) {
+                        mostLeasedCard = PopularProductInfo.builder().productId(maxId).name(maxProd.getProductName())
+                                .productCode(maxProd.getProductUniqueId()).capacity(maxProd.getCapacity() != null ? maxProd.getCapacity() + "ml" : "0ml").percentage(maxPct).build();
+                    }
+                    ProductResponse minProd = productMap.get(minId);
+                    if (minProd != null) {
+                        lessLeasedCard = PopularProductInfo.builder().productId(minId).name(minProd.getProductName())
+                                .productCode(minProd.getProductUniqueId()).capacity(minProd.getCapacity() != null ? minProd.getCapacity() + "ml" : "0ml").percentage(minPct).build();
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed fetching metadata from Inventory-Service inside stream task logic: ", ex);
+                }
+            }
+
+            return AdminDashboardResponse.builder()
+                    .containersCirculation(totalCirculation).activeContainers(activeContainers).overdueContainers(overdueContainers)
+                    .todayLeased(leasedTodayCount).leasedTrendPercentage(leasedTrend).todayReturns(returnedTodayCount).returnsTrendPercentage(returnsTrend)
+                    .extendedFeeRevenue(totalExtendedFee).soldRevenue(totalSoldRevenue).averageReturnTimeDays(Math.round(avgReturnTime * 10.0) / 10.0)
+                    .activeUsersToday(uniqueUsersToday.size()).mostLeased(mostLeasedCard).lessLeased(lessLeasedCard).build();
+
+        } catch (Exception ex) {
+            log.error("Failed dynamic compilation inside processing stream metrics: ", ex);
+            throw new RuntimeException("Operational engine database failure context logs parsing exception.");
+        }
+    }
+
+    private String calculateTrend(int today, int yesterday) {
+        if (yesterday == 0) return "+0%";
+        int difference = today - yesterday;
+        double percentage = ((double) difference / yesterday) * 100;
+        return (percentage >= 0 ? "+" : "") + Math.round(percentage) + "%";
     }
 //    @Override
 //    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {

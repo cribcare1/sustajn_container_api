@@ -11,6 +11,7 @@ import com.sustajn.oderservice.request.LeasedReturnedGraphInput;
 import com.sustajn.oderservice.request.ReturnRequest;
 import com.sustajn.oderservice.request.SoldRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
@@ -52,6 +53,10 @@ public interface OrderService {
     List<UserExtendedFeeMonthWiseResponse> getUserExtendedFeeHistory(Long userId);
 
     ExtensionPreviewResponse getExtensionPreview(Long orderId);
+
+    AdminDashboardResponse getAdminDashboardMetrics();
+
+    SseEmitter subscribeAdminDashboard();
 
     public void markAsSold(SoldRequest request);
 
