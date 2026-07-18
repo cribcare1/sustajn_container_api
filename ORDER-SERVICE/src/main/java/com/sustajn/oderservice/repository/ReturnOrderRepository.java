@@ -108,4 +108,7 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
 
+    @Query("SELECT ro FROM ReturnOrder ro WHERE ro.returnedAt BETWEEN :start AND :end")
+    List<ReturnOrder> findReturnsBetweenDates(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
 }
