@@ -3,9 +3,9 @@ spring:
     name: AUTH-SERVICE
 
   datasource:
-    url: jdbc:postgresql://ep-purple-salad-aoopfdy3-pooler.c-2.ap-southeast-1.aws.neon.tech/auth_service_3?sslmode=require&channel_binding=require
+    url: jdbc:postgresql://ep-gentle-block-aoifiomz-pooler.c-2.ap-southeast-1.aws.neon.tech/auth_db_1?sslmode=require&channel_binding=require
     username: neondb_owner
-    password: npg_e6xr3XVMcYFZ
+    password:  npg_pW7izeTrDs3H
     driver-class-name: org.postgresql.Driver
 #    url: ${DB_URL}
 #    password: ${DB_PASSWORD}
