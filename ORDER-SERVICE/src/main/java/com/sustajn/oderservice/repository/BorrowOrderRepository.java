@@ -277,5 +277,10 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
     @Query("SELECT bo FROM BorrowOrder bo WHERE bo.borrowedAt BETWEEN :start AND :end")
     List<BorrowOrder> findBorrowsBetweenDates(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    List<BorrowOrder> findByProductId(Long productId);
+
+    @Query("SELECT COALESCE(SUM(b.quantity - b.returnedQuantity), 0) FROM BorrowOrder b WHERE b.productId = :productId AND (b.isSold = false OR b.isSold IS NULL)")
+    Integer sumInCirculationByProductId(@Param("productId") Long productId);
+
     Long findUserIdByOrderId(Long orderId);
 }
