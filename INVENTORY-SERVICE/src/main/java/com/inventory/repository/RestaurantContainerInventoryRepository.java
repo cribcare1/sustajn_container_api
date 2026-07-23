@@ -46,4 +46,7 @@ public interface RestaurantContainerInventoryRepository extends JpaRepository<Re
     List<RestaurantContainerDetails> findContainersWithDetails(
             @Param("restaurantId") Long restaurantId
     );
+
+    @Query("SELECT COALESCE(SUM(r.currentQuantity), 0) FROM RestaurantContainerInventory r WHERE r.containerTypeId = :containerTypeId")
+    Integer sumWithPartnerCount(@Param("containerTypeId") Integer containerTypeId);
 }

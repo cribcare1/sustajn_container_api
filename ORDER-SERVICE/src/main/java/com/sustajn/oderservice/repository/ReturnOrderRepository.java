@@ -111,4 +111,7 @@ public interface ReturnOrderRepository extends JpaRepository<ReturnOrder,Long> {
     @Query("SELECT ro FROM ReturnOrder ro WHERE ro.returnedAt BETWEEN :start AND :end")
     List<ReturnOrder> findReturnsBetweenDates(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    @Query("SELECT COALESCE(SUM(r.returnedQuantity), 0) FROM ReturnOrder r WHERE r.productId = :productId")
+    Integer sumReturnedCountByProductId(@Param("productId") Long productId);
+
 }

@@ -75,4 +75,7 @@ public interface InventoryFeignClient {
 
     @PostMapping("/inventory/internal/container-extension-details")
     List<Map<String, Object>> getContainerExtensionDetailsBulk(@RequestBody List<Integer> containerTypeIds);
+
+    @GetMapping("/inventory/containers/{containerTypeId}/stats")
+    ContainerInventoryStatsDto getContainerInventoryStats(@PathVariable("containerTypeId") Integer containerTypeId);
 }

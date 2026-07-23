@@ -1,5 +1,6 @@
 package com.inventory.repository;
 
+import com.inventory.Constant.TransactionType;
 import com.inventory.entity.AdminOrder;
 import com.inventory.entity.AdminOrderItem;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -77,5 +78,14 @@ public interface AdminOrderItemRepository extends JpaRepository<AdminOrderItem,L
     List<Object[]> findDateWiseReturnedQty(
             @Param("restaurantId") Long restaurantId,
             @Param("productId") Integer productId
+    );
+
+    @Query("SELECT COALESCE(SUM(i.approvedQty), 0) " +
+            "FROM AdminOrderItem i JOIN i.order o " +
+            "WHERE i.containerTypeId = :containerTypeId " +
+            "AND o.type = :type")
+    Integer sumQtyByContainerTypeIdAndType(
+            @Param("containerTypeId") Integer containerTypeId,
+            @Param("type") TransactionType type
     );
 }
