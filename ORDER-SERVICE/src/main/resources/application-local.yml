@@ -9,7 +9,7 @@ spring:
 #    driver-class-name: org.postgresql.Driver
 
   datasource:
-    url: jdbc:postgresql://ep-solitary-sunset-ao3lnirw-pooler.c-2.ap-southeast-1.aws.neon.tech/order_db_1?sslmode=require&channel_binding=require'
+    url: jdbc:postgresql://ep-solitary-sunset-ao3lnirw-pooler.c-2.ap-southeast-1.aws.neon.tech/order_db_1?sslmode=require&channel_binding=require
     username: neondb_owner
     password: npg_4cLW8brkUJvt
 

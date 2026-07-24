@@ -78,4 +78,7 @@ public interface InventoryFeignClient {
 
     @GetMapping("/inventory/containers/{containerTypeId}/stats")
     ContainerInventoryStatsDto getContainerInventoryStats(@PathVariable("containerTypeId") Integer containerTypeId);
+
+    @GetMapping("/inventory/containers/{containerTypeId}/ordered-history")
+    List<MonthlyOrderedResponse> getOrderedHistory(@PathVariable("containerTypeId") Integer containerTypeId);
 }
