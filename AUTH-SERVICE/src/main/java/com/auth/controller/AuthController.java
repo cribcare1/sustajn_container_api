@@ -27,10 +27,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -494,5 +491,13 @@ public class AuthController {
         }
 
         return ResponseEntity.ok(resultList);
+    }
+
+    @PostMapping("/internal/users/summary-bulk")
+    public ResponseEntity<List<UserSummaryDto>> getUserSummariesBulk(@RequestBody List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        return ResponseEntity.ok(userRepository.findUserSummariesByUserIds(userIds));
     }
 }

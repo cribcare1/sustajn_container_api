@@ -2,6 +2,7 @@ package com.inventory.feignClient;
 
 import com.inventory.config.FeignMultipartConfig;
 import com.inventory.dto.PartnerInfoDto;
+import com.inventory.dto.UserSummaryDto;
 import com.inventory.request.SubscriptionRequest;
 import com.inventory.response.ApiResponse;
 import com.sustajn.oderservice.dto.UserResponse;
@@ -40,4 +41,7 @@ public interface AuthFeignClient {
 
     @GetMapping("/auth/internal/partner-subscriptions")
     List<Map<String, Object>> getPartnerSubscriptionsFromAuth();
+
+    @PostMapping("/auth/internal/users/summary-bulk")
+    List<UserSummaryDto> getUserSummariesBulk(@RequestBody List<Long> userIds);
 }
