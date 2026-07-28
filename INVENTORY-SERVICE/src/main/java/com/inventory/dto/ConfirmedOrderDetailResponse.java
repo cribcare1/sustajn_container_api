@@ -1,6 +1,10 @@
 package com.inventory.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
 @Data
@@ -8,18 +12,22 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConfirmedOrderDetailResponse {
+
     private Long id;
     private String orderId;
     private String restaurantName;
     private String restaurantAddress;
-    private String partnerRemark;      // Maps to "Partner Remarks" section
-    private String sustajnRemark;// Maps to "Sustajn Remarks" section
-    private String orderDate;          // Returns "27.11.2025"
-    private String orderTime;          // Returns "11:00"
-    private String orderedOnDate;      // Returns format: "10.12.2025"
-    private String orderedOnTime;      // Returns format: "10:00"
-    private String confirmedOnDate;    // Returns format: "10.12.2025"
-    private String confirmedOnTime;    // Returns format: "10:00"
+    private String partnerRemark;
+    private String sustajnRemark;
+
+    // Standardized date & time fields
+    private String orderDate;
+    private String orderTime;
+    private String orderedOnDate;
+    private String orderedOnTime;
+    private String confirmedOnDate;
+    private String confirmedOnTime;
+
     private List<ConfirmedItemDetail> items;
 
     @Data
@@ -28,10 +36,11 @@ public class ConfirmedOrderDetailResponse {
     @AllArgsConstructor
     public static class ConfirmedItemDetail {
         private Long itemId;
-        private String containerName;   // e.g., "Dip Cup"
-        private String productCode;     // e.g., "ST-DC-50"
-        private String capacity;        // e.g., "50ml"
+        private String containerName;
+        private String productCode;
+        private String capacity;
         private String imageUrl;
-        private Integer orderedQty;     // Displays confirmed/approved quantity value
+        private Integer orderedQty;   // Quantity requested by partner
+        private Integer approvedQty;  // Quantity approved by admin
     }
 }
