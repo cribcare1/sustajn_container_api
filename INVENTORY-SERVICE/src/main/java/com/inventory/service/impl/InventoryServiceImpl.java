@@ -2511,9 +2511,7 @@ public class InventoryServiceImpl implements InventoryService {
 
             if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
                 damagedContainers = damagedContainerRepository.findAllIsDamageByCustomer();
-            }
-
-            if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+            } else if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
                 damagedContainers = damagedContainerRepository.findAllIsDamageByRestaurant();
             }
 
@@ -2525,7 +2523,7 @@ public class InventoryServiceImpl implements InventoryService {
                 );
             }
 
-            // ================= BULK FETCH CONTAINER TYPES =================
+            // ================= 1. BULK FETCH CONTAINER TYPES =================
             Set<Integer> containerTypeIds = damagedContainers.stream()
                     .map(DamagedContainer::getContainerTypeId)
                     .filter(Objects::nonNull)
@@ -2534,12 +2532,9 @@ public class InventoryServiceImpl implements InventoryService {
             Map<Integer, ContainerType> containerTypeMap =
                     containerTypeRepository.findByIdIn(containerTypeIds)
                             .stream()
-                            .collect(Collectors.toMap(
-                                    ContainerType::getId,
-                                    ct -> ct
-                            ));
+                            .collect(Collectors.toMap(ContainerType::getId, ct -> ct));
 
-            // ================= BULK FETCH DAMAGE IMAGES =================
+            // ================= 2. BULK FETCH DAMAGE IMAGES =================
             Set<Long> damageIds = damagedContainers.stream()
                     .map(DamagedContainer::getId)
                     .collect(Collectors.toSet());
@@ -2547,40 +2542,45 @@ public class InventoryServiceImpl implements InventoryService {
             Map<Long, List<DamagedContainerImages>> damageImagesMap =
                     damagedContainerImagesRepository.findByDamageIdIn(damageIds)
                             .stream()
-                            .collect(Collectors.groupingBy(
-                                    DamagedContainerImages::getDamageId
-                            ));
+                            .collect(Collectors.groupingBy(DamagedContainerImages::getDamageId));
 
-            // ================= BULK FETCH USER DETAILS (Feign) =================
-            Set<Long> userIds = new HashSet<>();
+            // ================= 3. BULK FETCH USER DETAILS VIA FEIGN =================
+            List<Long> targetUserIds = new ArrayList<>();
 
             if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
-                userIds = damagedContainers.stream()
+                targetUserIds = damagedContainers.stream()
                         .map(DamagedContainer::getUserId)
                         .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
-            }
-            if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
-                userIds = damagedContainers.stream()
+                        .distinct()
+                        .collect(Collectors.toList());
+            } else if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+                targetUserIds = damagedContainers.stream()
                         .map(DamagedContainer::getRestaurantId)
                         .filter(Objects::nonNull)
-                        .collect(Collectors.toSet());
+                        .distinct()
+                        .collect(Collectors.toList());
             }
 
-            Map<Long, Map<String, Object>> userDetailsMap = new HashMap<>();
+            Map<Long, UserSummaryDto> userSummaryMap = new HashMap<>();
 
-            for (Long userId : userIds) {
+            if (!targetUserIds.isEmpty()) {
                 try {
-                    Map<String, Object> userDetails =
-                            authFeignClient.getUserDetails(userId);
-
-                    userDetailsMap.put(userId, userDetails);
+                    List<UserSummaryDto> summaries = authFeignClient.getUserSummariesBulk(targetUserIds);
+                    if (summaries != null && !summaries.isEmpty()) {
+                        userSummaryMap = summaries.stream()
+                                .filter(dto -> dto.getUserId() != null)
+                                .collect(Collectors.toMap(
+                                        UserSummaryDto::getUserId,
+                                        dto -> dto,
+                                        (existing, replacement) -> existing
+                                ));
+                    }
                 } catch (Exception ex) {
-                    log.error("Failed to fetch user details for userId {}", userId);
+                    log.error("Failed to fetch user summaries bulk over Feign: {}", ex.getMessage());
                 }
             }
 
-            // ================= GROUP BY MONTH =================
+            // ================= 4. GROUP BY MONTH =================
             Map<String, List<DamagedContainer>> monthWiseMap =
                     damagedContainers.stream()
                             .collect(Collectors.groupingBy(dc -> {
@@ -2616,67 +2616,50 @@ public class InventoryServiceImpl implements InventoryService {
 
                     for (DamagedContainer dc : dateContainers) {
 
-                        ContainerType containerType =
-                                containerTypeMap.get(dc.getContainerTypeId());
-
+                        ContainerType containerType = containerTypeMap.get(dc.getContainerTypeId());
                         if (containerType == null) continue;
 
-                        // ===== Fetch user details from Map =====
-                        Map<String, Object> userDetails = new HashMap<>();
+                        // Resolve User Summary based on damageBy type
+                        Long lookupId = InventoryConstant.USER.equalsIgnoreCase(damageBy)
+                                ? dc.getUserId()
+                                : dc.getRestaurantId();
 
-                        if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
-                            userDetails = userDetailsMap.get(dc.getUserId());
-                        }
-                        if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
-                            userDetails = userDetailsMap.get(dc.getRestaurantId());
-                        }
+                        UserSummaryDto userSummary = userSummaryMap.get(lookupId);
 
                         String customerId = null;
                         String restaurantName = null;
 
-                        if (userDetails != null && userDetails.get("data") != null) {
-
-                            Map<String, Object> data =
-                                    (Map<String, Object>) userDetails.get("data");
-
+                        if (userSummary != null) {
                             if (InventoryConstant.USER.equalsIgnoreCase(damageBy)) {
-                                customerId = data.get("customerId") != null
-                                        ? data.get("customerId").toString()
-                                        : null;
-                            }
-
-                            if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
-                                restaurantName = data.get("fullName") != null
-                                        ? data.get("fullName").toString()
-                                        : null;
+                                customerId = userSummary.getCustomerId();
+                            } else if (InventoryConstant.RESTAURANT.equalsIgnoreCase(damageBy)) {
+                                restaurantName = userSummary.getFullName();
                             }
                         }
 
-                        // ===== Fetch Images =====
-                        List<DamagedContainerImages> images =
-                                damageImagesMap.getOrDefault(
-                                        dc.getId(),
-                                        Collections.emptyList()
-                                );
+                        // Fetch Images
+                        List<DamagedContainerImages> images = damageImagesMap.getOrDefault(
+                                dc.getId(),
+                                Collections.emptyList()
+                        );
 
                         String imageUrls = images.stream()
                                 .map(DamagedContainerImages::getDamageImageUrl)
                                 .filter(Objects::nonNull)
                                 .collect(Collectors.joining("#"));
 
-                        DamageProductResponse product =
-                                new DamageProductResponse(
-                                        customerId,
-                                        restaurantName,
-                                        containerType.getId(),
-                                        containerType.getName(),
-                                        containerType.getDescription(),
-                                        containerType.getImageUrl(),
-                                        containerType.getCapacityMl(),
-                                        containerType.getProductId(),
-                                        dc.getRemark(),
-                                        imageUrls
-                                );
+                        DamageProductResponse product = new DamageProductResponse(
+                                customerId,
+                                restaurantName,
+                                containerType.getId(),
+                                containerType.getName(),
+                                containerType.getDescription(),
+                                containerType.getImageUrl(),
+                                containerType.getCapacityMl(),
+                                containerType.getProductId(),
+                                dc.getRemark(),
+                                imageUrls
+                        );
 
                         productResponses.add(product);
 
@@ -2711,9 +2694,7 @@ public class InventoryServiceImpl implements InventoryService {
             );
 
         } catch (Exception e) {
-
             log.error("Error fetching month-wise damaged container details", e);
-
             return new ApiResponse<>(
                     InventoryConstant.ERROR,
                     "Failed to fetch month-wise damaged container details",

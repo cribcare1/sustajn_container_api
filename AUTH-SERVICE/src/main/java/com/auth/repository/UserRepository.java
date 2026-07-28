@@ -5,6 +5,7 @@ import com.auth.enumDetails.UserType;
 import com.auth.model.User;
 import com.auth.response.RestaurantRegisterResponse;
 import com.auth.response.RestaurantSearchResponse;
+import com.auth.response.UserSummaryDto;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -235,4 +236,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     WHERE u.id IN :userIds
 """)
     List<Object[]> findPartnerDetailsByIds(@Param("userIds") List<Long> userIds);
+
+    @Query("SELECT new com.auth.response.UserSummaryDto(u.id, u.customerId, u.fullName) " +
+            "FROM User u WHERE u.id IN :userIds")
+    List<UserSummaryDto> findUserSummariesByUserIds(@Param("userIds") List<Long> userIds);
 }
