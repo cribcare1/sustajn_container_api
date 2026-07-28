@@ -60,4 +60,12 @@ public interface AdminOrderRepository extends JpaRepository<AdminOrder,Long> {
             "AND o.type = com.inventory.Constant.TransactionType.BORROW " +
             "ORDER BY COALESCE(o.orderDate, o.createdAt) DESC")
     List<Object[]> findBorrowOrdersRawByContainerTypeId(@Param("containerTypeId") Integer containerTypeId);
+    @Query("SELECT item.containerTypeId, SUM(COALESCE(item.approvedQty, item.requestedQty)) " +
+            "FROM AdminOrder o JOIN o.items item " +
+            "WHERE o.type = :type AND o.status IN :statuses " +
+            "GROUP BY item.containerTypeId")
+    List<Object[]> getProcessedQuantitiesGroupedByTypeAndStatuses(
+            @Param("type") TransactionType type,
+            @Param("statuses") List<AdminOrderStatus> statuses
+    );
 }

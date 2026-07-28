@@ -491,16 +491,15 @@ public class InventoryServiceImpl implements InventoryService {
         java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
         java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm");
 
-        // Safely extract transaction placement timestamps from your base persistence model
+        // Safely extract transaction placement timestamps
         java.time.LocalDateTime rawOrderedTime = order.getCreatedAt() != null ? order.getCreatedAt() : java.time.LocalDateTime.now();
-
-        // Employs tracking state values (If your entity defines an explicit order confirmation timestamp field, use it here)
         java.time.LocalDateTime rawConfirmedTime = order.getUpdatedAt() != null ? order.getUpdatedAt() : rawOrderedTime;
 
         String formattedOrderDate = rawOrderedTime.format(dateFormatter);
         String formattedOrderTime = rawOrderedTime.format(timeFormatter);
         String formattedConfirmedDate = rawConfirmedTime.format(dateFormatter);
         String formattedConfirmedTime = rawConfirmedTime.format(timeFormatter);
+
         List<ConfirmedOrderDetailResponse.ConfirmedItemDetail> itemsList = new ArrayList<>();
 
         if (order.getItems() != null && !order.getItems().isEmpty()) {
@@ -519,13 +518,18 @@ public class InventoryServiceImpl implements InventoryService {
                     imageUrl = type.getImageUrl();
                 }
 
+                // Extract requested quantity vs approved quantity
+                Integer orderedQty = item.getRequestedQty() != null ? item.getRequestedQty() : 0;
+                Integer approvedQty = item.getApprovedQty() != null ? item.getApprovedQty() : 0;
+
                 itemsList.add(ConfirmedOrderDetailResponse.ConfirmedItemDetail.builder()
                         .itemId(item.getId())
                         .containerName(containerName)
                         .productCode(productCode)
                         .capacity(capacityStr)
                         .imageUrl(imageUrl)
-                        .orderedQty(item.getApprovedQty() != null ? item.getApprovedQty() : 0)
+                        .orderedQty(orderedQty)   // 🟢 Correctly map requested quantity
+                        .approvedQty(approvedQty) // 🟢 Added approved quantity field
                         .build());
             }
         }
@@ -538,6 +542,8 @@ public class InventoryServiceImpl implements InventoryService {
                 .restaurantAddress(restaurantAddress)
                 .partnerRemark(order.getRestaurantRemark() != null ? order.getRestaurantRemark() : "No remarks provided.")
                 .sustajnRemark(order.getAdminRemark() != null ? order.getAdminRemark() : "No admin notes provided.")
+                .orderDate(formattedOrderDate)             // 🟢 Fixed: Populated orderDate
+                .orderTime(formattedOrderTime)             // 🟢 Fixed: Populated orderTime
                 .orderedOnDate(formattedOrderDate)
                 .orderedOnTime(formattedOrderTime)
                 .confirmedOnDate(formattedConfirmedDate)
@@ -1333,25 +1339,31 @@ public class InventoryServiceImpl implements InventoryService {
             // 1. Fetch raw container metadata models
             List<ContainerType> allContainers = containerTypeRepository.findAll();
 
-            // 2. 🟢 FETCH ALL APPROVED BORROWED COUNTS FROM THE DATABASE
+            // 🟢 Active stock statuses: both APPROVED and DELIVERED count as active movements
+            List<AdminOrderStatus> activeStatuses = Arrays.asList(
+                    AdminOrderStatus.APPROVED,
+                    AdminOrderStatus.DELIVERED
+            );
+
+            // 2. 🟢 FETCH ALL BORROWED COUNTS (APPROVED + DELIVERED)
             Map<Integer, Integer> borrowedMap = new HashMap<>();
-            List<Object[]> borrowResults = adminOrderRepository.getProcessedQuantitiesGroupedByType(
-                    TransactionType.BORROW, AdminOrderStatus.APPROVED
+            List<Object[]> borrowResults = adminOrderRepository.getProcessedQuantitiesGroupedByTypeAndStatuses(
+                    TransactionType.BORROW, activeStatuses
             );
             for (Object[] row : borrowResults) {
                 if (row[0] != null && row[1] != null) {
-                    borrowedMap.put((Integer) row[0], ((Long) row[1]).intValue());
+                    borrowedMap.put((Integer) row[0], ((Number) row[1]).intValue());
                 }
             }
 
-            // 3. 🟢 FETCH ALL APPROVED RETURNED COUNTS FROM THE DATABASE
+            // 3. 🟢 FETCH ALL RETURNED COUNTS (APPROVED + DELIVERED)
             Map<Integer, Integer> returnedMap = new HashMap<>();
-            List<Object[]> returnResults = adminOrderRepository.getProcessedQuantitiesGroupedByType(
-                    TransactionType.RETURN, AdminOrderStatus.APPROVED
+            List<Object[]> returnResults = adminOrderRepository.getProcessedQuantitiesGroupedByTypeAndStatuses(
+                    TransactionType.RETURN, activeStatuses
             );
             for (Object[] row : returnResults) {
                 if (row[0] != null && row[1] != null) {
-                    returnedMap.put((Integer) row[0], ((Long) row[1]).intValue());
+                    returnedMap.put((Integer) row[0], ((Number) row[1]).intValue());
                 }
             }
 
@@ -1391,7 +1403,6 @@ public class InventoryServiceImpl implements InventoryService {
         }
         return response;
     }
-
     @Override
     public Map<String, Object> getContainerTypeById(Integer id) {
         Map<String, Object> response = new HashMap<>();
