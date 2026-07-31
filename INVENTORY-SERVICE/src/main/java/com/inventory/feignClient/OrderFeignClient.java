@@ -1,9 +1,11 @@
 package com.inventory.feignClient;
 
+import com.inventory.dto.CustomerSoldHistoryRawDto;
 import com.inventory.dto.SoldHistoryRawData;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
@@ -26,4 +28,7 @@ public interface OrderFeignClient {
 
     @GetMapping("/orders/internal/restaurant/user-balances/{restaurantId}")
     Map<Long, Map<String, Integer>> getRestaurantUserBalances(@PathVariable("restaurantId") Long restaurantId);
+
+    @GetMapping("/internal/orders/customer/sold-history-raw/{userId}")
+    List<CustomerSoldHistoryRawDto> getCustomerSoldHistoryRawData(@PathVariable("userId") Long userId);
 }
