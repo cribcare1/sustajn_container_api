@@ -3,6 +3,7 @@ package com.inventory.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.dto.*;
+import com.inventory.dto.CustomerSoldHistoryResponse;
 import com.inventory.entity.ContainerType;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.exception.InventoryException;
@@ -530,5 +531,13 @@ public class InventoryController {
                 "Live restaurant returnable stock items provided successfully",
                 data
         ));
+    }
+
+    @GetMapping("/customer/sold-history/{userId}")
+    public ResponseEntity<ApiResponse<List<CustomerSoldHistoryResponse>>> getCustomerSoldHistory(
+            @PathVariable("userId") Long userId) {
+
+        List<CustomerSoldHistoryResponse> data = inventoryService.getCustomerSoldHistory(userId);
+        return ResponseEntity.ok(new ApiResponse<>("success", "Customer sold history fetched successfully", data));
     }
 }

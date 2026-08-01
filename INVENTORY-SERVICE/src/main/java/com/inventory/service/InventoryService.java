@@ -1,6 +1,7 @@
 package com.inventory.service;
 
 import com.inventory.dto.*;
+import com.inventory.dto.CustomerSoldHistoryResponse;
 import com.inventory.entity.DamagedContainer;
 import com.inventory.entity.RestaurantContainerInventory;
 import com.inventory.entity.RestaurantInventoryMaster;
@@ -82,6 +83,8 @@ public interface InventoryService {
     List<SoldMonthWiseDashboardResponse> getSoldContainersComprehensiveDashboard();
 
     List<RestaurantStockResponse> getRestaurantReturnInventory(Long restaurantId);
+
+    List<CustomerSoldHistoryResponse> getCustomerSoldHistory(Long userId);
 
     ApiResponse<List<DamageContainerMonthWiseResponse>> getDamageContainerMonthWiseDetailsByUserId(Long userId);
 

@@ -4,6 +4,7 @@ import com.inventory.Constant.AdminOrderStatus;
 import com.inventory.Constant.InventoryConstant;
 import com.inventory.Constant.TransactionType;
 import com.inventory.dto.*;
+import com.inventory.dto.CustomerSoldHistoryResponse;
 import com.inventory.entity.*;
 import com.inventory.exception.DuplicateResourceException;
 import com.inventory.exception.InventoryException;
@@ -967,6 +968,63 @@ public class InventoryServiceImpl implements InventoryService {
             log.error("Fatal error loading live return inventory details: ", ex);
         }
         return stockList;
+    }
+
+    @Override
+    public List<CustomerSoldHistoryResponse> getCustomerSoldHistory(Long userId) {
+        // 1. Fetch raw transaction timeline directly from ORDER-SERVICE
+        List<CustomerSoldHistoryRawDto> rawData = orderFeignClient.getCustomerSoldHistoryRawData(userId);
+
+        if (rawData == null || rawData.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy", Locale.ENGLISH);
+        DateTimeFormatter dateDotFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+        // 2. Group raw records by Month (e.g., "November-2025")
+        Map<String, List<CustomerSoldHistoryRawDto>> monthGrouped = rawData.stream()
+                .filter(item -> item.getSoldAt() != null)
+                .collect(Collectors.groupingBy(
+                        item -> item.getSoldAt().format(monthFormatter),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        List<CustomerSoldHistoryResponse> finalResponse = new ArrayList<>();
+
+        // 3. Map into UI JSON structure matching mobile screen layout
+        for (Map.Entry<String, List<CustomerSoldHistoryRawDto>> entry : monthGrouped.entrySet()) {
+            String monthYear = entry.getKey();
+            List<CustomerSoldHistoryRawDto> itemsInMonth = entry.getValue();
+
+            List<CustomerSoldHistoryResponse.CustomerSoldItemDto> itemList = new ArrayList<>();
+
+            for (CustomerSoldHistoryRawDto raw : itemsInMonth) {
+                // Look up container details from ContainerType table
+                ContainerType container = containerTypeRepository.findById(raw.getProductId().intValue())
+                        .orElse(null);
+
+                itemList.add(CustomerSoldHistoryResponse.CustomerSoldItemDto.builder()
+                        .productName(container != null ? container.getName() : "Unknown Container")
+                        .productUniqueId(container != null ? container.getProductId() : "N/A")
+                        .capacity(container != null && container.getCapacityMl() != null ? container.getCapacityMl() + "ml" : "0ml")
+                        .imageUrl(container != null ? container.getImageUrl() : "")
+                        .soldQuantity(raw.getSoldQuantity() != null ? raw.getSoldQuantity() : 0)
+                        .totalAmount(raw.getTotalAmount() != null ? raw.getTotalAmount() : 0L)
+                        .borrowedOn(raw.getBorrowedAt() != null ? raw.getBorrowedAt().format(dateDotFormatter) : "N/A")
+                        .dueOn(raw.getDueDate() != null ? raw.getDueDate().format(dateDotFormatter) : "N/A")
+                        .soldOn(raw.getSoldAt() != null ? raw.getSoldAt().format(dateDotFormatter) : "N/A")
+                        .build());
+            }
+
+            finalResponse.add(CustomerSoldHistoryResponse.builder()
+                    .monthYear(monthYear)
+                    .items(itemList)
+                    .build());
+        }
+
+        return finalResponse;
     }
     @Override
     public List<SoldMonthWiseDashboardResponse> getSoldContainersComprehensiveDashboard() {
