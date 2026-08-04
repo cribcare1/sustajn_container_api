@@ -255,12 +255,23 @@ public interface BorrowOrderRepository extends JpaRepository<BorrowOrder,Long> {
     List<Object[]> getCirculationCountsForAllProducts();
 
 
-    // Group active circulation counts by numeric User ID
+    @Query("SELECT COALESCE(SUM(b.quantity - b.returnedQuantity), 0L) " +
+            "FROM BorrowOrder b " +
+            "WHERE b.productId = :productId " +
+            "AND b.quantity > b.returnedQuantity " +
+            "AND (b.isSold = false OR b.isSold IS NULL)")
+    Long getInCirculationCountForProduct(@Param("productId") Long productId);
+
     @Query("SELECT b.userId, COALESCE(SUM(b.quantity - b.returnedQuantity), 0) " +
             "FROM BorrowOrder b " +
-            "WHERE b.productId = :productId AND b.quantity > b.returnedQuantity " +
+            "WHERE b.productId = :productId " +
+            "AND b.quantity > b.returnedQuantity " +
+            "AND (b.isSold = false OR b.isSold IS NULL) " +
             "GROUP BY b.userId")
     List<Object[]> getCirculationPerUserForProduct(@Param("productId") Long productId);
+
+
+
 
     List<BorrowOrder> findByIsExtendedTrueAndExtendedFeeIsNotNullOrderByExtendedAtDesc();
 

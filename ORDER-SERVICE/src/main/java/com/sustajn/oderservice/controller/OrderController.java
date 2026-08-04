@@ -214,11 +214,20 @@ public class OrderController {
         Map<Long, Integer> userCounts = new HashMap<>();
 
         for (Object[] row : results) {
-            Long userId = (Long) row[0];
-            Integer count = ((Number) row[1]).intValue();
-            userCounts.put(userId, count);
+            if (row[0] != null && row[1] != null) {
+                // 🟢 Safe conversion for BigInteger/Long/Integer types
+                Long userId = ((Number) row[0]).longValue();
+                Integer count = ((Number) row[1]).intValue();
+                userCounts.put(userId, count);
+            }
         }
         return userCounts;
+    }
+
+    @GetMapping("/internal/circulation-count/{productId}")
+    public Integer getInCirculationCount(@PathVariable Long productId) {
+        Long count = borrowOrderRepository.getInCirculationCountForProduct(productId);
+        return count != null ? count.intValue() : 0;
     }
 
     @GetMapping("/internal/sold-history-dates/{restaurantId}")
