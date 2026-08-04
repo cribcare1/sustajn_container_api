@@ -123,28 +123,37 @@ public class ContainerStatisticServiceImpl {
         ContainerType container = containerTypeRepository.findById(containerTypeId)
                 .orElseThrow(() -> new RuntimeException("Container not found"));
         Long productIdLong = container.getId().longValue();
-        // 2. Get counts from Order Service
-        Integer totalInCirculation = 0;
+
+        // 2. Fetch User Holding Breakdown (Isolated try-catch)
         Map<Long, Integer> numericUserMap = new HashMap<>();
         try {
-            totalInCirculation = orderFeignClient.getInCirculationCount(productIdLong);
             numericUserMap = orderFeignClient.getCirculationByUser(productIdLong);
         } catch (Exception e) {
-            log.error("Failed to fetch order data: {}", e.getMessage());
+            log.error("Failed to fetch user circulation map for productId {}: {}", productIdLong, e.getMessage());
         }
 
-        // 3. Translate IDs using Auth Service
+        // 3. Fetch Total Count (Isolated try-catch + fallback to user map sum)
+        Integer totalInCirculation = 0;
+        try {
+            totalInCirculation = orderFeignClient.getInCirculationCount(productIdLong);
+        } catch (Exception e) {
+            log.error("Failed to fetch circulation count for productId {}: {}", productIdLong, e.getMessage());
+            // Fallback: sum counts from user map if available
+            totalInCirculation = numericUserMap.values().stream().mapToInt(Integer::intValue).sum();
+        }
+
+        // 4. Translate User IDs via Auth Service
         Map<Long, String> customerIdMap = new HashMap<>();
         if (!numericUserMap.isEmpty()) {
             try {
-                List<Long> numericIds = new java.util.ArrayList<>(numericUserMap.keySet());
+                List<Long> numericIds = new ArrayList<>(numericUserMap.keySet());
                 customerIdMap = authFeignClient.getCustomerIdsBulk(numericIds);
             } catch (Exception e) {
-                log.error("Failed to fetch auth data: {}", e.getMessage());
+                log.error("Failed to fetch auth customer IDs: {}", e.getMessage());
             }
         }
 
-        // 4. Build and Sort the User List
+        // 5. Build and Sort User List
         Map<Long, String> finalCustomerIdMap = customerIdMap;
         List<UserHoldingDto> userList = numericUserMap.entrySet().stream()
                 .map(entry -> {
@@ -154,10 +163,10 @@ public class ContainerStatisticServiceImpl {
                             .count(entry.getValue())
                             .build();
                 })
-                .sorted((a, b) -> b.getCount().compareTo(a.getCount())) // Sort highest count first
-                .collect(java.util.stream.Collectors.toList());
+                .sorted((a, b) -> b.getCount().compareTo(a.getCount()))
+                .collect(Collectors.toList());
 
-        // 5. Return Final Response
+        // 6. Return Details
         return ContainerInCirculationDetailResponse.builder()
                 .containerTypeId(containerTypeId)
                 .name(container.getName())
