@@ -1,5 +1,6 @@
 package com.sustajn.oderservice.service;
 
+import com.sustajn.oderservice.dto.AdminDashboardResponse;
 import com.sustajn.oderservice.dto.ContainerChartResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -18,6 +19,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class SseService {
 
     private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
+
+    private final List<SseEmitter> adminEmitters = new CopyOnWriteArrayList<>();
 
     private final OrderService orderService;
 
@@ -76,5 +79,52 @@ public class SseService {
                 log.warn("Failed to fetch/send chart stats for restaurant in notifyClients {}: {}", restaurantId, ex.getMessage());
             }
         }
+    }
+
+    public SseEmitter subscribeAdmin() {
+        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L); // 30 minutes
+        adminEmitters.add(emitter);
+
+        emitter.onCompletion(() -> adminEmitters.remove(emitter));
+        emitter.onTimeout(() -> adminEmitters.remove(emitter));
+        emitter.onError((ex) -> adminEmitters.remove(emitter));
+
+        // Send initial data snapshot immediately upon connection
+        try {
+            AdminDashboardResponse stats = orderService.getAdminDashboardMetrics();
+            emitter.send(SseEmitter.event()
+                    .name("dashboard-metrics")
+                    .data(stats, MediaType.APPLICATION_JSON));
+        } catch (Exception ex) {
+            log.warn("Error sending initial admin dashboard metrics: {}", ex.getMessage());
+        }
+
+        return emitter;
+    }
+
+    public void notifyAdminClients() {
+        if (adminEmitters.isEmpty()) return;
+
+        try {
+            AdminDashboardResponse stats = orderService.getAdminDashboardMetrics();
+            for (SseEmitter emitter : adminEmitters) {
+                try {
+                    emitter.send(SseEmitter.event()
+                            .name("dashboard-metrics")
+                            .data(stats, MediaType.APPLICATION_JSON));
+                } catch (IOException ex) {
+                    log.warn("Removing admin emitter due to send error: {}", ex.getMessage());
+                    adminEmitters.remove(emitter);
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("Failed to fetch/send admin dashboard metrics: {}", ex.getMessage());
+        }
+    }
+
+    // 🟢 3. Convenient single method to push updates to ALL subscribers (Restaurant + Admin)
+    public void notifyAllDashboards() {
+        notifyAllClients();     // Updates Restaurant Charts
+        notifyAdminClients();   // Updates Admin Live Metrics
     }
 }

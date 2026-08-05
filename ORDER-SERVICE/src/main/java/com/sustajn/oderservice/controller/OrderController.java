@@ -40,7 +40,7 @@ public class OrderController {
             @RequestBody BorrowRequest request
     ) {
         Map<String, Object> response = orderService.borrowContainers(request);
-        try { sseService.notifyAllClients(); } catch (Exception ignored) {}
+            try { sseService.notifyAllDashboards(); } catch (Exception ignored) {}
         return ResponseEntity.ok(response);
     }
 
@@ -52,7 +52,7 @@ public class OrderController {
             @RequestBody ReturnRequest request
     ) {
         Map<String, Object> response = orderService.returnContainers(request);
-        try { sseService.notifyAllClients(); } catch (Exception ignored) {}
+        try { sseService.notifyAllDashboards(); } catch (Exception ignored) {}
         return ResponseEntity.ok(response);
     }
 
@@ -130,6 +130,7 @@ public class OrderController {
 
         // Returns number of items extended
          borrowOrderService.extendBorrowOrder(orderId);
+        try { sseService.notifyAllDashboards(); } catch (Exception ignored) {}
         return ResponseEntity.ok(
                 new ApiResponse<>("success",
                         "Order extended by 5 days successfully",
@@ -191,6 +192,7 @@ public class OrderController {
     @PostMapping("/markSold")
     public ResponseEntity<Void> markSold(@RequestBody SoldRequest request) {
         orderService.markAsSold(request);
+        try { sseService.notifyAllDashboards(); } catch (Exception ignored) {}
         return ResponseEntity.ok().build();
     }
 
@@ -325,7 +327,7 @@ public class OrderController {
 
     @GetMapping(value = "/admin/dashboard/metrics/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamAdminDashboardMetrics() {
-        return orderService.subscribeAdminDashboard();
+        return sseService.subscribeAdmin();
     }
 
 }

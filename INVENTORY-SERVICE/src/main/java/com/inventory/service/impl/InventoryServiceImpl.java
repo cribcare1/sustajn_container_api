@@ -862,7 +862,7 @@ public class InventoryServiceImpl implements InventoryService {
                         .name(userMap.get("name").toString())
                         .userType(userTypeString)
                         .restaurantAddress(userMap.get("concatenatedAddress").toString())
-                        .planType(activePlan.getPlanType() != null ? activePlan.getPlanType() : activePlan.getPlanName())
+                        .planType(activePlan.getPlanName() != null ? activePlan.getPlanName() : activePlan.getPlanName())
                         .amount(activePlan.getFeeType() != null ? activePlan.getFeeType() : BigDecimal.ZERO)
                         .formattedDate(trackingDate.format(displayFormatter))
                         .build();

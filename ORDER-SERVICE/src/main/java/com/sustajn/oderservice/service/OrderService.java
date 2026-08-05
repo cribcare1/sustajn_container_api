@@ -56,7 +56,6 @@ public interface OrderService {
 
     AdminDashboardResponse getAdminDashboardMetrics();
 
-    SseEmitter subscribeAdminDashboard();
 
     public void markAsSold(SoldRequest request);
 
