@@ -1145,48 +1145,6 @@ public class OrderServiceImpl implements OrderService {
         return payload;
     }
     @Override
-    public SseEmitter subscribeAdminDashboard() {
-        SseEmitter emitter = new SseEmitter(1800000L);
-
-        try {
-            // Push initial immediate confirmation handshakes event block down line
-            emitter.send(SseEmitter.event().name("INIT").data("Connected to live engine pipeline."));
-        } catch (Exception e) {
-            log.error("Failed sending startup connection event: ", e);
-        }
-
-        emitter.onCompletion(() -> dashboardEmitters.remove(emitter));
-        emitter.onTimeout(() -> dashboardEmitters.remove(emitter));
-        emitter.onError((ex) -> dashboardEmitters.remove(emitter));
-
-        dashboardEmitters.add(emitter);
-        return emitter;
-    }
-
-    @Scheduled(fixedRate = 5000)
-    public void broadcastDashboardMetrics() {
-        if (dashboardEmitters.isEmpty()) {
-            return;
-        }
-
-        log.info("Broadcasting updated calculations down to {} active stream handles.", dashboardEmitters.size());
-        AdminDashboardResponse dynamicData = getAdminDashboardMetrics();
-
-        List<SseEmitter> unreachableEmitters = new ArrayList<>();
-        for (SseEmitter emitter : dashboardEmitters) {
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("dashboard-metrics")
-                        .data(dynamicData));
-            } catch (Exception ex) {
-                // Collect stale connections if the client closed their app layout pane
-                unreachableEmitters.add(emitter);
-            }
-        }
-        dashboardEmitters.removeAll(unreachableEmitters);
-    }
-
-    @Override
     public AdminDashboardResponse getAdminDashboardMetrics() {
         try {
             LocalDateTime now = LocalDateTime.now();
