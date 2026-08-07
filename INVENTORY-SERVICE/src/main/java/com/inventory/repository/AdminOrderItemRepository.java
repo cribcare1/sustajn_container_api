@@ -88,4 +88,31 @@ public interface AdminOrderItemRepository extends JpaRepository<AdminOrderItem,L
             @Param("containerTypeId") Integer containerTypeId,
             @Param("type") TransactionType type
     );
+
+    @Query(value = """
+        SELECT 
+            o.id AS orderId,
+            o.restaurant_id AS restaurantId,
+            ct.product_id AS containerCode,
+            oi.approved_qty AS quantity,
+            o.order_date AS orderedDate,
+            o.decision_at AS deliveredDate
+        FROM admin_order_items oi
+        JOIN admin_orders o ON o.id = oi.admin_order_id
+        JOIN container_types ct ON ct.id = oi.container_type_id
+        WHERE oi.container_type_id = :containerTypeId
+          AND o.status = 'APPROVED'
+        ORDER BY o.order_date DESC
+        """, nativeQuery = true)
+    List<Object[]> findIssuedDetailsByContainerType(@Param("containerTypeId") Integer containerTypeId);
+
+    @Query("""
+    SELECT COALESCE(SUM(oi.approvedQty), 0)
+    FROM AdminOrderItem oi
+    JOIN oi.order o
+    WHERE oi.containerTypeId = :containerTypeId
+      AND o.status = com.inventory.Constant.AdminOrderStatus.APPROVED
+      AND o.type = com.inventory.Constant.TransactionType.BORROW
+""")
+    Integer sumIssuedToPartnerCountByContainerTypeId(@Param("containerTypeId") Integer containerTypeId);
 }
