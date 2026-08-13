@@ -56,6 +56,9 @@ public interface OrderService {
 
     AdminDashboardResponse getAdminDashboardMetrics();
 
+    ApiResponse<List<SoldHistoryMonthGroupResponse>> getSoldHistoryGroupedByMonth(
+            String userType, Long productId, String searchKeyword);
+
 
     public void markAsSold(SoldRequest request);
 

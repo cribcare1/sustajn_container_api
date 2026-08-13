@@ -17,14 +17,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/inventory")
@@ -539,5 +538,23 @@ public class InventoryController {
 
         List<CustomerSoldHistoryResponse> data = inventoryService.getCustomerSoldHistory(userId);
         return ResponseEntity.ok(new ApiResponse<>("success", "Customer sold history fetched successfully", data));
+    }
+
+    @PostMapping("/internal/container-product-codes")
+    public ResponseEntity<Map<Integer, String>> getContainerProductCodesBulk(@RequestBody List<Integer> containerTypeIds) {
+        if (CollectionUtils.isEmpty(containerTypeIds)) {
+            return ResponseEntity.ok(Collections.emptyMap());
+        }
+
+        List<ContainerType> containerTypes = containerTypeRepository.findAllById(containerTypeIds);
+
+        Map<Integer, String> productCodeMap = containerTypes.stream()
+                .collect(Collectors.toMap(
+                        ContainerType::getId,
+                        ct -> ct.getProductId() != null ? ct.getProductId() : "",
+                        (existing, replacement) -> existing
+                ));
+
+        return ResponseEntity.ok(productCodeMap);
     }
 }

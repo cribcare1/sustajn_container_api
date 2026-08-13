@@ -81,4 +81,7 @@ public interface InventoryFeignClient {
 
     @GetMapping("/inventory/containers/{containerTypeId}/ordered-history")
     List<MonthlyOrderedResponse> getOrderedHistory(@PathVariable("containerTypeId") Integer containerTypeId);
+
+    @PostMapping("/inventory/internal/container-product-codes")
+    Map<Integer, String> getContainerProductCodesBulk(@RequestBody List<Integer> containerTypeIds);
 }
