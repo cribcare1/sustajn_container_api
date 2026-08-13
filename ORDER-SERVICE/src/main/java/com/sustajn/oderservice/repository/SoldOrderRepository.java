@@ -37,4 +37,20 @@ public interface SoldOrderRepository extends JpaRepository<SoldOrder, Integer> {
             "WHERE s.user_id = :userId " +
             "ORDER BY s.sold_at DESC", nativeQuery = true)
     List<Object[]> findCustomerSoldHistoryRawDataNative(@Param("userId") Long userId);
+    @Query("""
+        SELECT s FROM SoldOrder s 
+        WHERE (:productId IS NULL OR s.productId = :productId) 
+          AND s.userId IS NOT NULL
+        ORDER BY s.soldAt DESC
+    """)
+    List<SoldOrder> findUserSoldOrders(@Param("productId") Long productId);
+
+    // Fetch sold orders for RESTAURANT / PARTNER tab (where restaurantId IS NOT NULL)
+    @Query("""
+        SELECT s FROM SoldOrder s 
+        WHERE (:productId IS NULL OR s.productId = :productId) 
+          AND s.restaurantId IS NOT NULL
+        ORDER BY s.soldAt DESC
+    """)
+    List<SoldOrder> findRestaurantSoldOrders(@Param("productId") Long productId);
 }

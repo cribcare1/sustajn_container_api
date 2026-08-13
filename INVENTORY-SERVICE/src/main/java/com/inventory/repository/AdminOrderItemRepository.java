@@ -88,4 +88,21 @@ public interface AdminOrderItemRepository extends JpaRepository<AdminOrderItem,L
             @Param("containerTypeId") Integer containerTypeId,
             @Param("type") TransactionType type
     );
+    @Query(value = """
+        SELECT 
+            o.id AS orderId,
+            o.restaurant_id AS restaurantId,
+            ct.product_id AS containerCode,
+            oi.approved_qty AS quantity,
+            o.order_date AS returnedOnDate,
+            COALESCE(o.decision_at, o.order_date) AS collectedOnDate
+        FROM admin_order_items oi
+        JOIN admin_orders o ON o.id = oi.admin_order_id
+        JOIN container_types ct ON ct.id = oi.container_type_id
+        WHERE oi.container_type_id = :containerTypeId
+          AND o.status = 'APPROVED'
+          AND o.type = 'RETURN'
+        ORDER BY o.order_date DESC
+        """, nativeQuery = true)
+    List<Object[]> findReturnedDetailsByContainerType(@Param("containerTypeId") Integer containerTypeId);
 }

@@ -3,10 +3,7 @@ package com.sustajn.oderservice.service.impl;
 import com.sustajn.oderservice.constant.OrderEnumType;
 import com.sustajn.oderservice.constant.OrderServiceConstant;
 import com.sustajn.oderservice.dto.*;
-import com.sustajn.oderservice.entity.BorrowOrder;
-import com.sustajn.oderservice.entity.Notification;
-import com.sustajn.oderservice.entity.Order;
-import com.sustajn.oderservice.entity.ReturnOrder;
+import com.sustajn.oderservice.entity.*;
 import com.sustajn.oderservice.exception.ResourceNotFoundException;
 import com.sustajn.oderservice.feign.service.AuthClient;
 import com.sustajn.oderservice.feign.service.InventoryFeignClient;
@@ -15,6 +12,7 @@ import com.sustajn.oderservice.projection.LeasedReturnedCountWithTimeGraphProjec
 import com.sustajn.oderservice.repository.BorrowOrderRepository;
 import com.sustajn.oderservice.repository.OrderRepository;
 import com.sustajn.oderservice.repository.ReturnOrderRepository;
+import com.sustajn.oderservice.repository.SoldOrderRepository;
 import com.sustajn.oderservice.request.*;
 import com.sustajn.oderservice.service.OrderService;
 import com.sustajn.oderservice.util.ApiResponseUtil;
@@ -26,6 +24,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import com.sustajn.oderservice.dto.DeviceTokenResponse;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.math.BigDecimal;
@@ -45,6 +44,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final BorrowOrderRepository borrowOrderRepository;
     private final ReturnOrderRepository returnOrderRepository;
+    private final SoldOrderRepository soldOrderRepository;
     private final AuthClient authClient;
     private final InventoryFeignClient inventoryFeignClient;
     private final NotificationFeignClient notificationFeignClient;
@@ -1270,7 +1270,186 @@ public class OrderServiceImpl implements OrderService {
         double percentage = ((double) difference / yesterday) * 100;
         return (percentage >= 0 ? "+" : "") + Math.round(percentage) + "%";
     }
-//    @Override
+
+    @Override
+    public ApiResponse<List<SoldHistoryMonthGroupResponse>> getSoldHistoryGroupedByMonth(
+            String userType, Long productId, String searchKeyword) {
+
+        try {
+            boolean isUserType = "USER".equalsIgnoreCase(userType);
+
+            List<SoldOrder> soldOrders = isUserType
+                    ? soldOrderRepository.findUserSoldOrders(productId)
+                    : soldOrderRepository.findRestaurantSoldOrders(productId);
+
+            if (soldOrders.isEmpty()) {
+                return new ApiResponse<>("SUCCESS", "No sold records found", List.of());
+            }
+
+            // 1. Fetch real product codes from INVENTORY-SERVICE using containerTypeIds
+            List<Integer> containerTypeIds = soldOrders.stream()
+                    .map(SoldOrder::getProductId)
+                    .filter(Objects::nonNull)
+                    .map(Long::intValue)
+                    .distinct()
+                    .toList();
+
+            Map<Integer, String> containerCodeMap = new HashMap<>();
+            if (!containerTypeIds.isEmpty()) {
+                try {
+                    Map<Integer, String> res = inventoryFeignClient.getContainerProductCodesBulk(containerTypeIds);
+                    if (res != null) {
+                        containerCodeMap.putAll(res);
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to fetch container product codes from INVENTORY-SERVICE: {}", ex.getMessage());
+                }
+            }
+
+            Map<Long, String> customerIdMap = new HashMap<>();
+            Map<Long, String> restaurantNameMap = new HashMap<>();
+
+            // 2. Fetch real details from AUTH-SERVICE via AuthClient
+            if (isUserType) {
+                // Fetch Customer IDs for User Tab
+                List<Long> userIds = soldOrders.stream()
+                        .map(SoldOrder::getUserId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+
+                if (!userIds.isEmpty()) {
+                    try {
+                        Map<Long, String> res = authClient.getCustomerIdsBulk(userIds);
+                        if (res != null) customerIdMap.putAll(res);
+                    } catch (Exception ex) {
+                        log.error("Failed to fetch customer IDs from AUTH-SERVICE: {}", ex.getMessage());
+                    }
+                }
+            } else {
+                // Fetch Restaurant Names for Partner Tab
+                List<Long> restaurantIds = soldOrders.stream()
+                        .map(SoldOrder::getRestaurantId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .toList();
+
+                if (!restaurantIds.isEmpty()) {
+                    try {
+                        // Priority 1: Try partner-details bulk endpoint
+                        Map<Long, PartnerInfoDto> partnerDetails = authClient.getPartnerDetailsBulk(restaurantIds);
+                        if (partnerDetails != null) {
+                            partnerDetails.forEach((id, info) -> {
+                                if (info != null && StringUtils.hasText(info.getName())) {
+                                    restaurantNameMap.put(id, info.getName());
+                                }
+                            });
+                        }
+                    } catch (Exception ex) {
+                        log.warn("Partner details bulk call failed, trying getRestaurantsByIds fallback: {}", ex.getMessage());
+                        try {
+                            // Priority 2: Fallback to getRestaurantsByIds
+                            List<RestaurantRegisterResponse> restaurants = authClient.getRestaurantsByIds(restaurantIds);
+                            if (restaurants != null) {
+                                for (RestaurantRegisterResponse r : restaurants) {
+                                    if (r.getRestaurantId() != null && StringUtils.hasText(r.getName())) {
+                                        restaurantNameMap.put(r.getRestaurantId(), r.getName());
+                                    }
+                                }
+                            }
+                        } catch (Exception e) {
+                            log.error("Failed to fetch restaurant names from AUTH-SERVICE fallback: {}", e.getMessage());
+                        }
+                    }
+                }
+            }
+
+            DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMMM-yyyy", Locale.ENGLISH);
+            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+            // 3. Group records chronologically by Month-Year
+            Map<String, List<SoldOrder>> monthGroupedMap = soldOrders.stream()
+                    .filter(s -> s.getSoldAt() != null)
+                    .collect(Collectors.groupingBy(
+                            s -> s.getSoldAt().format(monthFormatter),
+                            LinkedHashMap::new,
+                            Collectors.toList()
+                    ));
+
+            List<SoldHistoryMonthGroupResponse> monthGroupList = new ArrayList<>();
+
+            for (Map.Entry<String, List<SoldOrder>> entry : monthGroupedMap.entrySet()) {
+                String monthYear = entry.getKey();
+                List<SoldOrder> ordersInMonth = entry.getValue();
+
+                List<SoldHistoryItemResponse> items = new ArrayList<>();
+
+                for (SoldOrder so : ordersInMonth) {
+
+                    // Resolve Customer Code or default
+                    String custId = isUserType && so.getUserId() != null
+                            ? customerIdMap.getOrDefault(so.getUserId(), "USER-" + so.getUserId())
+                            : null;
+
+                    // Resolve Partner/Restaurant Name or default
+                    String partnerName = !isUserType && so.getRestaurantId() != null
+                            ? restaurantNameMap.getOrDefault(so.getRestaurantId(), "Partner #" + so.getRestaurantId())
+                            : null;
+
+                    // Resolve Real Container Code
+                    Integer containerTypeId = so.getProductId() != null ? so.getProductId().intValue() : null;
+                    String realContainerCode = containerTypeId != null
+                            ? containerCodeMap.getOrDefault(containerTypeId, "N/A")
+                            : "N/A";
+
+                    // Search keyword filtering
+                    if (StringUtils.hasText(searchKeyword)) {
+                        String keyword = searchKeyword.toLowerCase();
+                        if (isUserType && (custId == null || !custId.toLowerCase().contains(keyword))) {
+                            continue;
+                        }
+                        if (!isUserType && (partnerName == null || !partnerName.toLowerCase().contains(keyword))) {
+                            continue;
+                        }
+                    }
+
+                    String dateStr = so.getSoldAt().format(dateFormatter);
+                    String timeStr = so.getSoldAt().format(timeFormatter);
+
+                    items.add(SoldHistoryItemResponse.builder()
+                            .id(so.getId())
+                            .userId(so.getUserId())
+                            .customerId(custId)
+                            .restaurantId(so.getRestaurantId())
+                            .restaurantName(partnerName)
+                            .productId(so.getProductId())
+                            .containerCode(realContainerCode) // 🟢 Real Product Code dynamically mapped
+                            .soldQuantity(so.getSoldQuantity() != null ? so.getSoldQuantity() : 0)
+                            .soldDate(dateStr)
+                            .soldTime(timeStr)
+                            .fullDateTime(dateStr + " | " + timeStr)
+                            .reason(so.getReason() != null ? so.getReason() : "N/A")
+                            .build());
+                }
+
+                if (!items.isEmpty()) {
+                    int monthTotalQty = items.stream().mapToInt(SoldHistoryItemResponse::getSoldQuantity).sum();
+                    monthGroupList.add(SoldHistoryMonthGroupResponse.builder()
+                            .monthYear(monthYear)
+                            .totalQuantity(monthTotalQty)
+                            .items(items)
+                            .build());
+                }
+            }
+
+            return new ApiResponse<>("SUCCESS", "Sold history fetched successfully", monthGroupList);
+
+        } catch (Exception e) {
+            log.error("Error fetching sold history for userType {}: {}", userType, e.getMessage(), e);
+            return new ApiResponse<>("ERROR", "Failed to fetch sold history", List.of());
+        }
+    }
 //    public ApiResponse<OrderHistoryResponse> getOrderHistory(Long restaurantId) {
 //        try {
 //

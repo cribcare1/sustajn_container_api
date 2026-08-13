@@ -330,4 +330,16 @@ public class OrderController {
         return sseService.subscribeAdmin();
     }
 
+    @GetMapping("/sold-history")
+    public ResponseEntity<ApiResponse<List<SoldHistoryMonthGroupResponse>>> getSoldHistory(
+            @RequestParam(defaultValue = "USER") String userType,
+            @RequestParam(required = false) Long productId,
+            @RequestParam(required = false) String searchKeyword) {
+
+        ApiResponse<List<SoldHistoryMonthGroupResponse>> response =
+                orderService.getSoldHistoryGroupedByMonth(userType, productId, searchKeyword);
+
+        return ResponseEntity.ok(response);
+    }
+
 }
